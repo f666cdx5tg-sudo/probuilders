@@ -1352,20 +1352,47 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     align-items: flex-end;
   }
   .topbar {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     min-height: auto;
     padding: var(--s2) var(--s3);
     gap: var(--s2);
+    align-items: center;
+  }
+  .topbar-logo img {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 12px !important;
+  }
+  .brand-tagline {
+    font-size: 9px;
   }
   .topbar-right {
-    gap: var(--s2);
+    gap: var(--s1);
+    flex-shrink: 0;
   }
   .hi-line {
-    font-size: 10px;
+    font-size: 9.5px;
+    gap: 3px;
   }
-  #header-date { font-size: 13px !important; }
-  #weather-text { font-size: 13px !important; }
-  #weather-icon { font-size: 16px !important; }
+  .hi-line svg {
+    width: 9px;
+    height: 9px;
+  }
+  #header-date {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+  }
+  #weather-text {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+  }
+  #weather-icon {
+    font-size: 15px !important;
+  }
+  .btn-icon {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 /* Full-Screen Annotator */
