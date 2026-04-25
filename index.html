@@ -1347,7 +1347,25 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 [data-theme="dark"] .hi-pink-txt  { color: #F06292; }
 [data-theme="dark"] .hi-green-txt { color: #66BB6A; }
 @media (max-width: 768px) {
-  .header-info-stack { display: none; }
+  .header-info-stack {
+    display: flex;
+    align-items: flex-end;
+  }
+  .topbar {
+    flex-wrap: wrap;
+    min-height: auto;
+    padding: var(--s2) var(--s3);
+    gap: var(--s2);
+  }
+  .topbar-right {
+    gap: var(--s2);
+  }
+  .hi-line {
+    font-size: 10px;
+  }
+  #header-date { font-size: 13px !important; }
+  #weather-text { font-size: 13px !important; }
+  #weather-icon { font-size: 16px !important; }
 }
 
 /* Full-Screen Annotator */
