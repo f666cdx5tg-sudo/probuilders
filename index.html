@@ -3518,6 +3518,7 @@ function saveNewProject() {
   closeModal('modal-new-project');
   toast(`✅ Project "${p.name}" created — ID: ${p.id}`);
   renderProjects(); refreshHome(); populateProjectSelects();
+  scheduleAutoSave();
 }
 function renderProjects() {
   const filter = document.getElementById('project-filter')?.value;
@@ -3572,7 +3573,7 @@ function editProjectProgress(id) {
 function deleteProject(id) {
   if (!confirm('Delete this project?')) return;
   DB.projects = DB.projects.filter(p=>p.id!==id);
-  renderProjects(); refreshHome(); populateProjectSelects(); toast('Project deleted');
+  renderProjects(); refreshHome(); populateProjectSelects(); toast('Project deleted'); scheduleAutoSave();
 }
 function exportData() {
   const json = JSON.stringify(DB, null, 2);
@@ -3610,7 +3611,7 @@ function saveNewTask() {
   DB.tasks.push(t);
   closeModal('modal-new-task');
   toast(`Task added: ${desc}`);
-  renderTasks(); refreshHome();
+  renderTasks(); refreshHome(); scheduleAutoSave();
 }
 function renderTasks() {
   const pFilter = document.getElementById('task-project-filter')?.value;
@@ -3648,9 +3649,9 @@ function renderTasks() {
 function toggleTask(id) {
   const t = DB.tasks.find(x=>x.id===id); if(!t) return;
   t.done = !t.done; if(t.done) t.completedAt = now(); else delete t.completedAt;
-  renderTasks(); refreshHome(); toast(t.done?'✅ Task completed!':'Task reopened');
+  renderTasks(); refreshHome(); toast(t.done?'✅ Task completed!':'Task reopened'); scheduleAutoSave();
 }
-function deleteTask(id) { DB.tasks = DB.tasks.filter(t=>t.id!==id); renderTasks(); refreshHome(); toast('Task deleted'); }
+function deleteTask(id) { DB.tasks = DB.tasks.filter(t=>t.id!==id); renderTasks(); refreshHome(); toast('Task deleted'); scheduleAutoSave(); }
 
 /* ── PHOTOS ──────────────────────────────────────────────── */
 function openPhotoCapture() {
@@ -3693,7 +3694,7 @@ function savePhoto() {
   document.getElementById('photo-drop-zone').style.display = '';
   document.getElementById('photo-preview-row').style.display = 'none';
   document.getElementById('photo-file-input').value = '';
-  closeModal('modal-photo'); toast('📸 Photo saved'); renderPhotos();
+  closeModal('modal-photo'); toast('📸 Photo saved'); renderPhotos(); scheduleAutoSave();
 }
 function renderPhotos() {
   const pFilter   = document.getElementById('photo-project-filter')?.value;
@@ -3846,7 +3847,7 @@ function setAnnoTool2(tool,btn) {
   document.querySelectorAll('#annotator-toolbar .anno-tool').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   annoCanvas.style.cursor=(tool==='select')?'default':'crosshair';
-  const hints={select:'Click markup to select. Drag to move. Corner handles to resize.',pen:'Drag to draw freehand.',arrow:'Drag to place arrow.',rect:'Drag to draw box.',circle:'Drag to draw circle.',text:'Click to add text label.'};
+  const hints={select:'Click to select. Drag body to move. Drag ● endpoint handles to reposition. Del to delete.',pen:'Drag to draw freehand.',arrow:'Drag to place arrow. Select it after to move or repoint.',rect:'Drag to draw box.',circle:'Drag to draw circle.',text:'Click to add text label.'};
   annoSetHint(hints[tool]||'');
 }
 function setAnnoColor2(color,el) {
@@ -3940,7 +3941,7 @@ function annoDrawObject(ctx,obj,selected) {
     case 'text': { const fs=obj.fontSize||18; ctx.font=`bold ${fs}px 'Plus Jakarta Sans',sans-serif`; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=4; ctx.fillText(obj.text,obj.x,obj.y); break; }
   }
   ctx.restore();
-  if(selected){const b=annoGetBounds(obj);if(b)annoDrawHandles(ctx,b);}
+  if(selected){const b=annoGetBounds(obj);if(b||obj.type==='arrow')annoDrawHandles(ctx,b,obj);}
 }
 function annoDrawPreview(ctx,x,y) {
   ctx.save(); ctx.strokeStyle=annoColor2; ctx.fillStyle=annoColor2; ctx.lineWidth=annoStroke; ctx.lineCap='round'; ctx.setLineDash([6,4]);
@@ -3965,17 +3966,62 @@ function annoDrawHandles(ctx,b) {
     ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.stroke();
   });
 }
-function annoHitTest(obj,px,py) { const pad=8+(obj.stroke||4),b=annoGetBounds(obj); if(!b) return false; return px>=b.x-pad&&px<=b.x2+pad&&py>=b.y-pad&&py<=b.y2+pad; }
+function annoHitTest(obj,px,py) {
+  const pad=12+(obj.stroke||4);
+  if(obj.type==='arrow'){
+    // Use point-to-line-segment distance so you can actually click a thin arrow
+    const {x,y,x2,y2}=obj;
+    const dx=x2-x,dy=y2-y,len=Math.hypot(dx,dy);
+    if(len<1) return Math.hypot(px-x,py-y)<=pad;
+    const t=Math.max(0,Math.min(1,((px-x)*dx+(py-y)*dy)/(len*len)));
+    const dist=Math.hypot(px-(x+t*dx),py-(y+t*dy));
+    return dist<=pad;
+  }
+  const b=annoGetBounds(obj); if(!b) return false;
+  return px>=b.x-pad&&px<=b.x2+pad&&py>=b.y-pad&&py<=b.y2+pad;
+}
 function annoHitHandle(px,py) {
   if(annoSelected===null) return null;
-  const b=annoGetBounds(annoObjects[annoSelected]); if(!b) return null;
+  const obj=annoObjects[annoSelected]; if(!obj) return null;
+  // Arrows: handles at the actual tail and head endpoints
+  if(obj.type==='arrow'){
+    if(Math.hypot(px-obj.x, py-obj.y)<=12)  return 'tail';
+    if(Math.hypot(px-obj.x2,py-obj.y2)<=12) return 'head';
+    return null;
+  }
+  const b=annoGetBounds(obj); if(!b) return null;
   const corners={nw:[b.x,b.y],ne:[b.x2,b.y],sw:[b.x,b.y2],se:[b.x2,b.y2]};
   for(const [key,[cx,cy]] of Object.entries(corners)){if(Math.hypot(px-cx,py-cy)<=10) return key;}
   return null;
 }
 function annoHandleResize(obj,handle,px,py) {
+  // Arrows: move tail or head endpoint independently
+  if(obj.type==='arrow'){
+    if(handle==='tail'){obj.x=px;obj.y=py;}
+    else if(handle==='head'){obj.x2=px;obj.y2=py;}
+    return;
+  }
   if(handle==='nw'){obj.x=px;obj.y=py;}else if(handle==='ne'){obj.x2=px;obj.y=py;}else if(handle==='sw'){obj.x=px;obj.y2=py;}else{obj.x2=px;obj.y2=py;}
   if(obj.x>obj.x2)[obj.x,obj.x2]=[obj.x2,obj.x]; if(obj.y>obj.y2)[obj.y,obj.y2]=[obj.y2,obj.y];
+}
+function annoDrawHandles(ctx,b,obj) {
+  // Arrows: draw handles at actual endpoints with directional style
+  if(obj && obj.type==='arrow'){
+    [[obj.x,obj.y,'tail'],[obj.x2,obj.y2,'head']].forEach(([cx,cy,role])=>{
+      ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);
+      ctx.fillStyle=role==='head'?obj.color||'#E91E8C':'#fff';
+      ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.stroke();
+    });
+    // Draw dashed line between endpoints while selected
+    ctx.save();ctx.setLineDash([5,3]);ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(obj.x,obj.y);ctx.lineTo(obj.x2,obj.y2);ctx.stroke();ctx.restore();
+    return;
+  }
+  ctx.save(); ctx.setLineDash([5,3]); ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+  ctx.strokeRect(b.x-1,b.y-1,(b.x2-b.x)+2,(b.y2-b.y)+2); ctx.restore();
+  [{cx:b.x,cy:b.y},{cx:b.x2,cy:b.y},{cx:b.x,cy:b.y2},{cx:b.x2,cy:b.y2}].forEach(({cx,cy})=>{
+    ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.stroke();
+  });
 }
 function updateAnnoUI() { const n=annoObjects.length; document.getElementById('anno-obj-count').textContent=`${n} markup${n!==1?'s':''}`;const d=document.getElementById('anno-del-btn');if(d)d.style.display=(annoSelected!==null)?'inline-flex':'none'; }
 function annoSetHint(msg) { const el=document.getElementById('anno-hint');if(el)el.textContent=msg; }
@@ -4016,7 +4062,7 @@ function submitReport() {
   };
   DB.reports.push(r);
   if(r.progress && r.projectId) { const p=DB.projects.find(x=>x.id===r.projectId); if(p) p.progress=Math.min(100,+r.progress||0); }
-  closeModal('modal-new-report'); toast('📋 Daily report submitted'); renderReports();
+  closeModal('modal-new-report'); toast('📋 Daily report submitted'); renderReports(); scheduleAutoSave();
 }
 function renderReports() {
   const container = document.getElementById('reports-list');
@@ -4125,7 +4171,7 @@ function savePayment() {
   };
   DB.payments.push(p);
   closeModal('modal-payment'); toast(`💰 Payment of ${fmtMoney(p.amount)} recorded`);
-  renderBudget(); refreshHome(); refreshDashboard();
+  renderBudget(); refreshHome(); refreshDashboard(); scheduleAutoSave();
 }
 
 /* ── SUPPLIERS & RECEIPTS ────────────────────────────────── */
@@ -4137,7 +4183,7 @@ function saveSupplier() {
   const name = document.getElementById('sup-name').value.trim();
   if(!name){toast('Company name required');return;}
   DB.suppliers.push({id:uid(), name, contact:document.getElementById('sup-contact').value.trim(), phone:document.getElementById('sup-phone').value.trim(), email:document.getElementById('sup-email').value.trim(), address:document.getElementById('sup-address').value.trim(), specialty:document.getElementById('sup-specialty').value.trim(), created:now()});
-  closeModal('modal-supplier'); toast(`Supplier "${name}" added`); renderSuppliers(); populateSupplierSelects();
+  closeModal('modal-supplier'); toast(`Supplier "${name}" added`); renderSuppliers(); populateSupplierSelects(); scheduleAutoSave();
 }
 function renderSuppliers() {
   const container = document.getElementById('suppliers-list');
@@ -4163,7 +4209,7 @@ function saveReceipt() {
   const amount = document.getElementById('rec-amount').value;
   if(!desc||!amount){toast('Description and amount required');return;}
   DB.receipts.push({id:uid(), type:document.getElementById('rec-type').value, date:document.getElementById('rec-date').value||todayISO(), supplierId:document.getElementById('rec-supplier').value, projectId:document.getElementById('rec-project').value, desc, amount:+amount||0, ref:document.getElementById('rec-ref').value.trim(), created:now()});
-  closeModal('modal-receipt'); toast('Receipt saved'); renderReceipts();
+  closeModal('modal-receipt'); toast('Receipt saved'); renderReceipts(); scheduleAutoSave();
 }
 function renderReceipts() {
   const container = document.getElementById('receipts-list');
@@ -4191,7 +4237,7 @@ function saveMaterialOrder() {
   const item = document.getElementById('ord-item').value.trim();
   if(!item){toast('Item description required');return;}
   DB.materialOrders.push({id:uid(), item, supplierId:document.getElementById('ord-supplier').value, orderDate:document.getElementById('ord-date').value||todayISO(), eta:document.getElementById('ord-eta').value, qty:+document.getElementById('ord-qty').value||0, cost:+document.getElementById('ord-cost').value||0, status:document.getElementById('ord-status').value, created:now()});
-  closeModal('modal-order'); toast('Order logged'); renderOrders();
+  closeModal('modal-order'); toast('Order logged'); renderOrders(); scheduleAutoSave();
 }
 function renderOrders() {
   const tbody = document.getElementById('orders-body'); if(!tbody) return;
@@ -4213,7 +4259,7 @@ function saveWorker() {
   const w = {id:uid(), name, trade:document.getElementById('wk-trade').value, skill:document.getElementById('wk-skill').value, payType:document.getElementById('wk-pay-type').value, rate:document.getElementById('wk-rate').value, phone:document.getElementById('wk-phone').value.trim(), email:document.getElementById('wk-email').value.trim(), status:document.getElementById('wk-status').value, created:now()};
   DB.workers.push(w);
   closeModal('modal-new-worker'); toast(`Worker "${w.name}" added`);
-  renderWorkers(); populateWorkerSelect();
+  renderWorkers(); populateWorkerSelect(); scheduleAutoSave();
 }
 function renderWorkers() {
   const tbody = document.getElementById('workers-body'); if(!tbody) return;
@@ -4240,7 +4286,7 @@ function saveTimesheet() {
   const hours  = +document.getElementById('ts-hours').value||0;
   const rate   = worker ? +worker.rate||0 : 0;
   DB.timesheets.push({id:uid(), workerId, workerName:worker?worker.name:'', trade:worker?worker.trade:'', projectId:document.getElementById('ts-project').value, date:document.getElementById('ts-date').value||todayISO(), hours, rate, total:hours*rate, notes:document.getElementById('ts-notes').value.trim(), created:now()});
-  closeModal('modal-timesheet'); toast('Time logged'); renderTimesheets();
+  closeModal('modal-timesheet'); toast('Time logged'); renderTimesheets(); scheduleAutoSave();
 }
 function renderTimesheets() {
   const container = document.getElementById('timesheets-list');
@@ -4273,7 +4319,7 @@ function saveInventoryItem() {
   if(!name){toast('Item name required');return;}
   const item={id:uid(), name, category:document.getElementById('inv-cat').value, unit:document.getElementById('inv-unit').value, qty:+document.getElementById('inv-qty').value||0, min:+document.getElementById('inv-min').value||0, cost:+document.getElementById('inv-cost').value||0, location:document.getElementById('inv-loc').value.trim(), created:now()};
   DB.inventory.push(item);
-  closeModal('modal-inventory'); toast(`Item "${item.name}" added`); renderInventory(); refreshHome();
+  closeModal('modal-inventory'); toast(`Item "${item.name}" added`); renderInventory(); refreshHome(); scheduleAutoSave();
 }
 function renderInventory() {
   const search = document.getElementById('inv-search')?.value.toLowerCase()||'';
@@ -4302,7 +4348,7 @@ function renderInventory() {
 function adjustInventory(id) {
   const item=DB.inventory.find(i=>i.id===id); if(!item) return;
   const v=prompt(`Adjust quantity for "${item.name}" (current: ${item.qty}):`,item.qty);
-  if(v===null) return; item.qty=Math.max(0,+v||0); renderInventory(); refreshHome(); toast('Quantity updated');
+  if(v===null) return; item.qty=Math.max(0,+v||0); renderInventory(); refreshHome(); toast('Quantity updated'); scheduleAutoSave();
 }
 
 /* ── SAFETY ──────────────────────────────────────────────── */
@@ -4375,7 +4421,7 @@ function saveHazard() {
   const desc=document.getElementById('haz-desc').value.trim();
   if(!desc){toast('Hazard description required');return;}
   DB.hazards.push({id:uid(), projectId:document.getElementById('haz-project').value, severity:document.getElementById('haz-severity').value, desc, action:document.getElementById('haz-action').value.trim(), reporter:document.getElementById('haz-reporter').value.trim(), date:todayISO(), timestamp:now(), geo:currentGeo.display});
-  closeModal('modal-hazard'); toast('⚠️ Hazard reported'); renderSafety();
+  closeModal('modal-hazard'); toast('⚠️ Hazard reported'); renderSafety(); scheduleAutoSave();
 }
 function openNewSafetyCheckModal() { toast('Use the checklist in this view and Submit when done.'); }
 function openChangeOrderModal() {
@@ -4388,12 +4434,12 @@ function saveChangeOrder() {
   const desc=document.getElementById('co-desc').value.trim(), amount=document.getElementById('co-amount').value;
   if(!desc||!amount){toast('Description and amount required');return;}
   DB.changeOrders.push({id:uid(), projectId:document.getElementById('co-project').value, type:document.getElementById('co-type').value, desc, amount:+amount||0, date:document.getElementById('co-date').value||todayISO(), approvedBy:document.getElementById('co-approved').value.trim(), created:now()});
-  closeModal('modal-co'); toast('Change order saved'); renderSafety(); renderBudget();
+  closeModal('modal-co'); toast('Change order saved'); renderSafety(); renderBudget(); scheduleAutoSave();
 }
 
 /* ── DATA HELPERS ────────────────────────────────────────── */
 function deleteEntry(table, id, refreshFn) {
-  DB[table] = DB[table].filter(x=>x.id!==id); if(refreshFn) refreshFn();
+  DB[table] = DB[table].filter(x=>x.id!==id); if(refreshFn) refreshFn(); scheduleAutoSave();
 }
 
 /* ── INIT ────────────────────────────────────────────────── */
@@ -4456,44 +4502,8 @@ function setSaveStatus(state) {
   }
 }
 
-// ── Patch all DB mutations to trigger auto-save ───────────
-const _origSaveNewProject   = saveNewProject;
-const _origSaveNewTask      = saveNewTask;
-const _origSavePhoto        = savePhoto;
-const _origSubmitReport     = submitReport;
-const _origSaveWorker       = saveWorker;
-const _origSaveTimesheet    = saveTimesheet;
-const _origSaveInventoryItem= saveInventoryItem;
-const _origSaveSupplier     = saveSupplier;
-const _origSaveReceipt      = saveReceipt;
-const _origSaveMaterialOrder= saveMaterialOrder;
-const _origSaveHazard       = saveHazard;
-const _origSaveChangeOrder  = saveChangeOrder;
-const _origSavePayment      = savePayment;
-const _origDeleteEntry      = deleteEntry;
-const _origToggleTask       = toggleTask;
-const _origDeleteTask       = deleteTask;
-const _origDeleteProject    = deleteProject;
-const _origAdjustInventory  = adjustInventory;
-
-function saveNewProject()    { _origSaveNewProject();    scheduleAutoSave(); }
-function saveNewTask()       { _origSaveNewTask();       scheduleAutoSave(); }
-function savePhoto()         { _origSavePhoto();         scheduleAutoSave(); }
-function submitReport()      { _origSubmitReport();      scheduleAutoSave(); }
-function saveWorker()        { _origSaveWorker();        scheduleAutoSave(); }
-function saveTimesheet()     { _origSaveTimesheet();     scheduleAutoSave(); }
-function saveInventoryItem() { _origSaveInventoryItem(); scheduleAutoSave(); }
-function saveSupplier()      { _origSaveSupplier();      scheduleAutoSave(); }
-function saveReceipt()       { _origSaveReceipt();       scheduleAutoSave(); }
-function saveMaterialOrder() { _origSaveMaterialOrder(); scheduleAutoSave(); }
-function saveHazard()        { _origSaveHazard();        scheduleAutoSave(); }
-function saveChangeOrder()   { _origSaveChangeOrder();   scheduleAutoSave(); }
-function savePayment()       { _origSavePayment();       scheduleAutoSave(); }
-function toggleTask(id)      { _origToggleTask(id);      scheduleAutoSave(); }
-function deleteTask(id)      { _origDeleteTask(id);      scheduleAutoSave(); }
-function deleteProject(id)   { _origDeleteProject(id);   scheduleAutoSave(); }
-function adjustInventory(id) { _origAdjustInventory(id); scheduleAutoSave(); }
-function deleteEntry(table, id, fn) { _origDeleteEntry(table, id, fn); scheduleAutoSave(); }
+// ── Auto-save hooks: scheduleAutoSave() added inline to each save function ──
+// (No wrapper redeclarations — those cause JS hoisting conflicts)
 
 // ── Export / Import ───────────────────────────────────────
 function exportData() {
