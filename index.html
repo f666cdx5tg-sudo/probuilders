@@ -3449,7 +3449,7 @@ function showAuthScreen() {
         ${wsList.length ? `
         <div style="margin-bottom:16px">
           <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7A9E7A;margin-bottom:8px">Your Workspaces</div>
-          ${_buildWsList(wsList)}).join('')}
+          ${_buildWsList(wsList)}
         </div>
         <div id="login-form" style="display:none">` : '<div id="login-form">'}
           <div style="margin-bottom:12px">
@@ -4170,7 +4170,8 @@ function removeMember(memberId) {
 
 /* Patch the LS_KEY to be workspace-scoped */
 function pbGetLSKey() {
-  return window._WS_LS_KEY || DB_KEY_PFX;
+  // Return workspace-scoped key if logged in, otherwise fallback to base key
+  return window._WS_LS_KEY || window.LS_KEY || 'probuilders_data_v2';
 }
 
 function pbWsClick(el){ selectWorkspaceLogin(el.getAttribute('data-wsid')); }
@@ -4196,15 +4197,27 @@ function pbCloseUserPanel(){
 
 
 function _getAppUrls(){
-  var isGithub = window.location.href.includes('github.io');
+  var href = window.location.href;
+  var isGithub = href.includes('github.io');
+  var isFile   = href.startsWith('file://');
+  var isLocal  = href.includes('localhost') || href.includes('127.0.0.1');
+
+  // Always use exact hardcoded GitHub Pages URLs when on GitHub
   if(isGithub){
     return {
       field:   'https://f666cdx5tg-sudo.github.io/probuilders/index.html',
       desktop: 'https://f666cdx5tg-sudo.github.io/probuilders/desktop.html'
     };
   }
-  // Local / other host — build relative URLs
-  var href = window.location.href;
+  // File:// — can't navigate between files reliably; point to GitHub
+  if(isFile){
+    return {
+      field:   'https://f666cdx5tg-sudo.github.io/probuilders/index.html',
+      desktop: 'https://f666cdx5tg-sudo.github.io/probuilders/desktop.html',
+      _isFile: true
+    };
+  }
+  // Localhost — build relative
   var base = href.substring(0, href.lastIndexOf('/') + 1);
   return {
     field:   base + 'index.html',
@@ -4220,7 +4233,10 @@ function _renderAppSwitcher(){
   var fieldUrl   = urls.field;
   var desktopUrl = urls.desktop;
 
-  sw.innerHTML =
+  var isFile = urls._isFile;
+  var fileNote = isFile ? '<div style="font-size:11px;color:#FF9800;text-align:center;padding:6px 0;grid-column:1/-1">⚠️ Open from GitHub Pages for navigation to work</div>' : '';
+
+  sw.innerHTML = fileNote +
     '<a href="' + fieldUrl + '" style="text-decoration:none">'
     + '<div style="padding:12px;border-radius:12px;text-align:center;cursor:pointer;border:2px solid '+(current==='field'?'#4CAF50':'rgba(76,175,80,.2)')+';background:'+(current==='field'?'rgba(76,175,80,.15)':'rgba(76,175,80,.05)')+';transition:all .2s">'
     +   '<div style="font-size:22px;margin-bottom:4px">📱</div>'
@@ -4274,6 +4290,8 @@ function _showPostLoginSwitcher(role, name) {
 function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); if(m)m.remove(); }
 
 </script>
+
+
 
 
 
@@ -6676,11 +6694,50 @@ function showSyncBadge(msg) {
 const _origSaveToLocal = saveToLocal;
 function saveToLocal() {
   try {
-    localStorage.setItem(pbGetLSKey(), JSON.stringify(DB));
+    var key = pbGetLSKey();
+    if(!key){ setSaveStatus('error'); console.error('saveToLocal: no key — not logged in?'); return; }
+    var json = JSON.stringify(DB);
+    // Quota guard: if > 4MB strip photo src data and warn
+    if(json.length > 4000000){
+      console.warn('saveToLocal: data > 4MB ('+Math.round(json.length/1024)+'KB) — stripping large photo blobs');
+      var slim = JSON.parse(json);
+      // Keep only the 10 most recent photos with src; strip the rest
+      if(slim.photos && slim.photos.length > 0){
+        var withSrc = slim.photos.filter(function(p){return p.src;}).slice(-10);
+        var noSrc   = slim.photos.map(function(p){ return p.src ? Object.assign({},p,{src:null,_srcStripped:true}) : p; });
+        // Put back last 10 with src
+        withSrc.forEach(function(p){
+          var idx = noSrc.findIndex(function(x){return x.id===p.id;});
+          if(idx>=0) noSrc[idx] = p;
+        });
+        slim.photos = noSrc;
+      }
+      json = JSON.stringify(slim);
+    }
+    localStorage.setItem(key, json);
     setSaveStatus('saved');
-    broadcastData(); // push to desktop instantly
+    broadcastData();
   } catch(e) {
-    setSaveStatus('error');
+    console.error('saveToLocal failed:', e.name, e.message);
+    if(e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED'){
+      toast('⚠️ Storage full — older photos stripped. Export backup to preserve all data.');
+      // Emergency save: strip ALL photo src data
+      try {
+        var emergency = JSON.parse(JSON.stringify(DB));
+        emergency.photos = (emergency.photos||[]).map(function(p){
+          return Object.assign({},p,{src:null,_srcStripped:true});
+        });
+        localStorage.setItem(pbGetLSKey(), JSON.stringify(emergency));
+        setSaveStatus('saved');
+        toast('💾 Saved (photos stripped from storage — use Backup JSON to keep photos)');
+      } catch(e2){
+        setSaveStatus('error');
+        toast('❌ Save failed — device storage completely full');
+      }
+    } else {
+      setSaveStatus('error');
+      toast('❌ Save failed: ' + e.message);
+    }
   }
 }
 
