@@ -1798,6 +1798,9 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
+
+
+
 <script>
 'use strict';
 /* ── STATE ── */
@@ -2348,47 +2351,72 @@ function renderProjectsDesktop(){
 }
 
 /* ══ PHOTOS ══ */
+function pbDesktopOpenAlbum(el){ var sel=document.getElementById('dph-proj'); if(sel){sel.value=el.getAttribute('data-pid'); renderDesktopPhotos();} }
+
 function renderDesktopPhotos(){
   populateAllSelects();
-  var pf = document.getElementById('dph-proj') ? document.getElementById('dph-proj').value : '';
-  var cf = document.getElementById('dph-cat')  ? document.getElementById('dph-cat').value  : '';
-  var allPhotos = DB.photos || [];
-  var photos = allPhotos.filter(function(p){ return (!pf || p.projectId===pf) && (!cf || p.category===cf); });
-  var withSrc = photos.filter(function(p){ return !!p.src; });
-  renderFullCarousel(withSrc);
-  var grid = document.getElementById('dph-grid');
-  if(!grid) return;
-  if(!photos.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:60px 24px;text-align:center;color:var(--txm)"><div style="font-size:56px;opacity:.25">📸</div><div style="font-size:18px;font-weight:700;margin-top:12px">No photos yet</div><div style="font-size:14px;margin-top:6px;opacity:.7">Photos from the field app appear here</div></div>';
-    return;
+  var pf = document.getElementById('dph-proj')?.value || '';
+  var cf = document.getElementById('dph-cat')?.value  || '';
+
+  if(pf){
+    // ── Project gallery mode ──
+    var proj = DB.projects.find(function(p){return p.id===pf;});
+    var photos = (DB.photos||[]).filter(function(p){
+      return p.projectId===pf && (!cf||p.category===cf);
+    });
+    var withSrc = photos.filter(function(p){return !!p.src;});
+    renderFullCarousel(withSrc);
+
+    var grid = document.getElementById('dph-grid');
+    if(!grid) return;
+    if(!photos.length){
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--txm)"><div style="font-size:48px;margin-bottom:12px">📸</div><div style="font-size:16px;font-weight:700">No photos in '+( proj?proj.name:'this project')+'</div><div style="font-size:13px;margin-top:6px;opacity:.6">Photos added from the field app appear here</div></div>';
+      return;
+    }
+    grid.innerHTML = photos.map(function(ph,idx){
+      return '<div style="background:var(--s1);border:1px solid var(--br);border-radius:var(--r12);overflow:hidden;cursor:pointer" onclick="goFullCarousel('+idx+')" class="ph-thumb-card">'
+        +'<div style="height:130px;position:relative;background:var(--s2)">'
+        +(ph.src?'<img src="'+ph.src+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>':'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.3">📸</div>')
+        +(ph.hasMarkup?'<span style="position:absolute;top:4px;right:4px;background:#E91E8C;color:#fff;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px">MARKUP</span>':'')
+        +'</div>'
+        +'<div style="padding:8px 10px">'
+        +'<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(ph.caption||'Field Photo')+'</div>'
+        +'<div style="font-size:10px;color:var(--ok);margin-top:2px">📅 '+(ph.date||'')+'&nbsp; ⏱ '+(ph.time||ph.timestamp||'')+'</div>'
+        +(ph.geo&&ph.geo!=='Unknown'?'<div style="font-size:10px;color:var(--g)">📍 '+ph.geo+'</div>':'')
+        +(ph.addedBy?'<div style="font-size:10px;color:var(--txf)">👷 '+ph.addedBy+'</div>':'')
+        +'</div></div>';
+    }).join('');
+  } else {
+    // ── Albums mode: show one card per project ──
+    var projects = DB.projects||[];
+    var grid2 = document.getElementById('dph-grid');
+    if(!grid2) return;
+    var countEl = document.getElementById('full-carousel-count');
+    if(countEl) countEl.textContent = (DB.photos||[]).length + ' total photos';
+    renderFullCarousel((DB.photos||[]).filter(function(p){return !!p.src;}).slice(-20).reverse());
+
+    if(!projects.length){
+      grid2.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--txm)"><div style="font-size:48px;margin-bottom:12px">📁</div><div style="font-size:16px;font-weight:700">No projects yet</div></div>';
+      return;
+    }
+    grid2.innerHTML = projects.map(function(p){
+      var photos = (DB.photos||[]).filter(function(ph){return ph.projectId===p.id;});
+      var latest = photos.filter(function(ph){return !!ph.src;}).slice(-1)[0];
+      return '<div style="background:var(--s1);border:1px solid var(--br);border-radius:var(--r12);overflow:hidden;cursor:pointer;transition:all var(--tx2)" class="ph-thumb-card" data-pid="'+p.id+'" onclick="pbDesktopOpenAlbum(this)">'
+        +'<div style="height:150px;position:relative;background:var(--s2);overflow:hidden">'
+        +(latest&&latest.src?'<img src="'+latest.src+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>':'<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:rgba(255,255,255,.2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span style="font-size:12px">No photos</span></div>')
+        +'<div style="position:absolute;bottom:5px;right:7px;background:rgba(0,0,0,.65);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+photos.length+' 📸</div>'
+        +'<div style="position:absolute;inset:0;background:linear-gradient(transparent 50%,rgba(0,0,0,.6))"></div>'
+        +'<div style="position:absolute;bottom:0;left:0;right:0;padding:8px 10px">'
+        +'<div style="font-size:13px;font-weight:800;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.name+'</div>'
+        +'<div style="font-size:10px;color:rgba(255,255,255,.7)">'+p.city+(p.state?', '+p.state:'')+'</div>'
+        +'</div></div>'
+        +'<div style="padding:8px 10px;display:flex;align-items:center;justify-content:space-between">'
+        +'<span class="badge '+(p.status==='In Progress'?'bi':p.status==='Completed'?'bg':'bn')+'">'+p.status+'</span>'
+        +'<span style="font-size:11px;font-weight:800;color:var(--ok)">'+photos.length+' photos</span>'
+        +'</div></div>';
+    }).join('');
   }
-  var html = '';
-  photos.forEach(function(p, idx){
-    var proj = DB.projects.find(function(x){ return x.id === p.projectId; });
-    var photoIdx = withSrc.indexOf(p);
-    var clickFn = p.src ? ('goFullCarousel(' + photoIdx + ')') : '';
-    html += '<div class="ph-thumb-card" onclick="' + clickFn + '">';
-    html += '<div style="height:130px;overflow:hidden;position:relative;background:var(--s2)">';
-    if(p.src){
-      html += '<img src="' + p.src + '" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>';
-    } else {
-      html += '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.3">📸</div>';
-    }
-    if(p.hasMarkup) html += '<span style="position:absolute;top:5px;right:5px;background:#E91E8C;color:#fff;font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px">MARKUP</span>';
-    if(p.itemCount && p.itemCount.length){
-      var total = p.itemCount.reduce(function(s,x){return s+x.count;},0);
-      html += '<span style="position:absolute;top:5px;left:5px;background:#4CAF50;color:#fff;font-size:10px;font-weight:800;border-radius:5px;padding:2px 6px">🔢 ' + total + '</span>';
-    }
-    html += '<span style="position:absolute;bottom:5px;left:5px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px">' + (p.category||'Photo') + '</span>';
-    html += '</div>';
-    html += '<div style="padding:9px 11px">';
-    html += '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.caption||'Untitled') + '</div>';
-    if(proj) html += '<div style="font-size:11px;color:var(--txm);margin-top:2px">' + proj.name + '</div>';
-    html += '<div style="font-size:10px;color:var(--txf);margin-top:2px">' + (p.timestamp||'') + ' · 📍 ' + (p.geo||'—') + '</div>';
-    if(p.weather) html += '<div style="font-size:10px;color:#03A9F4;margin-top:1px">' + p.weather + '</div>';
-    html += '</div></div>';
-  });
-  grid.innerHTML = html;
 }
 
 /* ══ SAFETY ══ */
