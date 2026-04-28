@@ -1914,40 +1914,43 @@ textarea.form-control { resize: vertical; min-height: 80px; }
      PHOTOS VIEW
 ────────────────────────────────────────────────────────────── -->
 <section id="view-photos" class="view">
-  <div class="page-header">
-    <div>
-      <div class="page-title">Photos & Markups</div>
-      <div class="page-subtitle">Geo-tagged field photos with annotations</div>
+  <!-- Mode: albums (default) or gallery (specific project) -->
+  <div id="photos-albums-mode">
+    <div class="page-header">
+      <div>
+        <div class="page-title">📸 Photo Albums</div>
+        <div class="page-subtitle">Each project has its own album</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-primary" onclick="openPhotoCapture()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Add Photo
+        </button>
+      </div>
     </div>
-    <div class="page-actions">
-      <button class="btn btn-primary" onclick="openPhotoCapture()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Add Photo
-      </button>
-    </div>
+    <!-- Project album cards -->
+    <div id="project-albums-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
   </div>
 
-  <!-- Project selector -->
-  <div class="flex gap-3 mb-4" style="flex-wrap:wrap">
-    <select class="form-control" style="width:auto" id="photo-project-filter" onchange="renderPhotos()">
-      <option value="">All Projects</option>
-    </select>
-    <select class="form-control" style="width:auto" id="photo-category-filter" onchange="renderPhotos()">
-      <option value="">All Categories</option>
-      <option>Progress</option>
-      <option>Deficiency</option>
-      <option>Inspection</option>
-      <option>Safety</option>
-      <option>Delivery</option>
-      <option>Completion</option>
-    </select>
-  </div>
-
-  <div class="photo-grid" id="photos-grid">
-    <div class="photo-upload-slot" onclick="openPhotoCapture()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-      Tap to add photo
+  <!-- Fullscreen gallery mode for a single project -->
+  <div id="photos-gallery-mode" style="display:none">
+    <div class="page-header">
+      <div>
+        <button class="btn btn-outline btn-sm" onclick="closeProjectGallery()" style="margin-bottom:6px">← Back to Albums</button>
+        <div class="page-title" id="gallery-project-name">Project Photos</div>
+        <div class="page-subtitle" id="gallery-photo-count">0 photos</div>
+      </div>
+      <div class="page-actions">
+        <select class="form-control" style="width:130px" id="gallery-cat-filter" onchange="renderProjectGallery()">
+          <option value="">All</option>
+          <option>Progress</option><option>Deficiency</option><option>Inspection</option>
+          <option>Safety</option><option>Delivery</option><option>Completion</option>
+        </select>
+        <button class="btn btn-primary" onclick="openPhotoCapture()">+ Photo</button>
+      </div>
     </div>
+    <!-- Gallery grid — scrolls like phone gallery -->
+    <div id="project-gallery-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:3px"></div>
   </div>
 </section>
 
@@ -4303,6 +4306,8 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
+
+
 <script>
 'use strict';
 
@@ -4312,7 +4317,7 @@ const DB = {
   workers: [], timesheets: [], inventory: [],
   suppliers: [], receipts: [], materialOrders: [],
   hazards: [], changeOrders: [], payments: [],
-  documents: [],
+  documents: [], changelog: [], budgetItems: [],
   nextId: 1000,
 };
 
@@ -4904,19 +4909,66 @@ function photoFileSelected(event) {
   };
   reader.readAsDataURL(file);
 }
+function validatePhotoSrc(src) {
+  if (!src) return { valid: false, reason: 'No image data' };
+  if (src.length < 1000) return { valid: false, reason: 'Image too small — may be corrupt' };
+  const validTypes = ['data:image/jpeg','data:image/jpg','data:image/png','data:image/webp','data:image/gif','data:image/heic'];
+  const hasValidType = validTypes.some(t => src.startsWith(t));
+  if (!hasValidType) return { valid: false, reason: 'Unsupported image format' };
+  return { valid: true };
+}
+
+function logChange(action, entity, entityId, details) {
+  if(!DB.changelog) DB.changelog = [];
+  const user = (typeof _currentUser !== 'undefined' && _currentUser) ? _currentUser.name : 'Field User';
+  DB.changelog.push({
+    id:       uid(),
+    action,        // 'ADD_PHOTO' | 'UPDATE_PROJECT' | 'ADD_REPORT' etc.
+    entity,        // 'photo' | 'project' | 'report'
+    entityId,
+    details,
+    user,
+    geo:      currentGeo.display,
+    timestamp: now(),
+    date:     new Date().toISOString(),
+  });
+}
+
 function savePhoto() {
   const finalSrc = annoAnnotatedSrc || annoImageSrc;
+
+  // ── Validate photo ──
+  const validation = validatePhotoSrc(finalSrc);
+  if (!validation.valid) {
+    toast('❌ Photo not saved: ' + validation.reason);
+    return;
+  }
+  // ── Require project ──
+  const projId = document.getElementById('ph-project')?.value;
+  if (!projId) { toast('❌ Select a project before saving photo'); return; }
+
+  // ── Stamp metadata ──
+  const now_ts  = new Date();
+  const dateStr = now_ts.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  const timeStr = now_ts.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
   DB.photos.push({
     id: uid(),
-    projectId:  document.getElementById('ph-project').value,
+    projectId:  projId,
     category:   document.getElementById('ph-category').value,
     caption:    document.getElementById('ph-caption').value.trim(),
     src: finalSrc,
+    // ── Required metadata ──
+    date:       dateStr,
+    time:       timeStr,
     geo:        currentGeo.display,
     lat:        currentGeo.lat, lon: currentGeo.lon,
     weather:    `${currentWeather.icon} ${currentWeather.temp} ${currentWeather.desc}`,
-    timestamp:  now(),
+    timestamp:  `${dateStr} ${timeStr}`,
+    addedBy:    (typeof _currentUser !== 'undefined' && _currentUser) ? _currentUser.name : 'Field User',
+    // ── Flags ──
     hasMarkup:  !!annoAnnotatedSrc,
+    validated:  true,
     itemCount:  _countResults.length ? JSON.parse(JSON.stringify(_countResults)) : null,
   });
   document.getElementById('photo-drop-zone').style.display = '';
@@ -4928,21 +4980,167 @@ function savePhoto() {
   closeModal('modal-photo'); toast('📸 Photo saved'); renderPhotos(); scheduleAutoSave();
 }
 function renderPhotos() {
-  const pFilter   = document.getElementById('photo-project-filter')?.value;
-  const catFilter = document.getElementById('photo-category-filter')?.value;
-  let list = DB.photos.filter(p => (!pFilter||p.projectId===pFilter) && (!catFilter||p.category===catFilter));
-  const grid = document.getElementById('photos-grid');
-  const uploadSlot = `<div class="photo-upload-slot" onclick="openPhotoCapture()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Add Photo</div>`;
-  if (!list.length) { grid.innerHTML = uploadSlot; return; }
-  grid.dataset.filteredIds = JSON.stringify(list.map(p=>p.id));
-  grid.innerHTML = uploadSlot + list.map(p => {
-    const markup = p.hasMarkup ? '<span style="position:absolute;top:6px;right:6px;background:var(--pink);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px">MARKUP</span>' : '';
-    const counted = p.itemCount?.length ? `<span style="position:absolute;top:6px;left:6px;background:var(--green);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px">🔢 ${p.itemCount.reduce((s,i)=>s+i.count,0)}</span>` : '';
-    return `<div class="photo-thumb" onclick="openPhotoViewer('${p.id}')" title="Tap to view">
-      ${p.src?`<img src="${p.src}" alt="${p.caption||'Photo'}" loading="lazy" />`:'<div style="display:flex;align-items:center;justify-content:center;height:100%;background:var(--surface-2);color:var(--text-faint);font-size:var(--text-xs)">No Image</div>'}
-      ${markup}${counted}<div class="photo-thumb-label">${p.caption||'Photo'}</div></div>`;
+  // Always start in albums mode
+  showPhotoAlbums();
+}
+
+function showPhotoAlbums() {
+  document.getElementById('photos-albums-mode').style.display = 'block';
+  document.getElementById('photos-gallery-mode').style.display = 'none';
+
+  const grid = document.getElementById('project-albums-grid');
+  if (!grid) return;
+
+  const projects = DB.projects || [];
+
+  if (!projects.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><h3>No projects yet</h3><p>Create a project to start your photo albums</p></div>';
+    return;
+  }
+
+  // Build album card for each project
+  grid.innerHTML = projects.map(function(p) {
+    const photos = (DB.photos || []).filter(function(ph){ return ph.projectId === p.id; });
+    const latest = photos.filter(function(ph){ return ph.src; }).slice(-1)[0];
+    const count  = photos.length;
+    return '<div data-pid="'+p.id+'" onclick="pbOpenAlbum(this)" style="cursor:pointer;border-radius:14px;overflow:hidden;background:var(--surface-2);border:1px solid var(--divider);transition:transform .2s">'
+      + '<div style="height:130px;position:relative;background:#111;overflow:hidden">'
+      + (latest && latest.src
+          ? '<img src="' + latest.src + '" style="width:100%;height:100%;object-fit:cover" />'
+          : '<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:rgba(255,255,255,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:28px;height:28px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><span style="font-size:11px">No photos</span></div>')
+      + '<div style="position:absolute;bottom:5px;right:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">' + count + ' 📸</div>'
+      + '</div>'
+      + '<div style="padding:9px 11px"><div style="font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + p.name + '</div>'
+      + '<div style="font-size:10px;color:var(--text-muted);margin-top:2px">' + (p.status || '—') + '</div></div>'
+      + '</div>';
   }).join('');
 }
+
+let _currentGalleryProjectId = null;
+
+function openProjectGallery(projectId) {
+  _currentGalleryProjectId = projectId;
+  const proj = (DB.projects || []).find(function(p){ return p.id === projectId; });
+  if (!proj) return;
+
+  document.getElementById('photos-albums-mode').style.display = 'none';
+  document.getElementById('photos-gallery-mode').style.display = 'block';
+
+  const nameEl  = document.getElementById('gallery-project-name');
+  if (nameEl) nameEl.textContent = proj.name;
+
+  // Pre-set the photo capture project
+  const phProj = document.getElementById('ph-project');
+  if (phProj) phProj.value = projectId;
+
+  renderProjectGallery();
+}
+function pbOpenAlbum(el){ openProjectGallery(el.getAttribute('data-pid')); }
+
+
+function closeProjectGallery() {
+  _currentGalleryProjectId = null;
+  document.getElementById('photos-albums-mode').style.display = 'block';
+  document.getElementById('photos-gallery-mode').style.display = 'none';
+}
+
+function renderProjectGallery() {
+  const pid    = _currentGalleryProjectId;
+  const catF   = document.getElementById('gallery-cat-filter')?.value || '';
+  const photos = (DB.photos || []).filter(function(ph){
+    return ph.projectId === pid && (!catF || ph.category === catF);
+  }).reverse(); // newest first
+
+  const countEl = document.getElementById('gallery-photo-count');
+  if (countEl) countEl.textContent = photos.length + ' photo' + (photos.length !== 1 ? 's' : '');
+
+  const grid = document.getElementById('project-gallery-grid');
+  if (!grid) return;
+
+  if (!photos.length) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;padding:48px 20px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:36px;height:36px;margin:0 auto 10px;opacity:.3"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg><h3>No photos yet</h3><p>Tap + Photo to add the first one</p></div>';
+    return;
+  }
+
+  grid.innerHTML = photos.map(function(ph, idx) {
+    return '<div onclick="openPhotoLightbox(' + idx + ')" style="aspect-ratio:1;overflow:hidden;cursor:pointer;position:relative;background:#111">'
+      + (ph.src
+          ? '<img src="' + ph.src + '" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>'
+          : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);font-size:11px">No image</div>')
+      + '<div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.75));padding:6px 5px 4px;display:flex;flex-direction:column;gap:1px">'
+      + '<div style="font-size:9px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (ph.date || '') + '</div>'
+      + '<div style="font-size:8px;color:rgba(255,255,255,.7)">' + (ph.time || ph.timestamp || '') + '</div>'
+      + (ph.geo && ph.geo !== 'Unknown' ? '<div style="font-size:8px;color:#4CAF50;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📍 ' + ph.geo + '</div>' : '')
+      + '</div>'
+      + (ph.hasMarkup ? '<div style="position:absolute;top:4px;right:4px;background:#E91E8C;color:#fff;font-size:8px;font-weight:800;border-radius:4px;padding:1px 5px">MARKUP</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+let _lightboxPhotos = [];
+let _lightboxIdx    = 0;
+
+function openPhotoLightbox(idx) {
+  const pid    = _currentGalleryProjectId;
+  const catF   = document.getElementById('gallery-cat-filter')?.value || '';
+  _lightboxPhotos = (DB.photos || []).filter(function(ph){
+    return ph.projectId === pid && (!catF || ph.category === catF);
+  }).reverse();
+  _lightboxIdx = idx;
+  showLightboxSlide();
+}
+
+function showLightboxSlide() {
+  const ph   = _lightboxPhotos[_lightboxIdx];
+  if (!ph) return;
+  const proj = (DB.projects || []).find(function(p){ return p.id === ph.projectId; });
+
+  let lb = document.getElementById('photo-lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'photo-lightbox';
+    lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;touch-action:none';
+    document.body.appendChild(lb);
+    // Swipe support
+    let touchStartX = 0;
+    lb.addEventListener('touchstart', function(e){ touchStartX = e.touches[0].clientX; });
+    lb.addEventListener('touchend',   function(e){
+      const diff = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) { diff > 0 ? lightboxNext() : lightboxPrev(); }
+    });
+    document.addEventListener('keydown', function(e){
+      if (!document.getElementById('photo-lightbox')) return;
+      if (e.key === 'ArrowLeft')  lightboxPrev();
+      if (e.key === 'ArrowRight') lightboxNext();
+      if (e.key === 'Escape')     closeLightbox();
+    });
+  }
+
+  lb.innerHTML =
+    '<div style="position:absolute;top:12px;right:16px;display:flex;gap:8px;z-index:2">'
+    + '<span style="font-size:12px;color:rgba(255,255,255,.5)">' + (_lightboxIdx+1) + ' / ' + _lightboxPhotos.length + '</span>'
+    + '<button onclick="closeLightbox()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">✕</button>'
+    + '</div>'
+    + (ph.src ? '<img src="' + ph.src + '" style="max-width:100%;max-height:72dvh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.8)"/>' : '<div style="color:rgba(255,255,255,.3);font-size:14px">No image data</div>')
+    + '<div style="margin-top:14px;max-width:500px;width:100%;background:rgba(255,255,255,.06);border-radius:12px;padding:12px 14px">'
+    + '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">' + (ph.caption || 'Field Photo') + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">'
+    + '<div style="font-size:11px;color:#4CAF50">📅 ' + (ph.date || '') + '</div>'
+    + '<div style="font-size:11px;color:#9C27B0">⏱ ' + (ph.time || ph.timestamp || '') + '</div>'
+    + (ph.geo && ph.geo !== 'Unknown' ? '<div style="font-size:11px;color:#4CAF50;grid-column:1/-1">📍 ' + ph.geo + '</div>' : '')
+    + (ph.weather ? '<div style="font-size:11px;color:#03A9F4;grid-column:1/-1">' + ph.weather + '</div>' : '')
+    + (ph.addedBy ? '<div style="font-size:11px;color:rgba(255,255,255,.5)">👷 ' + ph.addedBy + '</div>' : '')
+    + (ph.category ? '<div style="font-size:11px;color:rgba(255,255,255,.5)">' + ph.category + '</div>' : '')
+    + '</div></div>'
+    + '<div style="display:flex;gap:16px;margin-top:14px">'
+    + '<button onclick="lightboxPrev()" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer">‹</button>'
+    + '<button onclick="lightboxNext()" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer">›</button>'
+    + '</div>';
+}
+
+function lightboxPrev(){ if(_lightboxIdx>0){ _lightboxIdx--; showLightboxSlide(); } }
+function lightboxNext(){ if(_lightboxIdx<_lightboxPhotos.length-1){ _lightboxIdx++; showLightboxSlide(); } }
+function closeLightbox(){ document.getElementById('photo-lightbox')?.remove(); }
 
 /* ── PHOTO VIEWER ────────────────────────────────────────── */
 function openPhotoViewer(photoId) {
