@@ -3636,15 +3636,156 @@ function applyRole(role) {
   setTimeout(function() {
     var existing = document.getElementById('user-badge');
     if (existing) existing.remove();
+    var roleInfo = ROLES[role] || ROLES.worker;
+    var name = (_currentUser && _currentUser.name) ? _currentUser.name : 'User';
+    // Get initials (up to 2 chars)
+    var initials = name.split(' ').map(function(n){ return n[0]; }).join('').slice(0,2).toUpperCase();
+    var isLoggedIn = role !== 'guest';
+    var circleColor = isLoggedIn ? '#4CAF50' : '#E91E8C';
+    var circleBorder = isLoggedIn ? 'rgba(76,175,80,.6)' : 'rgba(233,30,140,.6)';
+    var glowColor   = isLoggedIn ? 'rgba(76,175,80,.35)' : 'rgba(233,30,140,.35)';
+
+    // Build badge: floating glass circle bottom-right
     var badge = document.createElement('div');
     badge.id = 'user-badge';
-    badge.style.cssText = 'position:fixed;top:8px;right:8px;z-index:500;display:flex;align-items:center;gap:8px;background:rgba(13,27,13,.9);border:1px solid #243024;border-radius:99px;padding:5px 12px 5px 8px;backdrop-filter:blur(8px)';
-    var roleInfo = ROLES[role] || ROLES.worker;
-    badge.innerHTML = '<span style="font-size:14px">'+roleInfo.badge+'</span>'
-      +'<span style="font-size:12px;font-weight:700;color:#D4E8D4">'+(_currentUser?.name||'User')+'</span>'
-      +'<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;background:'+roleInfo.color+'22;color:'+roleInfo.color+'">'+roleInfo.label+'</span>'
-      +'<button onclick="pbSignOut()" style="background:none;border:none;color:#7A9E7A;font-size:11px;cursor:pointer;margin-left:4px">Sign out</button>';
+    badge.setAttribute('data-open','false');
+    badge.style.cssText = [
+      'position:fixed',
+      'bottom:22px',
+      'right:18px',
+      'z-index:600',
+      'display:flex',
+      'flex-direction:column',
+      'align-items:flex-end',
+      'gap:0',
+      'pointer-events:none',
+    ].join(';');
+
+    // Circle button
+    var circle = document.createElement('button');
+    circle.id = 'user-circle';
+    circle.title = name + ' · ' + roleInfo.label + ' · Tap for options';
+    circle.style.cssText = [
+      'width:48px',
+      'height:48px',
+      'border-radius:50%',
+      'background:' + circleColor + '33',
+      'border:2px solid ' + circleBorder,
+      'color:#fff',
+      'font-size:15px',
+      'font-weight:800',
+      'font-family:Plus Jakarta Sans,system-ui,sans-serif',
+      'cursor:pointer',
+      'pointer-events:all',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'letter-spacing:.02em',
+      'position:relative',
+      'transition:transform .2s,box-shadow .2s',
+      'box-shadow:0 0 18px ' + glowColor + ',0 2px 12px rgba(0,0,0,.4)',
+      'backdrop-filter:blur(20px) saturate(180%)',
+      '-webkit-backdrop-filter:blur(20px) saturate(180%)',
+    ].join(';');
+    circle.innerHTML = '<span style="position:relative;z-index:1;text-shadow:0 1px 3px rgba(0,0,0,.5)">' + initials + '</span>';
+
+    // Glass overlay shimmer inside circle
+    var shimmer = document.createElement('div');
+    shimmer.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'border-radius:50%',
+      'background:linear-gradient(135deg,rgba(255,255,255,.25) 0%,rgba(255,255,255,.05) 50%,transparent 100%)',
+      'pointer-events:none',
+    ].join(';');
+    circle.appendChild(shimmer);
+
+    // Popup panel (hidden by default)
+    var panel = document.createElement('div');
+    panel.id = 'user-panel';
+    panel.style.cssText = [
+      'position:absolute',
+      'bottom:58px',
+      'right:0',
+      'min-width:190px',
+      'border-radius:16px',
+      'padding:14px 16px',
+      'display:none',
+      'flex-direction:column',
+      'gap:10px',
+      'pointer-events:all',
+      'background:rgba(13,27,13,.72)',
+      'border:1px solid rgba(76,175,80,.25)',
+      'backdrop-filter:blur(28px) saturate(200%)',
+      '-webkit-backdrop-filter:blur(28px) saturate(200%)',
+      'box-shadow:0 8px 32px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)',
+    ].join(';');
+
+    // Panel header row
+    var row1 = document.createElement('div');
+    row1.style.cssText = 'display:flex;align-items:center;gap:10px';
+    row1.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;background:' + circleColor + '44;border:1.5px solid ' + circleBorder + ';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;backdrop-filter:blur(10px)">' + initials + '</div>'
+      + '<div><div style="font-size:13px;font-weight:700;color:#D4E8D4">' + name + '</div>'
+      + '<div style="font-size:10px;font-weight:800;color:' + roleInfo.color + ';margin-top:1px">' + roleInfo.badge + ' ' + roleInfo.label + '</div></div>';
+    panel.appendChild(row1);
+
+    // Divider
+    var div = document.createElement('div');
+    div.style.cssText = 'height:1px;background:rgba(255,255,255,.08);margin:0 -4px';
+    panel.appendChild(div);
+
+    // Team button (if admin/owner)
+    if (role === 'owner' || role === 'admin') {
+      var teamBtn = document.createElement('button');
+      teamBtn.onclick = function(){ pbCloseUserPanel(); openTeamManager(); };
+      teamBtn.style.cssText = 'background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);border-radius:10px;color:#A5D6A7;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;align-items:center;gap:8px;transition:background .15s';
+      teamBtn.onmouseenter = function(){ this.style.background='rgba(76,175,80,.22)'; };
+      teamBtn.onmouseleave = function(){ this.style.background='rgba(76,175,80,.12)'; };
+      teamBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Members';
+      panel.appendChild(teamBtn);
+    }
+
+    // Sign out button
+    var signOutBtn = document.createElement('button');
+    signOutBtn.onclick = function(){ pbCloseUserPanel(); pbSignOut(); };
+    signOutBtn.style.cssText = 'background:rgba(233,30,140,.1);border:1px solid rgba(233,30,140,.2);border-radius:10px;color:#F48FB1;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;align-items:center;gap:8px;transition:background .15s';
+    signOutBtn.onmouseenter = function(){ this.style.background='rgba(233,30,140,.2)'; };
+    signOutBtn.onmouseleave = function(){ this.style.background='rgba(233,30,140,.1)'; };
+    signOutBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out';
+    panel.appendChild(signOutBtn);
+
+    badge.appendChild(panel);
+    badge.appendChild(circle);
     document.body.appendChild(badge);
+
+    // Toggle panel on circle click
+    circle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var open = panel.style.display === 'flex';
+      if (open) {
+        pbCloseUserPanel();
+      } else {
+        panel.style.display = 'flex';
+        panel.style.flexDirection = 'column';
+        circle.style.transform = 'scale(1.1)';
+        circle.style.boxShadow = '0 0 28px ' + glowColor + ',0 4px 20px rgba(0,0,0,.5)';
+      }
+    });
+
+    // Close panel when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!badge.contains(e.target)) pbCloseUserPanel();
+    });
+
+    // Pulse animation on load
+    circle.style.animation = 'pbPulse 2s ease-in-out 3';
+    var style = document.getElementById('pb-badge-style');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'pb-badge-style';
+      style.textContent = '@keyframes pbPulse{0%,100%{box-shadow:0 0 18px '+glowColor+',0 2px 12px rgba(0,0,0,.4)}50%{box-shadow:0 0 32px '+circleColor+',0 2px 18px rgba(0,0,0,.5)}}';
+      document.head.appendChild(style);
+    }
   }, 200);
 
   // For client role: hide sidebar, show only client portal
@@ -3821,7 +3962,15 @@ function pbCloseWelcome(btn){ var p=btn.parentElement; while(p&&!p.style.positio
 
 function pbRemoveMember(btn){ removeMember(btn.getAttribute('data-mid')); }
 
+function pbCloseUserPanel(){
+  var panel = document.getElementById('user-panel');
+  var circle = document.getElementById('user-circle');
+  if(panel) panel.style.display='none';
+  if(circle){ circle.style.transform=''; circle.style.animation=''; }
+}
+
 </script>
+
 
 
 <script>
