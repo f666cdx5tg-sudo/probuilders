@@ -215,7 +215,7 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
 }
 .meta-chip svg { width: 12px; height: 12px; flex-shrink: 0; }
-#weather-icon { font-size: 14px; line-height: 1; }
+#weather-icon { font-size: 36px; line-height: 1; }
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -1524,9 +1524,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <svg viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <span id="geo-text" onclick="getLocation()" style="cursor:pointer" title="Tap to retry location">Locating...</span>
       </div>
-      <!-- Line 4: Weather — 16px bold sky blue -->
-      <div class="hi-line" style="font-size:16px;font-weight:800;color:#03A9F4;gap:7px">
-        <span id="weather-icon" style="font-size:18px;line-height:1">🌤</span>
+      <!-- Line 4: Weather — 32px bold sky blue -->
+      <div class="hi-line" style="font-size:32px;font-weight:800;color:#03A9F4;gap:7px">
+        <span id="weather-icon" style="font-size:36px;line-height:1">🌤</span>
         <span id="weather-text" onclick="fetchWeather(currentGeo.lat||40.9474, currentGeo.lon||-73.9935)" style="cursor:pointer" title="Tap to retry weather">Loading...</span>
       </div>
     </div>
