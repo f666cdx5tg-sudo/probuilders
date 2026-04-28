@@ -451,6 +451,18 @@ textarea.fc{resize:vertical;min-height:80px}
       <button class="btn btn-g" onclick="syncWithField()">🔄 Sync Field Data</button>
     </div>
   </div>
+  <!-- Sync status bar -->
+  <div id="sync-status-bar" style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.2);border-radius:var(--r8);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div style="font-size:12px;color:var(--txm)">
+      <strong style="color:var(--g)">💡 Sync options:</strong>
+      <span id="sync-guide-text"> Same browser: open field app in another tab → auto-syncs instantly. &nbsp;|&nbsp; Cross-device (iPhone↔Mac): use <strong>Google Drive</strong> buttons in both apps.</span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-g btn-sm" onclick="syncWithField()">🔄 Sync Now</button>
+      <button class="btn btn-o btn-sm" onclick="gDriveLoad()">☁️ Load from Drive</button>
+      <button class="btn btn-o btn-sm" onclick="gDriveSave()">☁️ Save to Drive</button>
+    </div>
+  </div>
   <div class="kpis">
     <div class="kpi g" onclick="showView('projects')"><div class="kpi-ico">🏗️</div><div class="kpi-lbl">Active Projects</div><div class="kpi-val" id="cmd-active">0</div><div class="kpi-meta">Tap to manage</div></div>
     <div class="kpi g" onclick="showView('invoices')"><div class="kpi-ico">💰</div><div class="kpi-lbl">Total Contract</div><div class="kpi-val" id="cmd-contract" style="font-size:18px;color:var(--ok)">$0</div></div>
@@ -1785,6 +1797,7 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
+
 <script>
 'use strict';
 /* ── STATE ── */
@@ -1927,17 +1940,35 @@ function initBroadcast(){
   } catch(e){ console.warn('BroadcastChannel not supported'); }
 }
 window.addEventListener('storage', e => {
-  if(e.key !== LS_KEY || !e.newValue) return;
+  if(e.key !== pbGetLSKey() || !e.newValue) return;
   try { const data = JSON.parse(e.newValue); Object.keys(DB).forEach(k=>{ if(data[k]!==undefined) DB[k]=data[k]; }); refreshAll(); } catch(e){}
 });
 function syncWithField(){
+  // 1. Ping via BroadcastChannel (same browser, instant)
   if(_bc) try { _bc.postMessage({type:'PING', source:'desktop'}); } catch(e){}
+
+  // 2. Read from localStorage (same browser — field app must be open in another tab)
+  const key = pbGetLSKey();
   const before = JSON.stringify(DB);
-  if(loadFromLocal()){
-    if(JSON.stringify(DB) !== before){ toast('🔄 Field data synced'); refreshAll(); }
-    else toast('✅ Already up to date');
-    setSaveStatus('saved');
-  } else toast('No field data found');
+  try {
+    const raw = localStorage.getItem(key);
+    if(raw){
+      const data = JSON.parse(raw);
+      Object.keys(DB).forEach(k => { if(data[k] !== undefined) DB[k] = data[k]; });
+      if(JSON.stringify(DB) !== before){
+        setSaveStatus('saved');
+        refreshAll();
+        toast('✅ Synced from field app');
+      } else {
+        toast('✅ Already up to date');
+      }
+    } else {
+      // No data under workspace key
+      toast('⚠️ No field data found — both apps must use the same workspace code, OR use Google Drive to sync across devices');
+    }
+  } catch(e){
+    toast('❌ Sync error: '+e.message);
+  }
 }
 setInterval(() => { loadFromLocal(); refreshSidebadges(); }, 30000);
 
