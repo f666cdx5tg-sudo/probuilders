@@ -3585,7 +3585,16 @@ function signIn() {
   if (!code||!name||!pin) { if(err) err.textContent='All fields required.'; return; }
 
   var ws = getWorkspace(code);
-  if (!ws) { if(err) err.textContent='Workspace not found. Check the code.'; return; }
+  if (!ws) {
+    if(err) err.textContent='Workspace "'+code+'" not on this device yet. Use the "Join Team" tab to register on a new device.';
+    // Auto-switch to Join tab
+    if(typeof authTab==='function') authTab('join');
+    var jo = document.getElementById('jo-code');
+    if(jo) jo.value = code;
+    var jn = document.getElementById('jo-name');
+    if(jn) { jn.value = name; jn.focus(); }
+    return;
+  }
 
   // Find matching member
   // Match by PIN first, then verify name loosely
@@ -4340,6 +4349,7 @@ function _showPostLoginSwitcher(role, name) {
 function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); if(m)m.remove(); }
 
 </script>
+
 
 
 
