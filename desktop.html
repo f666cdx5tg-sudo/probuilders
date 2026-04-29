@@ -1166,39 +1166,83 @@ function createWorkspace() {
 }
 
 function joinWorkspace() {
-  var code = (document.getElementById('jo-code')?.value||'').trim().toUpperCase();
-  var name = (document.getElementById('jo-name')?.value||'').trim();
-  var pin  = (document.getElementById('jo-pin')?.value||'').trim();
+  var code = ((document.getElementById('jo-code')?.value)||'').trim().toUpperCase();
+  var name = ((document.getElementById('jo-name')?.value)||'').trim();
+  var pin  = ((document.getElementById('jo-pin')?.value)||'').trim();
   var err  = document.getElementById('jo-error');
-  if (!code||!name||!pin) { if(err) err.textContent='All fields required.'; return; }
+
+  if (!code) { if(err) err.textContent='Enter the workspace code.'; return; }
+  if (!name) { if(err) err.textContent='Enter your name.'; return; }
+
+  // Clear any old error
+  if(err) err.textContent = '';
 
   var ws = getWorkspace(code);
-  if (!ws) { if(err) err.textContent='Workspace not found. Get the code from your admin.'; return; }
 
-  var member = ws.members.find(function(m){ return m.pin===pin; });
-  if (!member) { if(err) err.textContent='PIN not found. Ask your admin to add you first.'; return; }
-
-  if (member.name.toLowerCase() !== name.toLowerCase()) {
-    if(err) err.textContent='Name does not match. Ask your admin what name was used.'; return;
+  if (!ws) {
+    // ── NEW DEVICE: workspace not in this device's storage ──
+    // Register it locally — data syncs later via cloud
+    var newMember = {
+      id:      code + '_' + Date.now(),
+      name:    name,
+      role:    'worker',
+      pin:     pin || '0000',
+      created: new Date().toLocaleString()
+    };
+    var newWs = {
+      id:        code,
+      name:      'Workspace ' + code,
+      color:     '#4CAF50',
+      created:   new Date().toLocaleString(),
+      members:   [newMember],
+      _newDevice: true
+    };
+    saveWorkspace(newWs);
+    _currentWorkspace = newWs;
+    _currentUser      = { name: name, role: 'worker', pin: pin||'0000' };
+    localStorage.setItem(WS_KEY, code);
+    localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
+    window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+    document.getElementById('pb-auth-screen')?.remove();
+    applyRole('worker');
+    if (typeof loadFromLocal === 'function') loadFromLocal();
+    if (typeof refreshAll   === 'function') refreshAll();
+    else if (typeof refreshHome === 'function') refreshHome();
+    setTimeout(function(){
+      if (typeof toast === 'function')
+        toast('✅ Joined workspace ' + code + ' — pull from cloud to sync project data');
+    }, 800);
+    return;
   }
 
+  // ── Workspace found locally ──
+  // Try to find member by PIN, then by name, then add them
+  var member = null;
+  if (pin) member = ws.members.find(function(m){ return m.pin === pin; });
+  if (!member) member = ws.members.find(function(m){ return m.name.toLowerCase() === name.toLowerCase(); });
+  if (!member) {
+    // Auto-add as worker
+    member = { id: code+'_'+Date.now(), name: name, role: 'worker',
+               pin: pin||'0000', created: new Date().toLocaleString() };
+    ws.members.push(member);
+    saveWorkspace(ws);
+  }
+
+  // Update name if different
+  if (name && name !== member.name) { member.name = name; saveWorkspace(ws); }
+
   _currentWorkspace = ws;
-  _currentUser = { name:member.name, role:member.role, pin };
+  _currentUser      = { name: name||member.name, role: member.role, pin: member.pin };
   localStorage.setItem(WS_KEY, code);
-  localStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
+  localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
   window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
 
   document.getElementById('pb-auth-screen')?.remove();
   applyRole(member.role);
-  // Show app switcher for admin/owner after login
-  if(member.role === 'owner' || member.role === 'admin'){
-    _showPostLoginSwitcher(member.role, member.name);
-  }
-  if (typeof loadFromLocal === 'function') {
-    loadFromLocal();
-    if (typeof refreshAll === 'function') refreshAll();
-    else if (typeof refreshHome === 'function') refreshHome();
-  }
+  if (typeof loadFromLocal === 'function') loadFromLocal();
+  if (typeof refreshAll   === 'function') refreshAll();
+  else if (typeof refreshHome === 'function') refreshHome();
+  if (typeof toast === 'function') toast('👋 Welcome, ' + (name||member.name) + '!');
 }
 
 function showWorkspaceCode(wsId, wsName) {
@@ -1850,6 +1894,7 @@ function _showPostLoginSwitcher(role, name) {
 function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); if(m)m.remove(); }
 
 </script>
+
 
 
 
