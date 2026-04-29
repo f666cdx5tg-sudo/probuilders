@@ -421,6 +421,8 @@ textarea.fc{resize:vertical;min-height:80px}
       <div class="save-chip" id="save-chip" onclick="autoSaveNow()">⏳ Not saved</div>
       <button class="ni w100" style="margin-top:4px" onclick="exportData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Backup JSON</button>
       <button class="ni w100" onclick="importData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Restore JSON</button>
+      <button class="ni w100" onclick="pbGistPush()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>Push to Cloud ☁️</button>
+      <button class="ni w100" onclick="pbGistPull()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="8 16 12 20 16 16"/><line x1="12" y1="12" x2="12" y2="20"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>Pull from Cloud ☁️</button>
       <button class="ni w100" onclick="gDriveSave()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Save to Drive</button>
       <button class="ni w100" onclick="gDriveLoad()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Load from Drive</button>
     </div>
@@ -451,16 +453,23 @@ textarea.fc{resize:vertical;min-height:80px}
       <button class="btn btn-g" onclick="syncWithField()">🔄 Sync Field Data</button>
     </div>
   </div>
-  <!-- Sync status bar -->
-  <div id="sync-status-bar" style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.2);border-radius:var(--r8);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-    <div style="font-size:12px;color:var(--txm)">
-      <strong style="color:var(--g)">💡 Sync options:</strong>
-      <span id="sync-guide-text"> Same browser: open field app in another tab → auto-syncs instantly. &nbsp;|&nbsp; Cross-device (iPhone↔Mac): use <strong>Google Drive</strong> buttons in both apps.</span>
+  <!-- Sync bar -->
+  <div style="background:rgba(76,175,80,.07);border:1px solid rgba(76,175,80,.18);border-radius:var(--r12);padding:12px 16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--g)">☁️ Cross-Device Sync</div>
+        <div class="pb-sync-status" style="font-size:11px;color:var(--txm);margin-top:2px">Not synced yet</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-g btn-sm" onclick="pbGistPull()" title="Pull field data from GitHub Gist">⬇ Pull from Cloud</button>
+        <button class="btn btn-o btn-sm" onclick="pbGistPush()" title="Push desktop data to GitHub Gist">⬆ Push to Cloud</button>
+        <button class="btn btn-o btn-sm" onclick="pbPasteSync()" title="Paste sync data copied from field app">📥 Paste Data</button>
+        <button class="btn btn-o btn-sm" onclick="syncWithField()" title="Same-browser sync">🔄 Same Browser</button>
+      </div>
     </div>
-    <div style="display:flex;gap:6px">
-      <button class="btn btn-g btn-sm" onclick="syncWithField()">🔄 Sync Now</button>
-      <button class="btn btn-o btn-sm" onclick="gDriveLoad()">☁️ Load from Drive</button>
-      <button class="btn btn-o btn-sm" onclick="gDriveSave()">☁️ Save to Drive</button>
+    <div style="margin-top:8px;font-size:11px;color:var(--txf)">
+      <strong style="color:var(--txm)">iPhone↔Mac:</strong> Tap "Push to Cloud" on field app → "Pull from Cloud" here. First time: enter your GitHub token (free). &nbsp;|&nbsp;
+      <strong style="color:var(--txm)">Same Mac:</strong> Open field app in another tab → click "Same Browser".
     </div>
   </div>
   <div class="kpis">
@@ -873,7 +882,7 @@ function pbAuthInit() {
     if (ws) {
       _currentWorkspace = ws;
       // Restore last user session
-      const savedUser = sessionStorage.getItem('pb_user_' + savedWsId);
+      const savedUser = localStorage.getItem('pb_user_' + savedWsId);
       if (savedUser) {
         try { _currentUser = JSON.parse(savedUser); } catch(e){}
       }
@@ -1052,7 +1061,7 @@ function signIn() {
   _currentWorkspace = ws;
   _currentUser      = { name:member.name, role:member.role, pin };
   localStorage.setItem(WS_KEY, code);
-  sessionStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
+  localStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
 
   // Set DB_KEY to workspace-scoped key
   window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
@@ -1090,7 +1099,7 @@ function createWorkspace() {
   _currentWorkspace = ws;
   _currentUser = { name:owner, role:'owner', pin };
   localStorage.setItem(WS_KEY, wsId);
-  sessionStorage.setItem('pb_user_'+wsId, JSON.stringify(_currentUser));
+  localStorage.setItem('pb_user_'+wsId, JSON.stringify(_currentUser));
   window._WS_LS_KEY = DB_KEY_PFX + '_' + wsId;
 
   document.getElementById('pb-auth-screen')?.remove();
@@ -1122,7 +1131,7 @@ function joinWorkspace() {
   _currentWorkspace = ws;
   _currentUser = { name:member.name, role:member.role, pin };
   localStorage.setItem(WS_KEY, code);
-  sessionStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
+  localStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
   window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
 
   document.getElementById('pb-auth-screen')?.remove();
@@ -1790,6 +1799,1424 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
+<script>
+
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS CROSS-DEVICE SYNC ENGINE v2
+   
+   Method 1: GitHub Gist (free, automatic, reliable)
+   Method 2: Copy/Paste JSON (zero setup, works everywhere)
+   Method 3: Google Drive (existing)
+══════════════════════════════════════════════════════════════ */
+
+var _syncGistId    = null;   // stored per workspace
+var _syncGithubToken = null; // stored per workspace
+var _lastSyncTime  = null;
+
+/* ── Gist storage helpers ── */
+function pbSyncGetSettings() {
+  var ws = _currentWorkspace;
+  if (!ws) return {};
+  try {
+    var raw = localStorage.getItem('pb_sync_' + ws.id);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+function pbSyncSaveSettings(obj) {
+  var ws = _currentWorkspace;
+  if (!ws) return;
+  try {
+    var cur = pbSyncGetSettings();
+    localStorage.setItem('pb_sync_' + ws.id, JSON.stringify(Object.assign(cur, obj)));
+  } catch(e) {}
+}
+
+/* ══ METHOD 1: GITHUB GIST SYNC ══════════════════════════════ */
+async function pbGistPush() {
+  var settings = pbSyncGetSettings();
+  var token    = settings.githubToken;
+  if (!token) { openGithubTokenSetup('push'); return; }
+
+  var ws = _currentWorkspace;
+  var gistDesc = 'ProBuilders-Sync-' + (ws ? ws.id : 'default');
+  var payload  = {
+    description: gistDesc,
+    public: false,
+    files: {
+      'probuilders_data.json': {
+        content: JSON.stringify({
+          db:        (typeof DB !== 'undefined' ? DB : {}),
+          workspace: ws ? ws.id : '',
+          pushedAt:  new Date().toISOString(),
+          pushedBy:  _currentUser ? _currentUser.name : 'Unknown',
+        })
+      }
+    }
+  };
+
+  var gistId = settings.gistId;
+
+  try {
+    var method  = gistId ? 'PATCH' : 'POST';
+    var url     = gistId
+      ? 'https://api.github.com/gists/' + gistId
+      : 'https://api.github.com/gists';
+
+    var res  = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': 'token ' + token,
+        'Content-Type':  'application/json',
+        'Accept':        'application/vnd.github.v3+json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        pbSyncSaveSettings({ githubToken: null, gistId: null });
+        if(typeof toast==='function') toast('❌ GitHub token invalid — please re-enter it');
+        openGithubTokenSetup('push');
+        return;
+      }
+      throw new Error('HTTP ' + res.status);
+    }
+
+    var data = await res.json();
+    pbSyncSaveSettings({ gistId: data.id });
+    _lastSyncTime = new Date().toLocaleTimeString();
+    if(typeof toast==='function') toast('✅ Synced to GitHub — ' + _lastSyncTime);
+    pbUpdateSyncStatus('pushed');
+  } catch(e) {
+    if(typeof toast==='function') toast('❌ Gist sync failed: ' + e.message);
+    console.error('Gist push error:', e);
+  }
+}
+
+async function pbGistPull() {
+  var settings = pbSyncGetSettings();
+  var token    = settings.githubToken;
+  if (!token) { openGithubTokenSetup('pull'); return; }
+
+  var gistId = settings.gistId;
+  if (!gistId) {
+    if(typeof toast==='function') toast('⚠️ No gist found — push data from the field app first');
+    return;
+  }
+
+  try {
+    var res = await fetch('https://api.github.com/gists/' + gistId, {
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept':        'application/vnd.github.v3+json',
+      }
+    });
+    if (!res.ok) {
+      if (res.status === 401) { pbSyncSaveSettings({githubToken:null}); if(typeof toast==='function') toast('❌ Token invalid'); openGithubTokenSetup('pull'); return; }
+      throw new Error('HTTP ' + res.status);
+    }
+    var gist   = await res.json();
+    var content = gist.files['probuilders_data.json']?.content;
+    if (!content) throw new Error('No data in gist');
+
+    var parsed  = JSON.parse(content);
+    var incoming = parsed.db || parsed;
+
+    // Merge — never delete existing records
+    if (typeof DB !== 'undefined') {
+      ['projects','tasks','photos','reports','workers','timesheets',
+       'inventory','suppliers','receipts','materialOrders','hazards',
+       'changeOrders','payments','documents','changelog','budgetItems'].forEach(function(k) {
+        if (!incoming[k]) return;
+        if (!DB[k]) { DB[k] = incoming[k]; return; }
+        // Merge by ID — add new items, keep existing
+        var existingIds = new Set(DB[k].map(function(x){ return x.id; }));
+        incoming[k].forEach(function(item) {
+          if (!existingIds.has(item.id)) {
+            DB[k].push(item);
+          }
+        });
+        if (incoming.nextId > DB.nextId) DB.nextId = incoming.nextId;
+      });
+
+      if(typeof saveToLocal === 'function') saveToLocal();
+      if(typeof refreshAll === 'function') refreshAll();
+      else if(typeof refreshHome === 'function') refreshHome();
+    }
+
+    _lastSyncTime = new Date().toLocaleTimeString();
+    if(typeof toast==='function') toast('✅ Pulled from GitHub — ' + _lastSyncTime + ' · by ' + (parsed.pushedBy||'field'));
+    pbUpdateSyncStatus('pulled');
+  } catch(e) {
+    if(typeof toast==='function') toast('❌ Pull failed: ' + e.message);
+    console.error('Gist pull error:', e);
+  }
+}
+
+function openGithubTokenSetup(action) {
+  var existing = document.getElementById('pb-gist-setup');
+  if (existing) existing.remove();
+
+  window._pbGistAction = action;
+  var mo = document.createElement('div');
+  mo.id  = 'pb-gist-setup';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
+
+  mo.innerHTML =
+    '<div style="background:#1B261B;border-radius:18px;padding:26px 24px;max-width:500px;width:100%;border:1px solid #243024">'
+    + '<div style="font-size:20px;font-weight:800;color:#4CAF50;margin-bottom:4px">🔗 GitHub Gist Sync Setup</div>'
+    + '<div style="font-size:13px;color:#7A9E7A;margin-bottom:20px;line-height:1.5">One-time setup. Your data syncs automatically between iPhone and Mac — for free, using your existing GitHub account.</div>'
+    + '<div style="background:#162016;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.8;color:#7A9E7A">'
+    + '<strong style="color:#D4E8D4">Step 1:</strong> Go to <a href="https://github.com/settings/tokens/new" target="_blank" style="color:#4CAF50">github.com/settings/tokens/new</a><br>'
+    + '<strong style="color:#D4E8D4">Step 2:</strong> Set name: <code style="background:#243024;padding:1px 6px;border-radius:4px">ProBuilders Sync</code><br>'
+    + '<strong style="color:#D4E8D4">Step 3:</strong> Set expiration: <code style="background:#243024;padding:1px 6px;border-radius:4px">No expiration</code><br>'
+    + '<strong style="color:#D4E8D4">Step 4:</strong> Check only: <code style="background:#243024;padding:1px 6px;border-radius:4px">✅ gist</code><br>'
+    + '<strong style="color:#D4E8D4">Step 5:</strong> Click Generate token → copy it → paste below'
+    + '</div>'
+    + '<div style="margin-bottom:14px">'
+    + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7A9E7A;margin-bottom:6px">Paste your GitHub Token</div>'
+    + '<input id="pb-gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx..." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#0D1B0D;color:#D4E8D4;font-size:14px;font-family:monospace;box-sizing:border-box"/>'
+    + '</div>'
+    + '<div style="display:flex;gap:10px">'
+    + '<button onclick="pbCloseGistSetup()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    + '<button id="pb-gist-save-btn" onclick="pbSaveGithubTokenBtn()" style="flex:2;padding:11px;border-radius:10px;border:none;background:#4CAF50;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Save & Sync Now</button>'
+    + '</div>'
+    + '<div style="font-size:11px;color:#3A5A3A;margin-top:12px;text-align:center">Token is stored only on this device. Never shared with anyone.</div>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+  setTimeout(function(){ var inp=document.getElementById('pb-gh-token-input'); if(inp)inp.focus(); }, 100);
+}
+
+function pbSaveGithubToken(action) {
+  var token = document.getElementById('pb-gh-token-input')?.value?.trim();
+  if (!token || !token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+    if(typeof toast==='function') toast('❌ Paste a valid GitHub token (starts with ghp_ or github_pat_)');
+    return;
+  }
+  pbSyncSaveSettings({ githubToken: token });
+  document.getElementById('pb-gist-setup')?.remove();
+  if(typeof toast==='function') toast('✅ Token saved — syncing now...');
+  if (action === 'push') pbGistPush();
+  else pbGistPull();
+}
+
+/* ══ METHOD 2: CLIPBOARD SYNC ═════════════════════════════════ */
+async function pbCopySync() {
+  try {
+    var payload = JSON.stringify({
+      db:       (typeof DB !== 'undefined' ? DB : {}),
+      syncedAt: new Date().toISOString(),
+      by:       _currentUser ? _currentUser.name : 'Field',
+      ws:       _currentWorkspace ? _currentWorkspace.id : '',
+    });
+    await navigator.clipboard.writeText(payload);
+    if(typeof toast==='function') toast('📋 Data copied to clipboard — paste it in the other app');
+  } catch(e) {
+    // Fallback: show in a textarea
+    pbShowCopyFallback();
+  }
+}
+
+function pbShowCopyFallback() {
+  var mo = document.createElement('div');
+  mo.id = 'pb-copy-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
+  var data = JSON.stringify({db:typeof DB!=='undefined'?DB:{},syncedAt:new Date().toISOString()});
+  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:22px;max-width:480px;width:100%">'
+    +'<div style="font-size:16px;font-weight:800;color:#4CAF50;margin-bottom:10px">📋 Copy Sync Data</div>'
+    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:10px">Select all text below and copy (⌘A then ⌘C on Mac, tap & hold on iPhone):</div>'
+    +'<textarea readonly style="width:100%;height:120px;background:#0D1B0D;border:1px solid #243024;border-radius:8px;color:#4CAF50;font-family:monospace;font-size:10px;padding:10px;box-sizing:border-box;resize:none" onclick="this.select()">'+data+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button onclick="pbCloseCopyModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+  setTimeout(function(){ var ta=mo.querySelector('textarea'); if(ta)ta.select(); }, 100);
+}
+
+async function pbPasteSync() {
+  try {
+    var text = await navigator.clipboard.readText();
+    pbImportSyncData(text);
+  } catch(e) {
+    // Fallback: show paste dialog
+    pbShowPasteDialog();
+  }
+}
+
+function pbShowPasteDialog() {
+  var mo = document.createElement('div');
+  mo.id = 'pb-paste-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
+  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:22px;max-width:480px;width:100%">'
+    +'<div style="font-size:16px;font-weight:800;color:#E91E8C;margin-bottom:10px">📥 Paste Sync Data</div>'
+    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:10px">Paste the data you copied from the other device:</div>'
+    +'<textarea id="pb-paste-input" style="width:100%;height:120px;background:#0D1B0D;border:1px solid #243024;border-radius:8px;color:#4CAF50;font-family:monospace;font-size:10px;padding:10px;box-sizing:border-box;resize:none" placeholder="Paste sync data here..."></textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button onclick="pbClosePasteModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<button onclick="pbPasteAndClose()" style="flex:2;padding:10px;border-radius:8px;border:none;background:#E91E8C;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Import Data</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+  setTimeout(function(){ var inp=document.getElementById('pb-paste-input'); if(inp)inp.focus(); }, 100);
+}
+
+function pbImportSyncData(text) {
+  try {
+    var parsed   = JSON.parse(text);
+    var incoming = parsed.db || parsed;
+    if (!incoming || typeof incoming !== 'object') throw new Error('Invalid data format');
+
+    var keys = ['projects','tasks','photos','reports','workers','timesheets',
+                 'inventory','suppliers','receipts','materialOrders','hazards',
+                 'changeOrders','payments','documents','changelog','budgetItems'];
+
+    if (typeof DB !== 'undefined') {
+      keys.forEach(function(k) {
+        if (!incoming[k]) return;
+        if (!DB[k]) { DB[k] = incoming[k]; return; }
+        var existingIds = new Set(DB[k].map(function(x){ return x.id; }));
+        incoming[k].forEach(function(item) {
+          if (!existingIds.has(item.id)) DB[k].push(item);
+        });
+      });
+      if (incoming.nextId > DB.nextId) DB.nextId = incoming.nextId;
+
+      if (typeof saveToLocal === 'function') saveToLocal();
+      if (typeof refreshAll === 'function') refreshAll();
+      else if (typeof refreshHome === 'function') refreshHome();
+      if(typeof toast==='function') toast('✅ Data merged — ' + (incoming.projects||[]).length + ' projects, ' + (incoming.photos||[]).length + ' photos imported');
+    }
+  } catch(e) {
+    if(typeof toast==='function') toast('❌ Import failed: ' + e.message);
+    console.error('Import error:', e);
+  }
+}
+
+/* ── Sync status indicator ── */
+function pbUpdateSyncStatus(action) {
+  var els = document.querySelectorAll('.pb-sync-status');
+  els.forEach(function(el) {
+    el.textContent = action === 'pushed' ? '✅ Pushed ' + _lastSyncTime : '✅ Pulled ' + _lastSyncTime;
+    el.style.color = '#4CAF50';
+    setTimeout(function(){ el.textContent = 'Last sync: ' + _lastSyncTime; }, 5000);
+  });
+}
+
+/* ── Auto sync every 2 minutes if token is set ── */
+function pbAutoSyncStart() {
+  var settings = pbSyncGetSettings();
+  if (!settings.githubToken) return;
+  setInterval(function() {
+    var settings2 = pbSyncGetSettings();
+    if (settings2.githubToken && settings2.gistId) {
+      pbGistPull();
+    }
+  }, 120000); // every 2 minutes
+}
+
+function pbCloseGistSetup()  { var m=document.getElementById('pb-gist-setup');  if(m)m.remove(); }
+function pbCloseCopyModal()  { var m=document.getElementById('pb-copy-modal');   if(m)m.remove(); }
+function pbClosePasteModal() { var m=document.getElementById('pb-paste-modal');  if(m)m.remove(); }
+
+function pbPasteAndClose(){
+  var inp=document.getElementById('pb-paste-input');
+  if(inp) pbImportSyncData(inp.value);
+  pbClosePasteModal();
+}
+
+function pbSaveGithubTokenBtn(){ pbSaveGithubToken(window._pbGistAction || 'push'); }
+
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS PROJECT LIFECYCLE ENGINE
+   
+   Stages: DRAFT → ESTIMATE → PENDING_APPROVAL → APPROVED → 
+           MATERIALS_TAKEOFF → MATERIALS_ORDERED → IN_PROGRESS → 
+           INSPECTION → COMPLETED
+══════════════════════════════════════════════════════════════ */
+
+/* ── Standard task template (always auto-generated) ── */
+const STANDARD_TASKS = [
+  { key:'materials_on_site',  label:'Materials On Site',         required_items:['Garbage bags','Broom & dust pan','Mop','Vacuum','Duct tape','Drop cloths'], photo:true, category:'pre_work'  },
+  { key:'area_cleared',       label:'Area Cleared & Prepped',    photo:true,  category:'pre_work'  },
+  { key:'work_protection',    label:'Work Area Protected',        photo:true,  category:'pre_work'  },
+  { key:'demo',               label:'Demolition Complete',        photo:true,  category:'work'      },
+  { key:'debris_removed',     label:'Debris Removed from Area',   photo:true,  category:'work'      },
+  { key:'workers_assigned',   label:'Workers Assigned & On Site', photo:false, category:'work'      },
+  { key:'trade_work',         label:'Trade Work In Progress',     photo:true,  category:'work'      },
+  { key:'test_inspection',    label:'Test & Inspection Passed',   photo:true,  category:'finish'    },
+  { key:'area_condition',     label:'Area Left in Good Condition',photo:true,  category:'finish'    },
+];
+
+/* ── Project stage config ── */
+const STAGES = {
+  DRAFT:             { label:'Draft',             color:'#9E9E9E', icon:'📝', next:'ESTIMATE'            },
+  ESTIMATE:          { label:'Estimate Ready',    color:'#FF9800', icon:'💰', next:'PENDING_APPROVAL'    },
+  PENDING_APPROVAL:  { label:'Pending Approval',  color:'#9C27B0', icon:'⏳', next:'APPROVED'            },
+  APPROVED:          { label:'Approved',          color:'#2196F3', icon:'✅', next:'MATERIALS_TAKEOFF'   },
+  MATERIALS_TAKEOFF: { label:'Materials Takeoff', color:'#FF5722', icon:'📋', next:'MATERIALS_ORDERED'   },
+  MATERIALS_ORDERED: { label:'Materials Ordered', color:'#FF9800', icon:'🚛', next:'IN_PROGRESS'         },
+  IN_PROGRESS:       { label:'In Progress',       color:'#4CAF50', icon:'🔨', next:'INSPECTION'          },
+  INSPECTION:        { label:'Inspection',        color:'#00BCD4', icon:'🔍', next:'COMPLETED'           },
+  COMPLETED:         { label:'Completed',         color:'#4CAF50', icon:'🏁', next:null                  },
+};
+
+/* ──────────────────────────────────────────────────────────
+   ESTIMATE BUILDER
+────────────────────────────────────────────────────────── */
+function openEstimateBuilder(projId) {
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+  if(!DB.estimates) DB.estimates=[];
+  let est = DB.estimates.find(e=>e.projectId===projId) || null;
+
+  const mo = document.createElement('div');
+  mo.id = 'estimate-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;overflow-y:auto;font-family:inherit;padding:20px;display:flex;align-items:flex-start;justify-content:center';
+
+  const lineItems = est?.lineItems || [];
+
+  mo.innerHTML = `
+    <div style="background:var(--surface-1);border-radius:16px;padding:22px;max-width:640px;width:100%;margin:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:17px;font-weight:800">💰 Estimate Builder</div>
+          <div style="font-size:12px;color:var(--text-muted)">${proj.name}</div>
+        </div>
+        <button onclick="document.getElementById('estimate-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
+      </div>
+
+      <!-- Client info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Client</div>
+          <input class="form-control" id="est-client" value="${proj.client||''}" placeholder="Client name"/></div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Date</div>
+          <input class="form-control" type="date" id="est-date" value="${new Date().toISOString().slice(0,10)}"/></div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Scope of Work</div>
+          <textarea class="form-control" id="est-scope" rows="3" placeholder="Describe the full scope of work...">${est?.scope||''}</textarea></div>
+      </div>
+
+      <!-- Line items -->
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Line Items</div>
+      <div id="est-lines" style="margin-bottom:10px">
+        ${lineItems.map((item,i)=>`
+        <div id="est-line-${i}" style="display:grid;grid-template-columns:1fr 80px 90px 32px;gap:6px;align-items:center;margin-bottom:6px">
+          <input class="form-control" style="font-size:12px" placeholder="Description" value="${item.desc||''}" id="est-desc-${i}"/>
+          <input class="form-control" type="number" style="font-size:12px" placeholder="Qty" value="${item.qty||1}" id="est-qty-${i}" min="0" step="0.5"/>
+          <input class="form-control" type="number" style="font-size:12px" placeholder="Unit $" value="${item.rate||0}" id="est-rate-${i}" min="0" step="0.01" oninput="calcEstTotal()"/>
+          <button onclick="removeEstLine(${i})" style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;color:var(--error);font-size:14px;cursor:pointer;width:32px;height:32px">✕</button>
+        </div>`).join('')}
+      </div>
+      <button onclick="addEstLine()" style="width:100%;padding:9px;border-radius:10px;border:2px dashed var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">+ Add Line Item</button>
+
+      <!-- Totals -->
+      <div style="background:var(--surface-2);border-radius:12px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:var(--text-muted)">Subtotal</span><span id="est-subtotal">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:6px">
+          <span style="color:var(--text-muted)">Tax %</span>
+          <input type="number" id="est-tax" value="${est?.tax||0}" min="0" max="100" step="0.5" style="width:60px;padding:4px 8px;border-radius:6px;border:1px solid var(--divider);background:var(--surface-1);color:var(--text);font-size:12px;text-align:right" oninput="calcEstTotal()"/>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;border-top:1px solid var(--divider);padding-top:8px;margin-top:4px">
+          <span>TOTAL</span><span id="est-total" style="color:var(--success)">$0.00</span>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Terms & Notes</div>
+        <textarea class="form-control" id="est-notes" rows="2" placeholder="Payment terms, warranty, exclusions...">${est?.notes||'Payment due within 30 days. All work guaranteed for 1 year.'}</textarea>
+      </div>
+
+      <!-- Photo attachments -->
+      <div id="est-photos-section" style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Photos & Measurements</div>
+        <div id="est-photos-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
+          ${(est?.photos||[]).map(src=>`<img src="${src}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--divider)"/>`).join('')}
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px dashed var(--divider);cursor:pointer;font-size:12px;color:var(--text-muted)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Add Photo/Measurement
+          <input type="file" accept="image/*" multiple style="display:none" onchange="addEstPhoto(this)"/>
+        </label>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="document.getElementById('estimate-modal').remove()" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;min-width:100px">Cancel</button>
+        <button onclick="saveEstimate('${projId}','draft')" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--surface-2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;min-width:100px">💾 Save Draft</button>
+        <button onclick="saveEstimate('${projId}','send')" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--success);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;min-width:140px">📤 Send for Approval</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(mo);
+  calcEstTotal();
+}
+
+let _estPhotoSrcs = [];
+function addEstPhoto(input) {
+  Array.from(input.files).forEach(file => {
+    const r = new FileReader();
+    r.onload = e => {
+      _estPhotoSrcs.push(e.target.result);
+      const grid = document.getElementById('est-photos-grid');
+      if(grid){
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--divider)';
+        grid.appendChild(img);
+      }
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+let _estLineCount = 0;
+function addEstLine() {
+  _estLineCount++;
+  const n = document.querySelectorAll('[id^="est-line-"]').length;
+  const container = document.getElementById('est-lines');
+  if(!container) return;
+  const div = document.createElement('div');
+  div.id = `est-line-${n}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 80px 90px 32px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML = `
+    <input class="form-control" style="font-size:12px" placeholder="Description" id="est-desc-${n}"/>
+    <input class="form-control" type="number" style="font-size:12px" placeholder="Qty" value="1" id="est-qty-${n}" min="0" step="0.5"/>
+    <input class="form-control" type="number" style="font-size:12px" placeholder="Unit $" value="0" id="est-rate-${n}" min="0" step="0.01" oninput="calcEstTotal()"/>
+    <button onclick="removeEstLine(${n})" style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;color:var(--error);font-size:14px;cursor:pointer;width:32px;height:32px">✕</button>`;
+  container.appendChild(div);
+}
+
+function removeEstLine(n) {
+  document.getElementById('est-line-'+n)?.remove();
+  calcEstTotal();
+}
+
+function calcEstTotal() {
+  let sub = 0;
+  document.querySelectorAll('[id^="est-qty-"]').forEach((el,i) => {
+    const idNum = el.id.replace('est-qty-','');
+    const qty  = +(el.value)||0;
+    const rate = +(document.getElementById('est-rate-'+idNum)?.value)||0;
+    sub += qty * rate;
+  });
+  const tax = +(document.getElementById('est-tax')?.value)||0;
+  const total = sub * (1 + tax/100);
+  const st = document.getElementById('est-subtotal');
+  const tt = document.getElementById('est-total');
+  if(st) st.textContent = '$'+sub.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  if(tt) tt.textContent = '$'+total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+
+function saveEstimate(projId, action) {
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+
+  const lineItems = [];
+  document.querySelectorAll('[id^="est-desc-"]').forEach(el => {
+    const n    = el.id.replace('est-desc-','');
+    const desc = el.value.trim();
+    if(!desc) return;
+    const qty  = +(document.getElementById('est-qty-'+n)?.value)||1;
+    const rate = +(document.getElementById('est-rate-'+n)?.value)||0;
+    lineItems.push({ desc, qty, rate, total: qty*rate });
+  });
+
+  const tax   = +(document.getElementById('est-tax')?.value)||0;
+  const sub   = lineItems.reduce((s,l)=>s+l.total,0);
+  const total = sub*(1+tax/100);
+
+  if(!DB.estimates) DB.estimates=[];
+  const existing = DB.estimates.findIndex(e=>e.projectId===projId);
+  const estObj = {
+    id:         existing>=0 ? DB.estimates[existing].id : uid(),
+    projectId:  projId,
+    client:     document.getElementById('est-client')?.value.trim()||proj.client||'',
+    date:       document.getElementById('est-date')?.value||new Date().toISOString().slice(0,10),
+    scope:      document.getElementById('est-scope')?.value.trim()||'',
+    lineItems,
+    tax,
+    subtotal:   sub,
+    total,
+    notes:      document.getElementById('est-notes')?.value.trim()||'',
+    photos:     _estPhotoSrcs,
+    status:     action==='send' ? 'PENDING_APPROVAL' : 'DRAFT',
+    createdBy:  _currentUser?.name||'User',
+    createdAt:  now(),
+    signedAt:   null,
+    signature:  null,
+  };
+
+  if(existing>=0) DB.estimates[existing]=estObj; else DB.estimates.push(estObj);
+
+  // Update project
+  proj.contract = total;
+  if(action==='send') {
+    proj.lifecycleStage = 'PENDING_APPROVAL';
+    toast('📤 Estimate sent for client approval — $'+total.toFixed(2));
+  } else {
+    proj.lifecycleStage = proj.lifecycleStage||'ESTIMATE';
+    toast('💾 Estimate saved — $'+total.toFixed(2));
+  }
+
+  _estPhotoSrcs = [];
+  document.getElementById('estimate-modal')?.remove();
+  saveToLocal(); broadcastData();
+  renderProjects(); refreshHome();
+  logChange('ESTIMATE', 'estimate', estObj.id, {total, action});
+}
+
+/* ──────────────────────────────────────────────────────────
+   CLIENT APPROVAL + SIGNATURE
+────────────────────────────────────────────────────────── */
+function openClientApproval(projId) {
+  if(!DB.estimates) DB.estimates=[];
+  const est = DB.estimates.find(e=>e.projectId===projId);
+  if(!est) { toast('No estimate found — create estimate first'); return; }
+
+  const proj = DB.projects.find(p=>p.id===projId);
+  const mo = document.createElement('div');
+  mo.id = 'approval-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;overflow-y:auto;font-family:inherit;padding:16px;display:flex;align-items:flex-start;justify-content:center';
+
+  const lines = (est.lineItems||[]).map(l=>
+    `<tr><td style="padding:7px 10px;font-size:13px">${l.desc}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:13px">${l.qty}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:13px">$${l.rate.toFixed(2)}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:13px;font-weight:700">$${l.total.toFixed(2)}</td></tr>`
+  ).join('');
+
+  mo.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:28px;max-width:600px;width:100%;margin:auto;color:#111;font-family:Georgia,serif">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:2px solid #111;padding-bottom:16px">
+        <div>
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px">ESTIMATE</div>
+          <div style="font-size:13px;color:#666;margin-top:4px">#EST-${est.id.slice(-5).toUpperCase()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:700">${proj?.name||''}</div>
+          <div style="font-size:12px;color:#666">${est.date}</div>
+        </div>
+      </div>
+      <!-- Client -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#999;margin-bottom:4px">Prepared For</div>
+          <div style="font-size:14px;font-weight:700">${est.client}</div></div>
+        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#999;margin-bottom:4px">Prepared By</div>
+          <div style="font-size:14px;font-weight:700">${est.createdBy}</div></div>
+      </div>
+      <!-- Scope -->
+      <div style="background:#f8f8f8;border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.5">${est.scope||'See line items below.'}</div>
+      <!-- Line items -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
+        <thead><tr style="background:#111;color:#fff">
+          <th style="padding:8px 10px;text-align:left;font-size:11px">DESCRIPTION</th>
+          <th style="padding:8px 10px;text-align:center;font-size:11px">QTY</th>
+          <th style="padding:8px 10px;text-align:right;font-size:11px">UNIT</th>
+          <th style="padding:8px 10px;text-align:right;font-size:11px">TOTAL</th>
+        </tr></thead>
+        <tbody>${lines}</tbody>
+      </table>
+      <!-- Totals -->
+      <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+        <div style="width:220px">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee"><span>Subtotal</span><span>$${est.subtotal?.toFixed(2)||'0.00'}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #eee"><span>Tax (${est.tax||0}%)</span><span>$${((est.subtotal||0)*(est.tax||0)/100).toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:16px;font-weight:900;border-top:2px solid #111"><span>TOTAL</span><span>$${est.total?.toFixed(2)||'0.00'}</span></div>
+        </div>
+      </div>
+      <!-- Notes -->
+      <div style="font-size:12px;color:#666;line-height:1.6;margin-bottom:24px;border-top:1px solid #eee;padding-top:12px">${est.notes||''}</div>
+      <!-- Photos -->
+      ${est.photos?.length ? `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:24px">${est.photos.map(src=>`<img src="${src}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px"/>`).join('')}</div>` : ''}
+      <!-- Signature -->
+      ${est.signature
+        ? `<div style="border:2px solid #4CAF50;border-radius:10px;padding:14px;margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;color:#4CAF50;margin-bottom:6px">✅ APPROVED & SIGNED</div>
+            <img src="${est.signature}" style="max-height:80px;margin-bottom:6px"/>
+            <div style="font-size:12px;color:#666">Signed by ${est.signedName||est.client} on ${est.signedAt}</div>
+           </div>`
+        : `<div style="border:1px solid #ccc;border-radius:10px;padding:14px;margin-bottom:16px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#333">✍️ Client Signature Required for Approval</div>
+            <div style="font-size:11px;color:#666;margin-bottom:8px">I agree to the scope and total above.</div>
+            <canvas id="sig-canvas" width="520" height="100"
+              style="border:1px solid #ccc;border-radius:6px;width:100%;cursor:crosshair;touch-action:none;background:#fafafa">
+            </canvas>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input id="sig-name" placeholder="Print your name" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:13px"/>
+              <button onclick="clearSig()" style="padding:8px 14px;border-radius:6px;border:1px solid #ccc;background:#fff;color:#666;font-size:12px;cursor:pointer">Clear</button>
+            </div>
+           </div>`
+      }
+      <div style="display:flex;gap:8px;font-family:system-ui">
+        <button onclick="document.getElementById('approval-modal').remove()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #ccc;background:#fff;color:#333;font-size:13px;font-weight:700;cursor:pointer">Close</button>
+        ${!est.signature ? `<button onclick="approveEstimate('${projId}')" style="flex:2;padding:11px;border-radius:10px;border:none;background:#4CAF50;color:#fff;font-size:13px;font-weight:800;cursor:pointer">✅ Capture Approval</button>` : ''}
+      </div>
+    </div>`;
+
+  document.body.appendChild(mo);
+  if(!est.signature) initSigCanvas();
+}
+
+let _sigCanvas, _sigCtx, _sigDrawing = false;
+function initSigCanvas() {
+  _sigCanvas = document.getElementById('sig-canvas');
+  if(!_sigCanvas) return;
+  _sigCtx    = _sigCanvas.getContext('2d');
+  _sigCtx.strokeStyle = '#111';
+  _sigCtx.lineWidth   = 2;
+  _sigCtx.lineCap     = 'round';
+
+  const getPos = (e) => {
+    const r = _sigCanvas.getBoundingClientRect();
+    const scaleX = _sigCanvas.width  / r.width;
+    const scaleY = _sigCanvas.height / r.height;
+    const src = e.touches ? e.touches[0] : e;
+    return { x:(src.clientX - r.left)*scaleX, y:(src.clientY - r.top)*scaleY };
+  };
+  _sigCanvas.addEventListener('pointerdown', e=>{ _sigDrawing=true; const p=getPos(e); _sigCtx.beginPath(); _sigCtx.moveTo(p.x,p.y); e.preventDefault(); });
+  _sigCanvas.addEventListener('pointermove', e=>{ if(!_sigDrawing) return; const p=getPos(e); _sigCtx.lineTo(p.x,p.y); _sigCtx.stroke(); e.preventDefault(); });
+  _sigCanvas.addEventListener('pointerup',   ()=>{ _sigDrawing=false; });
+}
+function clearSig() { if(_sigCtx && _sigCanvas) _sigCtx.clearRect(0,0,_sigCanvas.width,_sigCanvas.height); }
+
+function approveEstimate(projId) {
+  if(!_sigCanvas) return;
+  const sigName = document.getElementById('sig-name')?.value.trim();
+  if(!sigName) { toast('Please print your name'); return; }
+
+  const imgData  = _sigCanvas.toDataURL();
+  const isBlank  = !imgData.includes('data:image') || imgData.length < 5000;
+  if(isBlank) { toast('Please sign in the box above'); return; }
+
+  if(!DB.estimates) DB.estimates=[];
+  const est = DB.estimates.find(e=>e.projectId===projId);
+  if(!est) return;
+
+  est.signature  = imgData;
+  est.signedName = sigName;
+  est.signedAt   = now();
+  est.status     = 'APPROVED';
+
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(proj){
+    proj.lifecycleStage = 'APPROVED';
+    proj.status         = 'Approved';
+    // Auto-generate standard task list
+    generateStandardTasks(projId);
+  }
+
+  document.getElementById('approval-modal')?.remove();
+  saveToLocal(); broadcastData();
+  renderProjects(); refreshHome();
+  toast('✅ Estimate approved by '+sigName+' — tasks auto-generated');
+  logChange('APPROVED','estimate',est.id,{signedBy:sigName});
+
+  // Prompt to start materials takeoff
+  setTimeout(()=>{ if(confirm('Estimate approved! Start Materials Takeoff now?')) openMaterialsTakeoff(projId); }, 800);
+}
+
+/* ──────────────────────────────────────────────────────────
+   AUTO-GENERATE STANDARD TASK LIST
+────────────────────────────────────────────────────────── */
+function generateStandardTasks(projId) {
+  if(!DB.tasks) DB.tasks=[];
+  const existing = DB.tasks.filter(t=>t.projectId===projId);
+  const existingKeys = new Set(existing.map(t=>t.taskKey).filter(Boolean));
+
+  STANDARD_TASKS.forEach((tpl, idx) => {
+    if(existingKeys.has(tpl.key)) return; // don't duplicate
+    DB.tasks.push({
+      id:           uid(),
+      projectId:    projId,
+      taskKey:      tpl.key,
+      desc:         tpl.label,
+      category:     tpl.category,
+      photoRequired:tpl.photo,
+      requiredItems:tpl.required_items||[],
+      done:         false,
+      photoId:      null,
+      completedBy:  null,
+      completedAt:  null,
+      order:        idx,
+      isStandard:   true,
+    });
+  });
+  toast('📋 '+STANDARD_TASKS.length+' standard tasks generated');
+}
+
+/* ──────────────────────────────────────────────────────────
+   MATERIALS TAKEOFF
+────────────────────────────────────────────────────────── */
+function openMaterialsTakeoff(projId) {
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+  if(!DB.materialsTakeoff) DB.materialsTakeoff={};
+  const existing = DB.materialsTakeoff[projId]?.items || [];
+
+  const mo = document.createElement('div');
+  mo.id    = 'takeoff-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;overflow-y:auto;font-family:inherit;padding:16px;display:flex;align-items:flex-start;justify-content:center';
+
+  mo.innerHTML = `
+    <div style="background:var(--surface-1);border-radius:16px;padding:22px;max-width:640px;width:100%;margin:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div><div style="font-size:17px;font-weight:800">📋 Materials Takeoff</div>
+          <div style="font-size:12px;color:var(--text-muted)">${proj.name}</div></div>
+        <button onclick="document.getElementById('takeoff-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
+      </div>
+
+      <!-- Standard supplies always needed -->
+      <div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.2);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--success);margin-bottom:8px">📦 Standard Job Site Supplies (always required)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;color:var(--text-muted)">
+          ${['Garbage bags','Broom & dust pan','Mop','Vacuum','Duct tape','Drop cloths'].map(s=>`<div>✓ ${s}</div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Trade-specific materials -->
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Trade Materials</div>
+      <div id="takeoff-lines">
+        ${existing.map((item,i)=>`
+        <div id="to-line-${i}" style="display:grid;grid-template-columns:1fr 70px 90px 90px 32px;gap:6px;align-items:center;margin-bottom:6px">
+          <input class="form-control" style="font-size:12px" placeholder="Material name" value="${item.name||''}" id="to-name-${i}"/>
+          <input class="form-control" style="font-size:12px" placeholder="Qty" type="number" value="${item.qty||1}" id="to-qty-${i}"/>
+          <input class="form-control" style="font-size:12px" placeholder="Unit cost $" type="number" value="${item.cost||0}" step="0.01" id="to-cost-${i}"/>
+          <input class="form-control" style="font-size:12px" placeholder="ETA (days)" type="number" value="${item.eta||0}" id="to-eta-${i}"/>
+          <button onclick="document.getElementById('to-line-'+${i}).remove()" style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;color:var(--error);font-size:14px;cursor:pointer;width:32px;height:32px">✕</button>
+        </div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 70px 90px 90px 32px;gap:6px;margin-bottom:4px">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint)">Material</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint)">Qty</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint)">Unit Cost</div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint)">ETA Days</div>
+        <div></div>
+      </div>
+      <div id="takeoff-lines-container">
+        ${!existing.length ? '<div id="to-line-0" style="display:grid;grid-template-columns:1fr 70px 90px 90px 32px;gap:6px;align-items:center;margin-bottom:6px"><input class="form-control" style="font-size:12px" placeholder="e.g. 2x4x8 Lumber" id="to-name-0"/><input class="form-control" type="number" style="font-size:12px" placeholder="Qty" value="1" id="to-qty-0"/><input class="form-control" type="number" style="font-size:12px" placeholder="0.00" step="0.01" id="to-cost-0"/><input class="form-control" type="number" style="font-size:12px" placeholder="Days" id="to-eta-0"/><div></div></div>' : ''}
+      </div>
+      <button onclick="addTakeoffLine()" style="width:100%;padding:9px;border-radius:10px;border:2px dashed var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">+ Add Material</button>
+
+      <!-- Trade assignment -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Trade Assignment</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div style="font-size:10px;font-weight:700;color:var(--text-faint);margin-bottom:4px">Trade</div>
+            <select class="form-control" id="to-trade">
+              ${['General Contracting','Electrical','Plumbing','HVAC','Carpentry','Masonry','Roofing','Painting','Flooring','Tile','Drywall','Other'].map(t=>`<option ${proj.trade===t?'selected':''}>${t}</option>`).join('')}
+            </select></div>
+          <div><div style="font-size:10px;font-weight:700;color:var(--text-faint);margin-bottom:4px">Lead Worker</div>
+            <select class="form-control" id="to-lead">
+              <option value="">Unassigned</option>
+              ${(DB.workers||[]).filter(w=>w.status==='Active').map(w=>`<option value="${w.id}">${w.name}</option>`).join('')}
+            </select></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('takeoff-modal').remove()" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>
+        <button onclick="saveTakeoff('${projId}')" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--primary-green);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save & Order Materials</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(mo);
+}
+
+let _takeoffLineCount = 1;
+function addTakeoffLine() {
+  const container = document.getElementById('takeoff-lines-container') || document.getElementById('takeoff-lines');
+  if(!container) return;
+  const n = container.querySelectorAll('[id^="to-line-"]').length;
+  const div = document.createElement('div');
+  div.id    = `to-line-${n}`;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 70px 90px 90px 32px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML = `
+    <input class="form-control" style="font-size:12px" placeholder="Material name" id="to-name-${n}"/>
+    <input class="form-control" type="number" style="font-size:12px" placeholder="Qty" value="1" id="to-qty-${n}"/>
+    <input class="form-control" type="number" style="font-size:12px" placeholder="0.00" step="0.01" id="to-cost-${n}"/>
+    <input class="form-control" type="number" style="font-size:12px" placeholder="Days" id="to-eta-${n}"/>
+    <button onclick="document.getElementById('to-line-${n}').remove()" style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;color:var(--error);font-size:14px;cursor:pointer;width:32px;height:32px">✕</button>`;
+  container.appendChild(div);
+}
+
+function saveTakeoff(projId) {
+  const items = [];
+  document.querySelectorAll('[id^="to-name-"]').forEach(el => {
+    const n    = el.id.replace('to-name-','');
+    const name = el.value.trim();
+    if(!name) return;
+    items.push({
+      name,
+      qty:  +(document.getElementById('to-qty-'+n)?.value)||1,
+      cost: +(document.getElementById('to-cost-'+n)?.value)||0,
+      eta:  +(document.getElementById('to-eta-'+n)?.value)||0,
+    });
+  });
+
+  if(!DB.materialsTakeoff) DB.materialsTakeoff={};
+  DB.materialsTakeoff[projId] = {
+    items,
+    trade:    document.getElementById('to-trade')?.value||'',
+    leadId:   document.getElementById('to-lead')?.value||'',
+    savedAt:  now(),
+    totalCost:items.reduce((s,i)=>s+i.qty*i.cost,0),
+    maxEta:   Math.max(...items.map(i=>i.eta),0),
+  };
+
+  // Add materials-on-site task to inventory check
+  items.forEach(item => {
+    if(!DB.inventory) DB.inventory=[];
+    if(!DB.inventory.find(i=>i.name.toLowerCase()===item.name.toLowerCase())) {
+      DB.inventory.push({ id:uid(), name:item.name, qty:0, min:item.qty, unit:'Each',
+        cost:item.cost, category:'Other', location:'Pending delivery', created:now() });
+    }
+  });
+
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(proj) {
+    proj.lifecycleStage = 'MATERIALS_ORDERED';
+    proj.trade = document.getElementById('to-trade')?.value||proj.trade;
+  }
+
+  document.getElementById('takeoff-modal')?.remove();
+  saveToLocal(); broadcastData();
+  renderProjects(); refreshHome();
+  toast('🚛 Materials takeoff saved — '+items.length+' items, max ETA '+DB.materialsTakeoff[projId].maxEta+' days');
+  logChange('MATERIALS_TAKEOFF','project',projId,{items:items.length});
+}
+
+/* ──────────────────────────────────────────────────────────
+   AUTO COMPLETION % FROM TASK LIST
+────────────────────────────────────────────────────────── */
+function calcAutoCompletion(projId) {
+  const tasks    = (DB.tasks||[]).filter(t=>t.projectId===projId);
+  if(!tasks.length) return 0;
+
+  const standard = tasks.filter(t=>t.isStandard);
+  const custom   = tasks.filter(t=>!t.isStandard);
+
+  // Standard tasks are worth 70% of completion
+  // Custom/trade tasks are worth 30%
+  let pct = 0;
+  if(standard.length) {
+    const stdDone = standard.filter(t=>t.done).length;
+    pct += (stdDone / standard.length) * 70;
+  } else {
+    pct += 70; // no standard tasks = skip that weight
+  }
+  if(custom.length) {
+    const cDone = custom.filter(t=>t.done).length;
+    pct += (cDone / custom.length) * 30;
+  } else {
+    pct += 30;
+  }
+
+  return Math.round(pct);
+}
+
+function syncProjectCompletion(projId) {
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+  const pct = calcAutoCompletion(projId);
+  if(proj.progress !== pct) {
+    proj.progress = pct;
+    if(pct===100 && proj.lifecycleStage !== 'COMPLETED') {
+      proj.lifecycleStage = 'COMPLETED';
+      proj.status         = 'Completed';
+      toast('🏁 '+proj.name+' — 100% complete!');
+    } else if(pct > 0 && proj.lifecycleStage === 'IN_PROGRESS') {
+      // stage stays in progress
+    }
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
+   ENHANCED TASK COMPLETION (photo required)
+────────────────────────────────────────────────────────── */
+function completeTask(taskId) {
+  const task = (DB.tasks||[]).find(t=>t.id===taskId);
+  if(!task) return;
+
+  if(task.photoRequired && !task.photoId) {
+    // Require photo before marking done
+    toast('📸 This task requires a photo before completion');
+    // Open camera/photo picker
+    const inp = document.createElement('input');
+    inp.type  = 'file'; inp.accept = 'image/*'; inp.capture = 'environment';
+    inp.onchange = e => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = ev => {
+        const src = ev.target.result;
+        const photoObj = {
+          id:        uid(),
+          projectId: task.projectId,
+          taskId:    taskId,
+          src,
+          caption:   'Task: '+task.desc,
+          date:      new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
+          time:      new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+          geo:       (typeof currentGeo!=='undefined') ? currentGeo.display : '',
+          timestamp: now(),
+          addedBy:   _currentUser?.name||'User',
+          validated: true,
+          category:  'Task Completion',
+        };
+        if(!DB.photos) DB.photos=[];
+        DB.photos.push(photoObj);
+        task.photoId   = photoObj.id;
+        task.done      = true;
+        task.completedBy = _currentUser?.name||'User';
+        task.completedAt = now();
+        syncProjectCompletion(task.projectId);
+        saveToLocal(); broadcastData();
+        renderTasks?.(); renderProjects?.(); refreshHome?.();
+        toast('✅ '+task.desc+' — marked complete with photo');
+        logChange('TASK_COMPLETE','task',taskId,{desc:task.desc});
+      };
+      r.readAsDataURL(f);
+    };
+    inp.click();
+  } else {
+    task.done        = !task.done;
+    task.completedBy = task.done ? (_currentUser?.name||'User') : null;
+    task.completedAt = task.done ? now() : null;
+    if(task.done) syncProjectCompletion(task.projectId);
+    saveToLocal(); broadcastData();
+    renderTasks?.(); renderProjects?.(); refreshHome?.();
+    const msg = task.done ? '✅ '+task.desc : '↩ '+task.desc+' unchecked';
+    toast(msg);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
+   CHANGE ORDER WORKFLOW (requires signature)
+────────────────────────────────────────────────────────── */
+function openChangeOrderRequest(projId) {
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+
+  const mo = document.createElement('div');
+  mo.id    = 'co-request-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;overflow-y:auto;font-family:inherit;padding:16px;display:flex;align-items:flex-start;justify-content:center';
+
+  mo.innerHTML = `
+    <div style="background:var(--surface-1);border-radius:16px;padding:22px;max-width:540px;width:100%;margin:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div><div style="font-size:17px;font-weight:800">📝 Change Order Request</div>
+          <div style="font-size:12px;color:var(--text-muted)">${proj.name}</div></div>
+        <button onclick="document.getElementById('co-request-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
+      </div>
+
+      <div style="background:rgba(255,143,0,.08);border:1px solid rgba(255,143,0,.3);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--warning)">
+        ⚠️ Change orders are NOT approved until the client signs. All work must stop on changed scope until signature is obtained.
+      </div>
+
+      <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="grid-column:1/-1">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Change Order Description *</div>
+          <textarea class="form-control" id="co-desc" rows="3" placeholder="Describe what is changing and why..."></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Type</div>
+          <select class="form-control" id="co-type">
+            <option value="Addition (increases contract)">Addition (increases contract)</option>
+            <option value="Deduction (decreases contract)">Deduction (decreases contract)</option>
+          </select>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Amount ($)</div>
+          <input class="form-control" type="number" id="co-amount" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+        <div style="grid-column:1/-1">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Reason / Justification</div>
+          <input class="form-control" id="co-reason" placeholder="e.g. Hidden damage discovered, client requested upgrade..."/>
+        </div>
+      </div>
+
+      <!-- Verifiable sub-tasks for this CO -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Verifiable Tasks for this Change Order</div>
+        <div id="co-tasks-list">
+          <div id="co-task-0" style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+            <input class="form-control" style="flex:1;font-size:12px" placeholder="Task description" id="co-task-desc-0"/>
+            <button onclick="document.getElementById('co-task-0').remove()" style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;color:var(--error);font-size:14px;cursor:pointer;width:32px;height:32px">✕</button>
+          </div>
+        </div>
+        <button onclick="addCOTask()" style="width:100%;padding:8px;border-radius:8px;border:1px dashed var(--divider);background:transparent;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">+ Add Task</button>
+      </div>
+
+      <!-- Client signature -->
+      <div style="border:1px solid var(--divider);border-radius:10px;padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">✍️ Client Signature Required</div>
+        <canvas id="co-sig-canvas" width="480" height="90"
+          style="border:1px solid var(--divider);border-radius:6px;width:100%;cursor:crosshair;touch-action:none;background:var(--surface-2)">
+        </canvas>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="co-sig-name" placeholder="Client name" style="flex:1" class="form-control" style="font-size:12px"/>
+          <button onclick="clearCOSig()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer">Clear</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('co-request-modal').remove()" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>
+        <button onclick="submitChangeOrder('${projId}')" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--warning, #FF9800);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Submit Change Order</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(mo);
+  initCOSigCanvas();
+}
+
+let _coSigCanvas, _coSigCtx, _coSigDrawing=false;
+function initCOSigCanvas() {
+  _coSigCanvas = document.getElementById('co-sig-canvas');
+  if(!_coSigCanvas) return;
+  _coSigCtx    = _coSigCanvas.getContext('2d');
+  _coSigCtx.strokeStyle='#333'; _coSigCtx.lineWidth=2; _coSigCtx.lineCap='round';
+  const getPos=(e)=>{ const r=_coSigCanvas.getBoundingClientRect(); const sx=_coSigCanvas.width/r.width; const sy=_coSigCanvas.height/r.height; const s=e.touches?e.touches[0]:e; return{x:(s.clientX-r.left)*sx,y:(s.clientY-r.top)*sy}; };
+  _coSigCanvas.addEventListener('pointerdown',e=>{_coSigDrawing=true;const p=getPos(e);_coSigCtx.beginPath();_coSigCtx.moveTo(p.x,p.y);e.preventDefault();});
+  _coSigCanvas.addEventListener('pointermove',e=>{if(!_coSigDrawing)return;const p=getPos(e);_coSigCtx.lineTo(p.x,p.y);_coSigCtx.stroke();e.preventDefault();});
+  _coSigCanvas.addEventListener('pointerup',()=>{_coSigDrawing=false;});
+}
+function clearCOSig() { if(_coSigCtx&&_coSigCanvas) _coSigCtx.clearRect(0,0,_coSigCanvas.width,_coSigCanvas.height); }
+
+let _coTaskCount=1;
+function addCOTask() {
+  const list=document.getElementById('co-tasks-list'); if(!list) return;
+  const n=list.querySelectorAll('[id^="co-task-"]').length;
+  const d=document.createElement('div'); d.id='co-task-'+n; d.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:6px';
+  d.innerHTML=`<input class="form-control" style="flex:1;font-size:12px" placeholder="Task description" id="co-task-desc-${n}"/>
+    <button onclick="document.getElementById('co-task-${n}').remove()" style="background:rgba(239,83,80,.12);border:1px solid rgba(239,83,80,.3);border-radius:8px;color:var(--error);font-size:14px;cursor:pointer;width:32px;height:32px">✕</button>`;
+  list.appendChild(d);
+}
+
+function submitChangeOrder(projId) {
+  const desc   = document.getElementById('co-desc')?.value.trim();
+  const amount = +(document.getElementById('co-amount')?.value)||0;
+  const reason = document.getElementById('co-reason')?.value.trim();
+  const sigName= document.getElementById('co-sig-name')?.value.trim();
+
+  if(!desc)    { toast('Description required'); return; }
+  if(!amount)  { toast('Amount required'); return; }
+  if(!sigName) { toast('Client name required for signature'); return; }
+
+  const sigData = _coSigCanvas?.toDataURL();
+  if(!sigData || sigData.length < 5000) { toast('Client signature required'); return; }
+
+  // Collect sub-tasks
+  const coTasks=[];
+  document.querySelectorAll('[id^="co-task-desc-"]').forEach(el=>{
+    const v=el.value.trim(); if(v) coTasks.push(v);
+  });
+
+  const coId = uid();
+  if(!DB.changeOrders) DB.changeOrders=[];
+  DB.changeOrders.push({
+    id:         coId,
+    projectId:  projId,
+    desc,
+    type:       document.getElementById('co-type')?.value||'Addition',
+    amount,
+    reason,
+    tasks:      coTasks,
+    signature:  sigData,
+    signedBy:   sigName,
+    signedAt:   now(),
+    status:     'APPROVED',
+    approvedAt: now(),
+    createdBy:  _currentUser?.name||'User',
+    date:       new Date().toISOString().slice(0,10),
+  });
+
+  // Add CO tasks to project task list
+  if(!DB.tasks) DB.tasks=[];
+  coTasks.forEach((td,i)=>{
+    DB.tasks.push({
+      id:          uid(),
+      projectId:   projId,
+      changeOrderId:coId,
+      desc:        td,
+      done:        false,
+      photoRequired:true,
+      isStandard:  false,
+      order:       100+i,
+      createdAt:   now(),
+    });
+  });
+
+  document.getElementById('co-request-modal')?.remove();
+  saveToLocal(); broadcastData();
+  renderProjects(); refreshHome();
+  toast('📝 Change Order submitted & signed by '+sigName);
+  logChange('CHANGE_ORDER','changeOrder',coId,{amount,signedBy:sigName});
+}
+
+/* ──────────────────────────────────────────────────────────
+   DAILY REPORT WITH TASK LIST
+────────────────────────────────────────────────────────── */
+function openDailyReport(projId) {
+  const proj  = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+  const tasks = (DB.tasks||[]).filter(t=>t.projectId===projId).sort((a,b)=>(a.order||0)-(b.order||0));
+  const pct   = calcAutoCompletion(projId);
+
+  const mo = document.createElement('div');
+  mo.id = 'daily-report-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;overflow-y:auto;font-family:inherit;padding:16px;display:flex;align-items:flex-start;justify-content:center';
+
+  const taskHTML = tasks.map(t=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;background:var(--surface-2);margin-bottom:6px;border-left:3px solid ${t.done?'var(--success)':'var(--divider)'}">
+      <input type="checkbox" id="rpt-task-${t.id}" ${t.done?'checked':''} onchange="toggleReportTask('${t.id}',this.checked)"
+        style="width:18px;height:18px;accent-color:var(--success);margin-top:1px;flex-shrink:0"/>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:${t.done?'600':'500'};color:${t.done?'var(--success)':'var(--text)'};text-decoration:${t.done?'line-through':''}">${t.desc}</div>
+        ${t.photoRequired&&!t.done?'<div style="font-size:10px;color:var(--warning);margin-top:2px">📸 Photo required</div>':''}
+        ${t.completedBy?`<div style="font-size:10px;color:var(--text-faint);margin-top:2px">✅ ${t.completedBy} · ${t.completedAt}</div>`:''}
+        ${t.requiredItems?.length&&!t.done?`<div style="font-size:10px;color:var(--text-faint);margin-top:3px">${t.requiredItems.join(' · ')}</div>`:''}
+      </div>
+    </div>`).join('');
+
+  mo.innerHTML = `
+    <div style="background:var(--surface-1);border-radius:16px;padding:22px;max-width:600px;width:100%;margin:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:17px;font-weight:800">📋 Daily Report</div>
+        <button onclick="document.getElementById('daily-report-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">${proj.name} · ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+
+      <!-- Auto completion -->
+      <div style="background:rgba(76,175,80,.08);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700">Auto Completion (based on task list)</span>
+          <span style="font-size:20px;font-weight:900;color:var(--success)">${pct}%</span>
+        </div>
+        <div style="height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--success),#2E7D32);border-radius:99px;transition:width .5s"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:5px">${tasks.filter(t=>t.done).length}/${tasks.length} tasks complete · Auto-updates as tasks are checked</div>
+      </div>
+
+      <!-- Task list -->
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Today's Task List</div>
+      <div style="margin-bottom:14px;max-height:300px;overflow-y:auto">${taskHTML||'<div style="text-align:center;padding:20px;color:var(--text-faint)">No tasks yet — tasks are auto-generated when estimate is approved</div>'}</div>
+
+      <!-- Report fields -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Workers on Site</div>
+          <input class="form-control" type="number" id="rpt-workers" value="1" min="0"/></div>
+        <div><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Weather</div>
+          <input class="form-control" id="rpt-weather-input" value="${typeof currentWeather!=='undefined'?currentWeather.icon+' '+currentWeather.temp+' '+currentWeather.desc:''}"/></div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Work Completed Today</div>
+          <textarea class="form-control" id="rpt-completed" rows="2" placeholder="Describe work completed..."></textarea></div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Incomplete / Blockers</div>
+          <textarea class="form-control" id="rpt-incomplete" rows="2" placeholder="What couldn't be finished? Why?"></textarea></div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Tomorrow's Plan</div>
+          <textarea class="form-control" id="rpt-tomorrow" rows="2" placeholder="What's planned for tomorrow?"></textarea></div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('daily-report-modal').remove()" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>
+        <button onclick="submitDailyReport('${projId}')" style="flex:2;padding:11px;border-radius:10px;border:none;background:var(--primary-green);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">📤 Submit Report</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(mo);
+}
+
+function toggleReportTask(taskId, checked) {
+  const task = (DB.tasks||[]).find(t=>t.id===taskId);
+  if(!task) return;
+  if(checked && task.photoRequired && !task.photoId) {
+    document.getElementById('rpt-task-'+taskId).checked = false;
+    toast('📸 Take a photo to complete this task');
+    document.getElementById('daily-report-modal')?.remove();
+    completeTask(taskId);
+  } else {
+    task.done = checked;
+    task.completedBy = checked ? (_currentUser?.name||'User') : null;
+    task.completedAt = checked ? now() : null;
+    syncProjectCompletion(task.projectId);
+  }
+}
+
+function submitDailyReport(projId) {
+  const proj  = DB.projects.find(p=>p.id===projId);
+  const tasks = (DB.tasks||[]).filter(t=>t.projectId===projId);
+  const pct   = calcAutoCompletion(projId);
+
+  if(!DB.reports) DB.reports=[];
+  DB.reports.push({
+    id:         uid(),
+    projectId:  projId,
+    date:       new Date().toISOString().slice(0,10),
+    timestamp:  now(),
+    reporter:   _currentUser?.name||'Field User',
+    workers:    +(document.getElementById('rpt-workers')?.value)||1,
+    weather:    document.getElementById('rpt-weather-input')?.value||'',
+    completed:  document.getElementById('rpt-completed')?.value.trim()||'',
+    incomplete: document.getElementById('rpt-incomplete')?.value.trim()||'',
+    tomorrow:   document.getElementById('rpt-tomorrow')?.value.trim()||'',
+    progress:   pct,
+    geo:        (typeof currentGeo!=='undefined') ? currentGeo.display : '',
+    taskSnapshot: tasks.map(t=>({id:t.id, desc:t.desc, done:t.done})),
+  });
+
+  // Update project progress
+  if(proj) proj.progress = pct;
+
+  document.getElementById('daily-report-modal')?.remove();
+  saveToLocal(); broadcastData();
+  renderProjects(); refreshHome();
+  toast('📤 Daily report submitted — project at '+pct+'%');
+  logChange('DAILY_REPORT','report',projId,{progress:pct});
+}
+
+/* ──────────────────────────────────────────────────────────
+   PROJECT LIFECYCLE PANEL (on project card)
+────────────────────────────────────────────────────────── */
+function openProjectLifecycle(projId) {
+  const proj  = DB.projects.find(p=>p.id===projId);
+  if(!proj)  return;
+  const stage = proj.lifecycleStage||'DRAFT';
+  const pct   = calcAutoCompletion(projId);
+  const tasks = (DB.tasks||[]).filter(t=>t.projectId===projId);
+  const est   = (DB.estimates||[]).find(e=>e.projectId===projId);
+  const takeoff = DB.materialsTakeoff?.[projId];
+
+  const mo = document.createElement('div');
+  mo.id    = 'lifecycle-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;overflow-y:auto;font-family:inherit;padding:16px;display:flex;align-items:flex-start;justify-content:center';
+
+  // Stage progress bar
+  const stageOrder = ['DRAFT','ESTIMATE','PENDING_APPROVAL','APPROVED','MATERIALS_TAKEOFF','MATERIALS_ORDERED','IN_PROGRESS','INSPECTION','COMPLETED'];
+  const stageIdx   = stageOrder.indexOf(stage);
+
+  const stageBar = stageOrder.map((s,i)=>{
+    const cfg  = STAGES[s];
+    const done = i < stageIdx;
+    const curr = i === stageIdx;
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px">
+      <div style="width:28px;height:28px;border-radius:50%;background:${done?'var(--success)':curr?cfg.color:'var(--surface-2)'};border:2px solid ${curr?cfg.color:'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .3s">
+        ${done?'✓':cfg.icon}
+      </div>
+      <div style="font-size:8px;font-weight:700;text-align:center;color:${curr?cfg.color:done?'var(--success)':'var(--text-faint)'};line-height:1.2">${cfg.label}</div>
+    </div>`;
+  }).join('');
+
+  // Action buttons based on stage
+  const actions = {
+    DRAFT:             `<button onclick="document.getElementById('lifecycle-modal').remove();openEstimateBuilder('${projId}')" class="lifecycle-action-btn" style="background:#FF9800">💰 Create Estimate</button>`,
+    ESTIMATE:          `<button onclick="document.getElementById('lifecycle-modal').remove();openEstimateBuilder('${projId}')" class="lifecycle-action-btn" style="background:#FF9800">✏️ Edit Estimate</button>
+                        <button onclick="document.getElementById('lifecycle-modal').remove();openClientApproval('${projId}')" class="lifecycle-action-btn" style="background:#9C27B0">📤 Get Client Approval</button>`,
+    PENDING_APPROVAL:  `<button onclick="document.getElementById('lifecycle-modal').remove();openClientApproval('${projId}')" class="lifecycle-action-btn" style="background:#9C27B0">✍️ Capture Signature</button>`,
+    APPROVED:          `<button onclick="document.getElementById('lifecycle-modal').remove();openMaterialsTakeoff('${projId}')" class="lifecycle-action-btn" style="background:#FF5722">📋 Materials Takeoff</button>`,
+    MATERIALS_TAKEOFF: `<button onclick="document.getElementById('lifecycle-modal').remove();openMaterialsTakeoff('${projId}')" class="lifecycle-action-btn" style="background:#FF5722">✏️ Edit Takeoff</button>`,
+    MATERIALS_ORDERED: `<button onclick="document.getElementById('lifecycle-modal').remove();advanceStage('${projId}','IN_PROGRESS')" class="lifecycle-action-btn" style="background:#4CAF50">🔨 Start Work</button>`,
+    IN_PROGRESS:       `<button onclick="document.getElementById('lifecycle-modal').remove();openDailyReport('${projId}')" class="lifecycle-action-btn" style="background:#4CAF50">📋 Daily Report</button>
+                        <button onclick="document.getElementById('lifecycle-modal').remove();openChangeOrderRequest('${projId}')" class="lifecycle-action-btn" style="background:#FF9800">📝 Change Order</button>
+                        <button onclick="document.getElementById('lifecycle-modal').remove();advanceStage('${projId}','INSPECTION')" class="lifecycle-action-btn" style="background:#00BCD4">🔍 Submit for Inspection</button>`,
+    INSPECTION:        `<button onclick="document.getElementById('lifecycle-modal').remove();advanceStage('${projId}','COMPLETED')" class="lifecycle-action-btn" style="background:#4CAF50">🏁 Mark Complete</button>`,
+    COMPLETED:         `<div style="text-align:center;padding:16px;color:var(--success);font-weight:800;font-size:15px">🏁 Project Complete!</div>`,
+  };
+
+  mo.innerHTML = `
+    <div style="background:var(--surface-1);border-radius:16px;padding:22px;max-width:580px;width:100%;margin:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div style="font-size:17px;font-weight:800">${proj.name}</div>
+          <div style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;background:${STAGES[stage]?.color||'#666'}22;padding:3px 10px;border-radius:99px">
+            <span>${STAGES[stage]?.icon}</span>
+            <span style="font-size:12px;font-weight:800;color:${STAGES[stage]?.color}">${STAGES[stage]?.label}</span>
+          </div>
+        </div>
+        <button onclick="document.getElementById('lifecycle-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
+      </div>
+
+      <!-- Stage progress -->
+      <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:20px;overflow-x:auto;padding-bottom:4px">${stageBar}</div>
+
+      <!-- Completion -->
+      <div style="background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:13px;font-weight:700">Completion</span>
+          <span style="font-size:22px;font-weight:900;color:var(--success)">${pct}%</span>
+        </div>
+        <div style="height:8px;background:var(--surface-1);border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--success),#2E7D32);border-radius:99px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-faint);margin-top:4px">${tasks.filter(t=>t.done).length}/${tasks.length} tasks · Auto-calculated</div>
+      </div>
+
+      <!-- Key info -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+        <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:var(--success)">$${((est?.total)||0).toLocaleString()}</div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint);margin-top:2px">Contract</div>
+        </div>
+        <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:var(--primary-pink)">${(DB.photos||[]).filter(p=>p.projectId===projId).length}</div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint);margin-top:2px">Photos</div>
+        </div>
+        <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:var(--warning)">${(DB.changeOrders||[]).filter(c=>c.projectId===projId).length}</div>
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint);margin-top:2px">Change Orders</div>
+        </div>
+      </div>
+
+      <!-- Estimate summary -->
+      ${est ? `<div style="background:rgba(76,175,80,.06);border:1px solid rgba(76,175,80,.15);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700">💰 Estimate ${est.signature?'✅ Signed':'⏳ Not Signed'}</span>
+          <button onclick="document.getElementById('lifecycle-modal').remove();openClientApproval('${projId}')" style="background:none;border:1px solid var(--success);border-radius:6px;color:var(--success);font-size:11px;font-weight:700;padding:3px 10px;cursor:pointer">View</button>
+        </div>
+        <div style="color:var(--text-faint);margin-top:3px">${est.lineItems?.length||0} items · $${(est.total||0).toFixed(2)} · ${est.signedAt||'Not approved'}</div>
+      </div>` : ''}
+
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
+        ${actions[stage]||''}
+      </div>
+      <button onclick="document.getElementById('lifecycle-modal').remove()" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>
+    </div>`;
+
+  document.body.appendChild(mo);
+}
+
+function advanceStage(projId, newStage) {
+  const proj = DB.projects.find(p=>p.id===projId);
+  if(!proj) return;
+  proj.lifecycleStage = newStage;
+  if(newStage==='IN_PROGRESS') proj.status = 'In Progress';
+  if(newStage==='COMPLETED')   proj.status = 'Completed';
+  saveToLocal(); broadcastData();
+  renderProjects?.(); refreshHome?.();
+  toast(STAGES[newStage]?.icon+' '+STAGES[newStage]?.label);
+  logChange('STAGE_CHANGE','project',projId,{stage:newStage});
+}
+
+/* CSS helper */
+document.head.insertAdjacentHTML('beforeend',`
+<style>
+.lifecycle-action-btn {
+  width:100%;padding:12px;border-radius:10px;border:none;
+  color:#fff;font-size:14px;font-weight:800;cursor:pointer;
+  font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px;
+  transition:filter .2s;
+}
+.lifecycle-action-btn:hover { filter:brightness(1.1); }
+</style>`);
+
+</script>
+
+
+
+
+
+
 
 
 
@@ -2053,6 +3480,9 @@ function showView(id){
 }
 
 function refreshAll(){
+  if(!DB.photos)       DB.photos       = [];
+  if(!DB.changelog)    DB.changelog    = [];
+  if(!DB.budgetItems)  DB.budgetItems  = [];
   refreshSidebadges();
   const active = document.querySelector('.ni.active[data-view]');
   if(active) try { showView(active.dataset.view); } catch(e){ refreshCommand(); }
@@ -2376,7 +3806,7 @@ function renderDesktopPhotos(){
     grid.innerHTML = photos.map(function(ph,idx){
       return '<div style="background:var(--s1);border:1px solid var(--br);border-radius:var(--r12);overflow:hidden;cursor:pointer" onclick="goFullCarousel('+idx+')" class="ph-thumb-card">'
         +'<div style="height:130px;position:relative;background:var(--s2)">'
-        +(ph.src?'<img src="'+ph.src+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>':'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.3">📸</div>')
+        +(ph&&ph.src?'<img src="'+ph.src+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>':'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;opacity:.3">📸</div>')
         +(ph.hasMarkup?'<span style="position:absolute;top:4px;right:4px;background:#E91E8C;color:#fff;font-size:9px;font-weight:800;border-radius:4px;padding:1px 5px">MARKUP</span>':'')
         +'</div>'
         +'<div style="padding:8px 10px">'
