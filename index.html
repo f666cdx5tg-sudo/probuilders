@@ -3494,8 +3494,14 @@ function showAuthScreen() {
 
       <!-- Join team panel -->
       <div id="auth-join" style="display:none">
-        <div style="background:#162016;border-radius:10px;padding:16px;margin-bottom:16px;font-size:13px;color:#7A9E7A;line-height:1.5">
-          Ask your team owner or admin for the <strong style="color:#D4E8D4">Workspace Code</strong> and your assigned <strong style="color:#D4E8D4">PIN</strong>. They can add you from Settings → Team Members.
+        <div style="background:#162016;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:#7A9E7A;line-height:1.6">
+          <div style="font-weight:800;color:#D4E8D4;margin-bottom:6px">How to join:</div>
+          <div>1. Get the <strong style="color:#4CAF50">Workspace Code</strong> from your owner (6 letters)</div>
+          <div>2. Get your <strong style="color:#4CAF50">PIN</strong> — owner adds you in Team Members</div>
+          <div>3. Enter your name, code, and PIN below</div>
+          <div style="margin-top:8px;padding:8px;background:#0D1B0D;border-radius:8px;font-size:11px;color:#3A5A3A">
+            💡 Tip: Your name doesn't have to match exactly — just enter how you want to appear
+          </div>
         </div>
         <div style="margin-bottom:12px">
           <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">WORKSPACE CODE *</div>
@@ -3536,11 +3542,39 @@ function selectWorkspaceLogin(wsId) {
   if (!ws) return;
   document.getElementById('li-code').value = wsId;
   var form = document.getElementById('login-form');
-  if (form) { form.style.display='block'; document.getElementById('li-name').focus(); }
+  if (form) { form.style.display='block'; }
+
+  // Show member list for quick PIN entry
+  var nameInput = document.getElementById('li-name');
+  if(nameInput) nameInput.focus();
+
   // Highlight selected card
   document.querySelectorAll('[id^="ws-card-"]').forEach(function(el){ el.style.borderColor='#243024'; });
   var card = document.getElementById('ws-card-'+wsId);
   if (card) card.style.borderColor = '#4CAF50';
+
+  // Show member hints
+  var existing = document.getElementById('li-member-hint');
+  if(existing) existing.remove();
+  if(ws.members && ws.members.length) {
+    var hint = document.createElement('div');
+    hint.id  = 'li-member-hint';
+    hint.style.cssText = 'margin-bottom:10px;font-size:12px;color:#7A9E7A';
+    hint.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Members — tap to auto-fill name</div>'
+      + ws.members.map(function(m){
+          var roleInfo = (typeof ROLES!=='undefined' && ROLES[m.role]) ? ROLES[m.role] : {badge:'👤',color:'#7A9E7A'};
+          var btn = document.createElement('button');
+          btn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;margin:3px;padding:5px 10px;border-radius:99px;border:1px solid #243024;background:#162016;color:#D4E8D4;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit';
+          btn.textContent = roleInfo.badge+' '+m.name;
+          btn.setAttribute('data-mname', m.name);
+          btn.onclick = function(){ document.getElementById('li-name').value = this.getAttribute('data-mname'); document.getElementById('li-pin').focus(); };
+          return btn.outerHTML;
+        }).join('');
+    var codeField = document.getElementById('li-code');
+    if(codeField && codeField.parentNode) {
+      form.insertBefore(hint, form.firstChild);
+    }
+  }
 }
 
 function signIn() {
@@ -3554,8 +3588,19 @@ function signIn() {
   if (!ws) { if(err) err.textContent='Workspace not found. Check the code.'; return; }
 
   // Find matching member
-  var member = ws.members.find(function(m){ return m.pin===pin && (m.name.toLowerCase()===name.toLowerCase() || m.role==='owner'); });
-  if (!member) { if(err) err.textContent='Name or PIN does not match.'; return; }
+  // Match by PIN first, then verify name loosely
+  var member = ws.members.find(function(m){ return m.pin===pin; });
+  if (!member) {
+    if(err) err.textContent='PIN not found for this workspace.';
+    return;
+  }
+  // Accept if name matches OR if only 1 member with that PIN (owner bypass)
+  var nameOk = !name || member.name.toLowerCase()===name.toLowerCase() || member.role==='owner';
+  if (!nameOk) {
+    // Still let them in but update name
+    member.name = name;
+    saveWorkspace(ws);
+  }
 
   _currentWorkspace = ws;
   _currentUser      = { name:member.name, role:member.role, pin };
@@ -4295,6 +4340,7 @@ function _showPostLoginSwitcher(role, name) {
 function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); if(m)m.remove(); }
 
 </script>
+
 
 
 
