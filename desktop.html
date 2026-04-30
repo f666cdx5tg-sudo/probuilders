@@ -377,7 +377,7 @@ textarea.fc{resize:vertical;min-height:80px}
       <span id="t-weather-ico" style="font-size:18px;line-height:1">🌤</span>
       <span id="t-weather-txt">Loading...</span>
     </div>
-    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v6.3</div>
+    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v7.3</div>
   </div>
   <div class="t-actions">
     <div class="alert-pill" id="alerts-pill" onclick="showView('safety')" style="display:none">⚠️ <span id="alerts-count">0</span></div>
@@ -429,6 +429,14 @@ textarea.fc{resize:vertical;min-height:80px}
     </div>
   </div>
     <div class="nav-sec">
+    <div class="nav-lbl">Tools & Reference</div>
+    <button class="ni" onclick="showView('fittings')" data-view="fittings">🔧 Pipe Fittings</button>
+    <button class="ni w100" onclick="showView('fittings');initFittingsView()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+      Pipe Fittings Tool
+    </button>
+    </div>
+    <div class="nav-sec">
     <div class="nav-lbl">Workspace</div>
     <div style="padding:4px 8px">
       <button class="ni w100" onclick="openTeamManager()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Members</button>
@@ -436,7 +444,7 @@ textarea.fc{resize:vertical;min-height:80px}
     </div>
   </div>
   <div class="sb-footer">
-    <div class="xs faint mono">ProBuilders Desktop v3.1</div>
+    <div class="xs faint mono">ProBuilders Desktop v6.4</div>
     <div class="xs faint">Field Command Center</div>
   </div>
 </nav>
@@ -818,10 +826,55 @@ textarea.fc{resize:vertical;min-height:80px}
     </div>
   </div>
 </section>
+
+  <!-- PIPE FITTINGS TOOL -->
+  <section id="view-fittings" class="view">
+    <div class="ph"><div><div class="ph-title">🔧 Pipe Fittings</div><div class="ph-sub">Charlotte Pipe catalog — build order list & export</div></div><div class="ph-actions"><button class="btn btn-g btn-sm" id="fittings-cart-btn" onclick="showFittingsOrderList()">🛒 Order List</button></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px"><select class="fc" id="fittings-mat" onchange="renderPipeFittingsTool()"><option value="">All Materials</option><option value="PVC">PVC</option><option value="ABS">ABS</option><option value="Copper">Copper</option></select><select class="fc" id="fittings-section" onchange="renderPipeFittingsTool()"><option value="">All Sections</option></select><input class="fc" id="fittings-search" placeholder="Search fittings or part #..." oninput="renderPipeFittingsTool()"/></div>
+    <div class="cs" id="fittings-count" style="margin-bottom:10px">— items</div>
+    <div id="fittings-tool-container" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:8px"></div>
+  </section>
 </main>
 </div>
 <div class="tw-wrap" id="toast-wrap"></div>
 <script>
+
+/* ── Migrate existing data to workspace-scoped key ── */
+function pbMigrateLocalData(wsCode) {
+  var wsKey  = 'probuilders_data_v2_' + wsCode;
+  var oldKey = 'probuilders_data_v2';
+
+  // If workspace key already has data, nothing to migrate
+  var existing = localStorage.getItem(wsKey);
+  if (existing) {
+    try {
+      var parsed = JSON.parse(existing);
+      if (parsed.projects && parsed.projects.length > 0) return; // already has real data
+    } catch(e) {}
+  }
+
+  // Check all possible old keys for data
+  var oldKeys = [oldKey, 'pb_data', 'probuilders_data'];
+  for (var i=0; i<oldKeys.length; i++) {
+    var raw = localStorage.getItem(oldKeys[i]);
+    if (!raw) continue;
+    try {
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') continue;
+      // Has real projects/tasks? Copy to workspace key
+      var hasData = (data.projects && data.projects.length > 0)
+                 || (data.tasks    && data.tasks.length    > 0)
+                 || (data.photos   && data.photos.length   > 0);
+      if (hasData) {
+        localStorage.setItem(wsKey, raw);
+        console.log('[ProBuilders] Migrated data from', oldKeys[i], 'to', wsKey,
+          '—', data.projects.length, 'projects');
+        return;
+      }
+    } catch(e) { continue; }
+  }
+}
+
 
 /* ── App detection ── */
 function pbCurrentApp(){
@@ -937,7 +990,7 @@ function showAuthScreen() {
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#4CAF50,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
         <div style="font-size:13px;color:#7A9E7A;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(76,175,80,.15);border:1px solid rgba(76,175,80,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#4CAF50;letter-spacing:.05em">v6.1</div>
+        <div style="display:inline-block;margin-top:8px;background:rgba(76,175,80,.15);border:1px solid rgba(76,175,80,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#4CAF50;letter-spacing:.05em">v7.3</div>
       </div>
 
       <!-- App switcher -->
@@ -1121,6 +1174,8 @@ function signIn() {
 
   // Set DB_KEY to workspace-scoped key
   window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+  // Migrate any existing data to workspace key
+  pbMigrateLocalData(code);
 
   document.getElementById('pb-auth-screen')?.remove();
   applyRole(member.role);
@@ -1157,6 +1212,7 @@ function createWorkspace() {
   localStorage.setItem(WS_KEY, wsId);
   localStorage.setItem('pb_user_'+wsId, JSON.stringify(_currentUser));
   window._WS_LS_KEY = DB_KEY_PFX + '_' + wsId;
+  pbMigrateLocalData(wsId);
 
   document.getElementById('pb-auth-screen')?.remove();
   applyRole('owner');
@@ -1205,6 +1261,8 @@ function joinWorkspace() {
     localStorage.setItem(WS_KEY, code);
     localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
     window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+    // ── Migrate any existing local data to workspace key ──
+    pbMigrateLocalData(code);
     document.getElementById('pb-auth-screen')?.remove();
     applyRole('worker');
     if (typeof loadFromLocal === 'function') loadFromLocal();
@@ -1212,7 +1270,7 @@ function joinWorkspace() {
     else if (typeof refreshHome === 'function') refreshHome();
     setTimeout(function(){
       if (typeof toast === 'function')
-        toast('✅ Joined workspace ' + code + ' — pull from cloud to sync project data');
+        toast('✅ Joined workspace ' + code + ' — your projects are loaded');
     }, 800);
     return;
   }
@@ -1238,6 +1296,8 @@ function joinWorkspace() {
   localStorage.setItem(WS_KEY, code);
   localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
   window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+  // Migrate any existing data to workspace key
+  pbMigrateLocalData(code);
 
   document.getElementById('pb-auth-screen')?.remove();
   applyRole(member.role);
@@ -1905,6 +1965,20 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <script>
 
 /* ══════════════════════════════════════════════════════════════
@@ -2233,6 +2307,7 @@ function pbPasteAndClose(){
 function pbSaveGithubTokenBtn(){ pbSaveGithubToken(window._pbGistAction || 'push'); }
 
 </script>
+
 
 
 <script>
@@ -4744,6 +4819,395 @@ window.addEventListener('keydown', e => {
   <div id="lightbox-meta" style="color:rgba(255,255,255,.5);font-size:11px;text-align:center"></div>
 </div>
 
+
+<section id="view-fittings" class="view">
+  <div class="ph"><div><div class="ph-title">🔧 Pipe Fittings Reference</div><div class="ph-sub">Charlotte Pipe catalog · Filter · Build order list · Export</div></div>
+    <div class="ph-actions">
+      <button class="btn btn-g btn-sm" onclick="exportFittingsOrder()">📦 Export Order</button>
+    </div>
+  </div>
+  <div id="fittings-tool-container" style="background:var(--s1);border-radius:var(--r12);min-height:300px"></div>
+</section>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS AI SCOPE ENGINE
+   Analyzes job scope → generates comprehensive checklist + estimate
+   Uses Anthropic API (claude-sonnet-4-20250514)
+══════════════════════════════════════════════════════════════ */
+
+function openScopeAnalyzer(projId) {
+  var proj = DB.projects.find(function(p){ return p.id===projId; });
+  if(!proj) return;
+
+  var existing = [proj.scope, proj.notes, proj.category, proj.trade].filter(Boolean).join('. ');
+
+  var mo = document.createElement('div');
+  mo.id = 'scope-modal';
+  mo.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9600;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;font-family:inherit';
+
+  mo.innerHTML = '<div style="background:#111;border:1px solid #2a2a2a;border-radius:18px;padding:24px;max-width:640px;width:100%;margin:auto">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +   '<div>'
+    +     '<div style="font-size:19px;font-weight:800;color:#fff">🤖 AI Scope Analyzer</div>'
+    +     '<div style="font-size:12px;color:#666;margin-top:2px">' + proj.name + '</div>'
+    +   '</div>'
+    +   '<button onclick="pbCloseScopeModal()" style="background:none;border:none;color:#666;font-size:22px;cursor:pointer">✕</button>'
+    + '</div>'
+
+    // Scope input
+    + '<div style="margin-bottom:12px">'
+    +   '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:6px">Describe the Scope of Work *</div>'
+    +   '<textarea id="scope-input" rows="5" placeholder="e.g. Full bathroom remodel — demo existing tile, replace tub with walk-in shower, new vanity, toilet, GFCI outlets, exhaust fan, tile floor and walls, waterproofing, paint..." '
+    +   'style="width:100%;padding:12px;border-radius:10px;border:1px solid #2a2a2a;background:#1a1a1a;color:#fff;font-size:13px;line-height:1.5;resize:vertical;font-family:inherit;box-sizing:border-box">'
+    +   existing
+    +   '</textarea>'
+    + '</div>'
+
+    // Trade chips hint
+    + '<div style="background:#1a2a1a;border:1px solid #2a3a2a;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#4CAF50">'
+    +   '💡 Tip: Be specific — mention materials (tile, cement board), fixtures (kohler, delta), dimensions, and any special conditions (old plumbing, water damage, permit required)'
+    + '</div>'
+
+    // Options row
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'
+    +   '<label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;border:1px solid #2a2a2a;cursor:pointer">'
+    +     '<input type="checkbox" id="scope-opt-tasks" checked style="width:16px;height:16px;accent-color:#4CAF50"/> '
+    +     '<div><div style="font-size:12px;font-weight:700;color:#fff">Generate Task List</div><div style="font-size:10px;color:#666">Full checklist with phases</div></div>'
+    +   '</label>'
+    +   '<label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;border:1px solid #2a2a2a;cursor:pointer">'
+    +     '<input type="checkbox" id="scope-opt-estimate" checked style="width:16px;height:16px;accent-color:#E91E8C"/> '
+    +     '<div><div style="font-size:12px;font-weight:700;color:#fff">Generate Estimate</div><div style="font-size:10px;color:#666">Line items with pricing</div></div>'
+    +   '</label>'
+    +   '<label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;border:1px solid #2a2a2a;cursor:pointer">'
+    +     '<input type="checkbox" id="scope-opt-materials" checked style="width:16px;height:16px;accent-color:#FF9800"/> '
+    +     '<div><div style="font-size:12px;font-weight:700;color:#fff">Materials List</div><div style="font-size:10px;color:#666">Everything incl. fasteners</div></div>'
+    +   '</label>'
+    +   '<label style="display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;border:1px solid #2a2a2a;cursor:pointer">'
+    +     '<input type="checkbox" id="scope-opt-safety" style="width:16px;height:16px;accent-color:#00BCD4"/> '
+    +     '<div><div style="font-size:12px;font-weight:700;color:#fff">Safety Checklist</div><div style="font-size:10px;color:#666">OSHA & compliance items</div></div>'
+    +   '</label>'
+    + '</div>'
+
+    // Action buttons
+    + '<div id="scope-result" style="display:none"></div>'
+    + '<div id="scope-error" style="display:none;color:#EF5350;font-size:12px;padding:10px;background:rgba(239,83,80,.1);border-radius:8px;margin-bottom:12px"></div>'
+    + '<div style="display:flex;gap:8px">'
+    +   '<button onclick="pbCloseScopeModal()" style="flex:1;padding:12px;border-radius:10px;border:1px solid #2a2a2a;background:transparent;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +   '<button id="scope-analyze-btn" onclick="runScopeAnalysis(\'' + projId + '\')" style="flex:2;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#4CAF50,#2E7D32);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">🤖 Analyze & Generate</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+  document.getElementById('scope-input')?.focus();
+}
+
+function pbCloseScopeModal() { document.getElementById('scope-modal')?.remove(); }
+
+async function runScopeAnalysis(projId) {
+  var scope = document.getElementById('scope-input')?.value?.trim();
+  if(!scope || scope.length < 10) { toast('Please describe the scope of work'); return; }
+
+  var proj = DB.projects.find(function(p){ return p.id===projId; });
+  var wantTasks    = document.getElementById('scope-opt-tasks')?.checked;
+  var wantEstimate = document.getElementById('scope-opt-estimate')?.checked;
+  var wantMaterials= document.getElementById('scope-opt-materials')?.checked;
+  var wantSafety   = document.getElementById('scope-opt-safety')?.checked;
+
+  // Show loading state
+  var btn = document.getElementById('scope-analyze-btn');
+  if(btn){ btn.disabled=true; btn.textContent='🤖 Analyzing...'; btn.style.background='#333'; }
+  var errEl = document.getElementById('scope-error');
+  if(errEl) errEl.style.display='none';
+
+  var prompt = 'You are an expert construction project manager and estimator. '
+    + 'Analyze the following scope of work and generate a COMPREHENSIVE, detailed breakdown.\n\n'
+    + 'PROJECT: ' + proj.name + '\n'
+    + 'PROPERTY TYPE: ' + (proj.propertyType||'') + '\n'
+    + 'ROOM / SPACE TYPE: ' + (proj.roomType||'') + '\n'
+    + 'CATEGORY: ' + (proj.category||'') + '\n'
+    + 'TRADE: ' + (proj.trade||'') + '\n'
+    + 'SCOPE: ' + scope + '\n\n'
+    + 'Return ONLY valid JSON with this exact structure (no markdown, no explanation):\n'
+    + '{\n'
+    + (wantTasks ? '  "phases": [\n    {\n      "phase": "Phase name",\n      "tasks": [\n        {"task": "Task description", "photo_required": true/false, "inspection": false}\n      ]\n    }\n  ],\n' : '  "phases": [],\n')
+    + (wantEstimate ? '  "estimate_items": [\n    {\n      "description": "Item name",\n      "category": "Labor|Material|Equipment|Permit|Other",\n      "qty": 1,\n      "unit": "EA|LF|SF|HR|LS|CY|LB|BOX|ROLL|GAL|SET",\n      "unit_cost": 0.00,\n      "notes": "spec or brand"\n    }\n  ],\n' : '  "estimate_items": [],\n')
+    + (wantMaterials ? '  "materials": [\n    {\n      "item": "Material name",\n      "spec": "spec/brand/grade",\n      "qty": 1,\n      "unit": "EA|LF|SF|HR|LS|CY|LB|BOX|ROLL|GAL|SET",\n      "category": "Protection|Demo|Framing|Plumbing|Electrical|Waterproofing|Tile|Drywall|Paint|Fixtures|Fasteners|Adhesives|Sealants|Tools|Other"\n    }\n  ],\n' : '  "materials": [],\n')
+    + (wantSafety ? '  "safety_items": [\n    {"item": "Safety requirement", "code": "OSHA ref"}\n  ]\n' : '  "safety_items": []\n')
+    + '}\n\n'
+    + 'REQUIREMENTS:\n'
+    + '- Tasks: be comprehensive, include EVERY step from protection to final punch list. Group logically by phase.\n'
+    + '- Estimate: include EVERYTHING — labor (breakdown by trade/hour), ALL materials (down to screws, tape, primer, caulk, drop cloths), permits, equipment rental, disposal. Use realistic NJ/metro area pricing.\n'
+    + '- Materials: list EVERY physical item needed including: fasteners (screws, nails, bolts), adhesives (thinset, construction adhesive, mastic), sealants (caulk, silicone, grout), consumables (sandpaper, painter tape, poly sheeting), safety items (gloves, goggles, dust masks).\n'
+    + '- Be specific about quantities and specs.\n'
+    + '- Do NOT skip anything. A complete estimate protects the contractor from change orders.';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if(!response.ok) throw new Error('API error: ' + response.status);
+
+    var data = await response.json();
+    var text = (data.content||[]).map(function(b){ return b.text||''; }).join('');
+
+    // Parse JSON
+    var clean = text.replace(/```json/g,'').replace(/```/g,'').trim();
+    var result = JSON.parse(clean);
+
+    pbCloseScopeModal();
+    showScopeResults(projId, result, scope, wantTasks, wantEstimate, wantMaterials, wantSafety);
+
+  } catch(err) {
+    console.error('Scope analysis error:', err);
+    if(errEl){ errEl.style.display='block'; errEl.textContent='❌ Analysis failed: ' + err.message + '. Check your internet connection.'; }
+    if(btn){ btn.disabled=false; btn.textContent='🤖 Analyze & Generate'; btn.style.background='linear-gradient(135deg,#4CAF50,#2E7D32)'; }
+  }
+}
+
+function showScopeResults(projId, result, scope, wantTasks, wantEstimate, wantMaterials, wantSafety) {
+  var proj = DB.projects.find(function(p){ return p.id===projId; });
+
+  // Count totals
+  var taskCount = (result.phases||[]).reduce(function(s,p){ return s+(p.tasks||[]).length; },0);
+  var estTotal  = (result.estimate_items||[]).reduce(function(s,i){ return s+(+i.qty||1)*(+i.unit_cost||0); },0);
+  var matCount  = (result.materials||[]).length;
+
+  var mo = document.createElement('div');
+  mo.id = 'scope-results-modal';
+  mo.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9600;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;font-family:inherit';
+
+  // Build phases HTML
+  var phasesHtml = (result.phases||[]).map(function(ph){
+    return '<div style="margin-bottom:12px">'
+      + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#4CAF50;padding:6px 0;border-bottom:1px solid #1a2a1a;margin-bottom:6px">' + ph.phase + '</div>'
+      + (ph.tasks||[]).map(function(t,i){
+          return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;color:#ccc;border-bottom:1px solid #1a1a1a">'
+            + '<span style="color:#2a2a2a;font-size:10px;width:20px;text-align:right;flex-shrink:0">' + (i+1) + '</span>'
+            + (t.photo_required?'<span style="font-size:10px">📸</span>':'<span style="font-size:10px;opacity:.2">📷</span>')
+            + (t.inspection?'<span style="font-size:10px">🔍</span>':'')
+            + '<span style="flex:1">' + t.task + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }).join('');
+
+  // Build estimate HTML - group by category
+  var estByCategory = {};
+  (result.estimate_items||[]).forEach(function(item){
+    var cat = item.category||'Other';
+    if(!estByCategory[cat]) estByCategory[cat]=[];
+    estByCategory[cat].push(item);
+  });
+  var estHtml = Object.keys(estByCategory).map(function(cat){
+    var items = estByCategory[cat];
+    var catTotal = items.reduce(function(s,i){ return s+(+i.qty||1)*(+i.unit_cost||0); },0);
+    return '<div style="margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:'
+      + (cat==='Labor'?'#4CAF50':cat==='Material'?'#FF9800':cat==='Equipment'?'#2196F3':cat==='Permit'?'#9C27B0':'#888')
+      + ';padding:5px 0;border-bottom:1px solid #1a2a1a;margin-bottom:4px"><span>' + cat + '</span><span>$' + catTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') + '</span></div>'
+      + items.map(function(item){
+          var line = (+item.qty||1)*(+item.unit_cost||0);
+          return '<div style="display:grid;grid-template-columns:1fr 50px 65px 70px;gap:4px;align-items:center;padding:4px 0;font-size:11px;color:#aaa;border-bottom:1px solid #111">'
+            + '<div>' + item.description + (item.notes?'<div style="font-size:9px;color:#555;font-style:italic">' + item.notes + '</div>':'') + '</div>'
+            + '<div style="text-align:right;color:#888">' + item.qty + ' ' + item.unit + '</div>'
+            + '<div style="text-align:right;color:#888">$' + (+item.unit_cost||0).toFixed(2) + '</div>'
+            + '<div style="text-align:right;font-weight:700;color:#fff">$' + line.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }).join('');
+
+  // Build materials HTML - group by category
+  var matByCategory = {};
+  (result.materials||[]).forEach(function(m){
+    var cat = m.category||'Other';
+    if(!matByCategory[cat]) matByCategory[cat]=[];
+    matByCategory[cat].push(m);
+  });
+  var matHtml = Object.keys(matByCategory).map(function(cat){
+    var items = matByCategory[cat];
+    return '<div style="margin-bottom:10px">'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#FF9800;padding:5px 0;border-bottom:1px solid #2a1a0a;margin-bottom:4px">' + cat + '</div>'
+      + items.map(function(m){
+          return '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:#aaa;border-bottom:1px solid #111">'
+            + '<div><span>' + m.item + '</span><span style="font-size:9px;color:#555;margin-left:8px">' + (m.spec||'') + '</span></div>'
+            + '<div style="color:#888;white-space:nowrap;margin-left:8px">' + m.qty + ' ' + m.unit + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }).join('');
+
+  // Safety HTML
+  var safetyHtml = (result.safety_items||[]).map(function(s){
+    return '<div style="padding:5px 0;font-size:11px;color:#aaa;border-bottom:1px solid #111;display:flex;gap:8px">'
+      + '<span style="color:#00BCD4">⚠️</span><span style="flex:1">' + s.item + '</span>'
+      + (s.code?'<span style="font-size:9px;color:#555">'+s.code+'</span>':'')
+      + '</div>';
+  }).join('');
+
+  mo.innerHTML = '<div style="background:#111;border:1px solid #222;border-radius:18px;padding:0;max-width:700px;width:100%;margin:auto;overflow:hidden">'
+
+    // Header
+    + '<div style="background:linear-gradient(135deg,#1a2a1a,#111);padding:20px 24px;border-bottom:1px solid #222">'
+    +   '<div style="display:flex;align-items:flex-start;justify-content:space-between">'
+    +     '<div><div style="font-size:18px;font-weight:800;color:#fff">🤖 AI Scope Analysis</div>'
+    +          '<div style="font-size:12px;color:#666;margin-top:2px">' + proj.name + '</div></div>'
+    +     '<button onclick="pbCloseScopeResults()" style="background:none;border:none;color:#666;font-size:22px;cursor:pointer">✕</button>'
+    +   '</div>'
+    // KPI bar
+    +   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">'
+    +     '<div style="background:#0d1a0d;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:#4CAF50">' + taskCount + '</div><div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Tasks</div></div>'
+    +     '<div style="background:#1a0d00;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:#FF9800">$' + estTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',') + '</div><div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Est. Total</div></div>'
+    +     '<div style="background:#1a0d0d;border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:900;color:#E91E8C">' + matCount + '</div><div style="font-size:9px;color:#666;text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Materials</div></div>'
+    +   '</div>'
+    + '</div>'
+
+    // Tabs
+    + '<div id="scope-res-tabs" style="display:flex;border-bottom:1px solid #222">'
+    +   (taskCount?'<button onclick="scopeResTab(\'tasks\')" id="srt-tasks" style="flex:1;padding:12px;border:none;background:#1a2a1a;color:#4CAF50;font-size:12px;font-weight:800;cursor:pointer;border-bottom:2px solid #4CAF50">📋 Tasks (' + taskCount + ')</button>':'')
+    +   (result.estimate_items?.length?'<button onclick="scopeResTab(\'estimate\')" id="srt-estimate" style="flex:1;padding:12px;border:none;background:transparent;color:#888;font-size:12px;font-weight:700;cursor:pointer">💰 Estimate</button>':'')
+    +   (matCount?'<button onclick="scopeResTab(\'materials\')" id="srt-materials" style="flex:1;padding:12px;border:none;background:transparent;color:#888;font-size:12px;font-weight:700;cursor:pointer">📦 Materials</button>':'')
+    +   (result.safety_items?.length?'<button onclick="scopeResTab(\'safety\')" id="srt-safety" style="flex:1;padding:12px;border:none;background:transparent;color:#888;font-size:12px;font-weight:700;cursor:pointer">⚠️ Safety</button>':'')
+    + '</div>'
+
+    // Tab panels
+    + '<div style="max-height:55vh;overflow-y:auto;padding:16px 20px">'
+    +   '<div id="srtab-tasks">' + phasesHtml + '</div>'
+    +   '<div id="srtab-estimate" style="display:none">'
+    +     '<div style="display:grid;grid-template-columns:1fr 50px 65px 70px;gap:4px;padding:5px 0;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#555;border-bottom:1px solid #222;margin-bottom:8px"><span>Description</span><span style="text-align:right">Qty</span><span style="text-align:right">Unit $</span><span style="text-align:right">Total</span></div>'
+    +     estHtml
+    +     '<div style="display:flex;justify-content:space-between;padding:12px 0;font-size:15px;font-weight:900;color:#fff;border-top:2px solid #333;margin-top:8px"><span>TOTAL ESTIMATE</span><span style="color:#4CAF50">$' + estTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') + '</span></div>'
+    +   '</div>'
+    +   '<div id="srtab-materials" style="display:none">' + matHtml + '</div>'
+    +   '<div id="srtab-safety" style="display:none">' + safetyHtml + '</div>'
+    + '</div>'
+
+    // Action buttons
+    + '<div style="padding:16px 20px;border-top:1px solid #222;display:flex;flex-wrap:wrap;gap:8px">'
+    +   (taskCount?'<button onclick="importScopeTasks(\'' + projId + '\')" style="flex:1;min-width:140px;padding:11px;border-radius:10px;border:none;background:#4CAF50;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">✅ Add Tasks</button>':'')
+    +   (result.estimate_items?.length?'<button onclick="importScopeEstimate(\'' + projId + '\')" style="flex:1;min-width:140px;padding:11px;border-radius:10px;border:none;background:#FF9800;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">💰 Save Estimate</button>':'')
+    +   (matCount?'<button onclick="importScopeMaterials(\'' + projId + '\')" style="flex:1;min-width:140px;padding:11px;border-radius:10px;border:none;background:#2196F3;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">📦 Add to Inventory</button>':'')
+    +   '<button onclick="pbCloseScopeResults()" style="flex:1;min-width:100px;padding:11px;border-radius:10px;border:1px solid #333;background:transparent;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>'
+    + '</div>'
+
+    + '</div>';
+
+  document.body.appendChild(mo);
+
+  // Store result globally for import functions
+  window._scopeResult = result;
+  window._scopeProjId = projId;
+}
+
+function pbCloseScopeResults() { document.getElementById('scope-results-modal')?.remove(); }
+
+function scopeResTab(tab) {
+  ['tasks','estimate','materials','safety'].forEach(function(t){
+    var panel = document.getElementById('srtab-'+t);
+    var btn   = document.getElementById('srt-'+t);
+    if(panel) panel.style.display = t===tab ? 'block' : 'none';
+    if(btn) {
+      var colors = {tasks:'#4CAF50',estimate:'#FF9800',materials:'#FF9800',safety:'#00BCD4'};
+      btn.style.background   = t===tab ? (t==='tasks'?'#1a2a1a':t==='safety'?'#001a1a':'#1a0d00') : 'transparent';
+      btn.style.color        = t===tab ? (colors[t]||'#fff') : '#888';
+      btn.style.borderBottom = t===tab ? '2px solid '+(colors[t]||'#fff') : '2px solid transparent';
+    }
+  });
+}
+
+function importScopeTasks(projId) {
+  var result = window._scopeResult;
+  if(!result || !result.phases) return;
+
+  if(!DB.tasks) DB.tasks = [];
+  var order = DB.tasks.filter(function(t){ return t.projectId===projId; }).length;
+  var count = 0;
+
+  result.phases.forEach(function(ph) {
+    // Phase header
+    DB.tasks.push({ id:uid(), projectId:projId, desc:ph.phase, isPhaseHeader:true, done:false, photoRequired:false, order:order++, isStandard:false, source:'ai' });
+    (ph.tasks||[]).forEach(function(t) {
+      DB.tasks.push({ id:uid(), projectId:projId, desc:t.task, done:false, photoRequired:!!t.photo_required, isInspection:!!t.inspection, order:order++, isStandard:false, source:'ai' });
+      count++;
+    });
+  });
+
+  pbCloseScopeResults();
+  saveToLocal(); broadcastData();
+  renderTasks?.(); renderProjects?.(); refreshHome?.();
+  toast('✅ ' + count + ' tasks added to project');
+  logChange('AI_TASKS','project',projId,{tasks:count});
+}
+
+function importScopeEstimate(projId) {
+  var result = window._scopeResult;
+  if(!result || !result.estimate_items) return;
+
+  if(!DB.estimates) DB.estimates = [];
+  var proj = DB.projects.find(function(p){ return p.id===projId; });
+  var items = result.estimate_items;
+  var total = items.reduce(function(s,i){ return s+(+i.qty||1)*(+i.unit_cost||0); },0);
+
+  var existing = DB.estimates.findIndex(function(e){ return e.projectId===projId; });
+  var lineItems = items.map(function(i){ return { desc:i.description, qty:+i.qty||1, rate:+i.unit_cost||0, unit:i.unit||'EA', total:(+i.qty||1)*(+i.unit_cost||0), category:i.category, notes:i.notes||'' }; });
+
+  var estObj = {
+    id:         existing>=0 ? DB.estimates[existing].id : uid(),
+    projectId:  projId,
+    client:     proj?.client||'',
+    date:       new Date().toISOString().slice(0,10),
+    scope:      document.getElementById('scope-input')?.value || proj?.scope || '',
+    lineItems,
+    tax:        0,
+    subtotal:   total,
+    total,
+    notes:      'AI-generated estimate — verify all quantities and pricing before presenting to client.',
+    photos:     [],
+    status:     'DRAFT',
+    createdBy:  _currentUser?.name||'AI Generated',
+    createdAt:  now(),
+    aiGenerated:true,
+  };
+
+  if(existing>=0) DB.estimates[existing]=estObj; else DB.estimates.push(estObj);
+  if(proj) { proj.contract = total; proj.lifecycleStage = proj.lifecycleStage||'ESTIMATE'; }
+
+  pbCloseScopeResults();
+  saveToLocal(); broadcastData();
+  renderProjects?.(); refreshHome?.();
+  toast('💰 Estimate saved — $' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','));
+  logChange('AI_ESTIMATE','project',projId,{total});
+}
+
+function importScopeMaterials(projId) {
+  var result = window._scopeResult;
+  if(!result || !result.materials) return;
+
+  if(!DB.inventory) DB.inventory = [];
+  var added = 0;
+  result.materials.forEach(function(m) {
+    if(!DB.inventory.find(function(i){ return i.name.toLowerCase()===m.item.toLowerCase(); })) {
+      DB.inventory.push({ id:uid(), name:m.item, spec:m.spec||'', qty:0, min:+m.qty||1, unit:m.unit||'EA', cost:0, category:m.category||'Other', location:'To Order', projectId:projId, created:now() });
+      added++;
+    }
+  });
+
+  pbCloseScopeResults();
+  saveToLocal(); broadcastData();
+  renderInventory?.(); refreshSidebadges?.();
+  toast('📦 ' + added + ' materials added to inventory');
+  logChange('AI_MATERIALS','project',projId,{added});
+}
+
+</script>
 </body>
 </html>
 <script>
@@ -5044,14 +5508,55 @@ function switchSchedTab(tab) {
 /* ════════════════════════════════════════════════════════════
    CREATE PROJECT (DESKTOP)
 ════════════════════════════════════════════════════════════ */
+
+function initTradesGrid(gridId, hiddenId) {
+  var trades = ["General Contracting","Electrical","Plumbing","HVAC","Carpentry / Framing","Masonry / Concrete","Roofing","Painting","Flooring","Landscaping","Drywall / Insulation","Waterproofing","Demolition","Steel / Structural","Tile / Stone","Millwork / Cabinets","Glass / Glazing","Fire Protection","Low Voltage / Data","Other"];
+  var grid = document.getElementById(gridId);
+  if(!grid) return;
+  grid.innerHTML = trades.map(function(t){
+    return '<button type="button" data-trade="'+t
+      +'" onclick="toggleTradeChip(this,\''+gridId+'\',\''+hiddenId+'\') " '
+      +'style="padding:7px 10px;border-radius:8px;border:1px solid var(--divider);background:var(--surface-2);'
+      +'color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;text-align:left;transition:all .15s">'+t+'</button>';
+  }).join('');
+  var hidden = document.getElementById(hiddenId);
+  if(hidden) hidden.value = '';
+}
+
+function toggleTradeChip(btn, gridId, hiddenId) {
+  var isOn = btn.getAttribute('data-on') === '1';
+  if(isOn) {
+    btn.removeAttribute('data-on');
+    btn.style.background = 'var(--surface-2)';
+    btn.style.borderColor = 'var(--divider)';
+    btn.style.color = 'var(--text-muted)';
+  } else {
+    btn.setAttribute('data-on','1');
+    btn.style.background = 'rgba(76,175,80,.15)';
+    btn.style.borderColor = '#4CAF50';
+    btn.style.color = '#4CAF50';
+  }
+  var grid = document.getElementById(gridId);
+  var selected = [];
+  if(grid) grid.querySelectorAll('[data-on="1"]').forEach(function(b){
+    selected.push(b.getAttribute('data-trade'));
+  });
+  var hidden = document.getElementById(hiddenId);
+  if(hidden) hidden.value = selected.join(', ');
+}
+
 function openNewProjectDesktop() {
   var mo = document.createElement('div'); mo.className='mo open'; mo.id='new-proj-modal';
   mo.innerHTML = '<div class="mc" style="max-width:680px">'
     +'<div class="mh"><div class="mt">🏗️ New Project</div><button class="icon-btn" onclick="document.getElementById(\'new-proj-modal\').remove()">✕</button></div>'
     +'<div class="mb fg">'
     +'<div class="fl fl-full"><div class="flbl">Project Name *</div><input class="fc" id="np2-name" placeholder="e.g. Riverside Kitchen Remodel"/></div>'
-    +'<div class="fl"><div class="flbl">Trade *</div><select class="fc" id="np2-trade"><option value="">Select Trade</option><option>General Contracting</option><option>Electrical</option><option>Plumbing</option><option>HVAC</option><option>Carpentry / Framing</option><option>Masonry / Concrete</option><option>Roofing</option><option>Painting</option><option>Flooring</option><option>Landscaping</option><option>Drywall / Insulation</option><option>Waterproofing</option><option>Demolition</option><option>Steel / Structural</option><option>Tile / Stone</option><option>Other</option></select></div>'
-    +'<div class="fl"><div class="flbl">Status</div><select class="fc" id="np2-status"><option>Pending</option><option selected>In Progress</option><option>On Hold</option><option>Completed</option></select></div>'
+    +'<div class="fl"><div class="flbl">Property Type *</div><select class="fc" id="np2-property-type"><option value="">Select</option><option>Residential</option><option>Commercial</option><option>Industrial</option></select></div>'
+    +'<div class="fl"><div class="flbl">Location</div><select class="fc" id="np2-location-type"><option value="">Select</option><option>Interior</option><option>Exterior</option><option>Interior &amp; Exterior</option></select></div>'
+    +'<div class="fl"><div class="flbl">Project Category</div><select class="fc" id="np2-category"><option value="">Select</option><option>Renovation</option><option>New Construction</option><option>Repair</option><option>Maintenance</option><option>Tenant Improvement</option></select></div>'
+    +'<div class="fl"><div class="flbl">Room / Space Type</div><select class="fc" id="np2-room-type"><option value="">Select Room / Space</option><optgroup label="Living Spaces"><option>Kitchen</option><option>Bathroom</option><option>Bedroom</option><option>Living Room</option><option>Common Space / Hallway</option><option>Dining Room</option><option>Home Office</option></optgroup><optgroup label="Lower / Upper"><option>Basement</option><option>Attic</option><option>Garage</option></optgroup><optgroup label="Systems"><option>Hot Water / Heating</option><option>HVAC</option><option>Electrical Panel</option><option>Plumbing System</option><option>Foundation</option><option>Roof</option></optgroup><optgroup label="Exterior"><option>Deck / Patio</option><option>Driveway</option><option>Exterior Walls / Siding</option></optgroup><optgroup label="Commercial"><option>Office Space</option><option>Retail Floor</option><option>Warehouse</option><option>Restroom</option><option>Break Room</option></optgroup><option>Other / Full Building</option></select></div>'
+    +'<div class="fl fl-full"><div class="flbl">Trades * <span style=\"font-size:10px;opacity:.6\">(select multiple)</span></div><div id=\"np2-trades-grid\" style=\"display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:4px\"></div><input type=\"hidden\" id=\"np2-trade\" value=\"\"/></div>'
+    +'<div class="fl"><div class="flbl">Status</div><select class="fc" id="np2-status"><option>Estimate</option><option>Pending</option><option selected>In Progress</option><option>On Hold</option><option>Completed</option></select></div>'
     +'<div class="fl fl-full"><div class="flbl">Street Address</div><input class="fc" id="np2-address" placeholder="123 Main Street"/></div>'
     +'<div class="fl"><div class="flbl">City *</div><input class="fc" id="np2-city" placeholder="City"/></div>'
     +'<div class="fl"><div class="flbl">State</div><input class="fc" id="np2-state" placeholder="NJ" maxlength="2"/></div>'
@@ -5067,6 +5572,7 @@ function openNewProjectDesktop() {
     +'<div class="mf"><button class="btn btn-o" onclick="document.getElementById(\'new-proj-modal\').remove()">Cancel</button><button class="btn btn-g" onclick="saveNewProjectDesktop()">🏗️ Create Project</button></div>'
     +'</div>';
   document.body.appendChild(mo);
+  initTradesGrid('np2-trades-grid','np2-trade');
 }
 
 function saveNewProjectDesktop() {
@@ -5078,6 +5584,10 @@ function saveNewProjectDesktop() {
   var id = 'P-' + String(Date.now()).slice(-5);
   var proj = {
     id, name, trade, city, client,
+    propertyType: document.getElementById('np2-property-type')?.value||'',
+    locationType: document.getElementById('np2-location-type')?.value||'',
+    category:     document.getElementById('np2-category')?.value||'',
+    roomType:     document.getElementById('np2-room-type')?.value||'',
     status:   document.getElementById('np2-status')?.value || 'In Progress',
     address:  document.getElementById('np2-address')?.value?.trim() || '',
     state:    document.getElementById('np2-state')?.value?.trim() || '',
@@ -5088,6 +5598,7 @@ function saveNewProjectDesktop() {
     phone:    document.getElementById('np2-phone')?.value?.trim() || '',
     contract: +(document.getElementById('np2-contract')?.value)||0,
     notes:    document.getElementById('np2-notes')?.value?.trim() || '',
+    scope:    document.getElementById('np2-scope')?.value?.trim() || '',
     progress: 0,
     created:  now(),
   };
@@ -5207,3 +5718,945 @@ function refreshCommand(){
   refreshSidebadges();
 }
 </script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS TRADE TEMPLATES
+   Auto-populate tasks when creating a new project
+══════════════════════════════════════════════════════════════ */
+
+const TRADE_TEMPLATES = {
+
+  'Plumbing — Bathroom Remodel': {
+    icon: '🚿',
+    color: '#2196F3',
+    trade: 'Plumbing',
+    phases: [
+      { phase:'Phase 1 — Tear Out & Prep', tasks:[
+        {desc:'Shut off water, disconnect fixtures', photo:true},
+        {desc:'Demo existing tile, vanity, toilet, tub/shower', photo:true},
+        {desc:'Remove drywall / backer board down to studs', photo:true},
+        {desc:'Inspect subfloor for rot — replace if soft', photo:true},
+        {desc:'Inspect / update framing as needed', photo:true},
+      ]},
+      { phase:'Phase 2 — Rough-Ins', tasks:[
+        {desc:'Rough plumbing — relocate / add supply & drain lines', photo:true},
+        {desc:'Rough electrical — GFCI outlets, fan, lighting circuits', photo:true},
+        {desc:'Install / relocate vent stack if needed', photo:true},
+        {desc:'📋 SCHEDULE ROUGH INSPECTION', photo:false, important:true},
+      ]},
+      { phase:'Phase 3 — Close Up Walls & Waterproof', tasks:[
+        {desc:'Install blocking (grab bars, shower fixtures, accessories)', photo:true},
+        {desc:'Hang cement backer board (wet areas) & moisture-resistant drywall', photo:true},
+        {desc:'Waterproof membrane — shower/tub walls & floor', photo:true},
+        {desc:'Mud & tape drywall seams', photo:true},
+      ]},
+      { phase:'Phase 4 — Finish Surfaces', tasks:[
+        {desc:'Set tile — floor first, then walls', photo:true},
+        {desc:'Grout & seal tile', photo:true},
+        {desc:'Prime & paint walls / ceiling (moisture-rated paint)', photo:true},
+      ]},
+      { phase:'Phase 5 — Install Fixtures & Trim', tasks:[
+        {desc:'Set tub / shower base or pan', photo:true},
+        {desc:'Install vanity & countertop', photo:true},
+        {desc:'Set toilet', photo:true},
+        {desc:'Trim plumbing — faucets, shower valve, supply lines', photo:true},
+        {desc:'Install lighting, exhaust fan, switches / outlets', photo:true},
+        {desc:'Hang mirror, towel bars, accessories', photo:true},
+        {desc:'Install door / trim, transition strips', photo:true},
+        {desc:'Caulk all wet edges (tub-to-tile, floor-to-vanity, toilet base)', photo:true},
+      ]},
+      { phase:'Phase 6 — Final', tasks:[
+        {desc:'📋 SCHEDULE FINAL INSPECTION', photo:false, important:true},
+        {desc:'Final clean & punch list walkthrough', photo:true},
+      ]},
+    ]
+  },
+
+  'Plumbing — Tub Replacement': {
+    icon: '🛁',
+    color: '#00BCD4',
+    trade: 'Plumbing',
+    phases: [
+      { phase:'Phase 1 — Pre-Work & Planning', tasks:[
+        {desc:'Confirm tub type with customer (alcove, freestanding, drop-in, skirted)', photo:false},
+        {desc:'Verify new tub dimensions fit rough opening (L × W × H)', photo:true},
+        {desc:'Check door/hallway clearance — can new tub get in?', photo:true},
+        {desc:'Confirm drain location matches (left, right, center)', photo:true},
+        {desc:'Verify subfloor can handle new tub weight', photo:true},
+        {desc:'Order tub, drain kit, valve trim, supplies — verify everything on site before demo', photo:false},
+        {desc:'Photograph existing conditions — tub, walls, plumbing access', photo:true},
+        {desc:'Lay drop cloths / floor protection on path', photo:true},
+      ]},
+      { phase:'Phase 2 — Shut Down & Protect', tasks:[
+        {desc:'Shut off water — main or local shut-offs', photo:false},
+        {desc:'Open faucet to drain remaining pressure', photo:false},
+        {desc:'Shut off power to nearby circuits (GFCI, fan, light)', photo:false},
+        {desc:'Remove toilet if it blocks tub removal path', photo:true},
+        {desc:'Protect fixtures staying in place', photo:true},
+      ]},
+      { phase:'Phase 3 — Demo & Removal', tasks:[
+        {desc:'Remove faucet handles, spout, showerhead', photo:true},
+        {desc:'Remove escutcheon plates & expose valve body', photo:true},
+        {desc:'Disconnect overflow & drain', photo:true},
+        {desc:'Cut caulk line where tub meets wall / tile', photo:true},
+        {desc:'Remove bottom row of tile or surround panels (18–24" above tub lip)', photo:true},
+        {desc:'Remove screws / nails from tub flange to studs', photo:true},
+        {desc:'Slide tub out — protect floor with hardboard or cardboard', photo:true},
+        {desc:'Inspect subfloor under tub for rot, mold, soft spots', photo:true},
+        {desc:'Inspect studs / blocking behind walls for damage', photo:true},
+      ]},
+      { phase:'Phase 4 — Rough Plumbing', tasks:[
+        {desc:'Verify drain aligns with new tub drain location', photo:true},
+        {desc:'Install / replace P-trap — verify trap arm slope & distance to vent', photo:true},
+        {desc:'Install new waste & overflow assembly', photo:true},
+        {desc:'Inspect / replace shut-off valves if corroded', photo:true},
+        {desc:'Stub out supply lines to correct height for new valve', photo:true},
+        {desc:'Stub out shower arm drop-ear elbow — 80" AFF typical', photo:true},
+        {desc:'Pressure test all new supply joints — 80 PSI / 15 min', photo:true},
+        {desc:'Water test drain assembly — fill tub to overflow, check below', photo:true},
+      ]},
+      { phase:'Phase 5 — Set the Tub', tasks:[
+        {desc:'Dry-fit tub in opening — check level L-R and front-to-back', photo:true},
+        {desc:'Verify drain lines up with waste shoe', photo:true},
+        {desc:'Apply mortar bed or expanding foam under tub bottom', photo:true},
+        {desc:'Set tub into mortar / foam — press down firmly & level', photo:true},
+        {desc:'Screw tub flange to studs', photo:true},
+        {desc:'Connect waste & overflow', photo:true},
+        {desc:'Fill tub with water BEFORE finishing walls — check for leaks', photo:true, important:true},
+      ]},
+      { phase:'Phase 6 — Waterproofing & Wall Closure', tasks:[
+        {desc:'Install cement backer board on walls above tub', photo:true},
+        {desc:'Leave 1/4" gap between backer board & tub lip (caulk joint)', photo:true},
+        {desc:'Apply waterproof membrane — RedGard, Kerdi, or sheet membrane', photo:true},
+        {desc:'Waterproof all penetrations (valve, spout, showerhead, corners)', photo:true},
+        {desc:'Let membrane cure fully per manufacturer instructions', photo:false},
+      ]},
+      { phase:'Phase 7 — Tile / Surround', tasks:[
+        {desc:'Set tile — snap level lines, start from 2nd row up on ledger board', photo:true},
+        {desc:'Grout all joints — wipe clean with damp sponge', photo:true},
+        {desc:'Seal grout after 48–72 hr cure', photo:true},
+      ]},
+      { phase:'Phase 8 — Trim-Out & Finish', tasks:[
+        {desc:'Install valve trim / handle(s)', photo:true},
+        {desc:'Install tub spout', photo:true},
+        {desc:'Install showerhead & arm', photo:true},
+        {desc:'Install shower door track / rod', photo:true},
+        {desc:'Install drain cover / stopper', photo:true},
+        {desc:'Caulk tub-to-tile joint with 100% silicone (fill tub first)', photo:true, important:true},
+        {desc:'Caulk around valve escutcheon, spout escutcheon', photo:true},
+        {desc:'Reinstall toilet if removed — new wax ring', photo:true},
+        {desc:'Install grab bar(s) if specified — into blocking', photo:true},
+      ]},
+      { phase:'Phase 9 — Final Test & Hand-Off', tasks:[
+        {desc:'Flow-test hot & cold — verify anti-scald valve functions', photo:true},
+        {desc:'Fill tub to overflow — check drain speed', photo:true},
+        {desc:'Check all connections for leaks', photo:true},
+        {desc:'Verify diverter sends water to shower & back to spout', photo:true},
+        {desc:'📋 SCHEDULE & PASS FINAL INSPECTION', photo:false, important:true},
+        {desc:'Walk customer through: shut-offs, valve operation, care instructions', photo:false},
+        {desc:'Provide warranty & contact info', photo:false},
+        {desc:'Take final photos for records', photo:true},
+      ]},
+    ]
+  },
+
+  'Plumbing — Full Plumbing Checklist': {
+    icon: '🔧',
+    color: '#4CAF50',
+    trade: 'Plumbing',
+    phases: [
+      { phase:'Phase 1 — Pre-Work / Site Assessment', tasks:[
+        {desc:'Verify scope of work with customer — get sign-off', photo:false},
+        {desc:'Check local code requirements (UPC / IPC jurisdiction)', photo:false},
+        {desc:'Pull plumbing permit if required', photo:false},
+        {desc:'Locate main shut-off valve & verify operation', photo:true},
+        {desc:'Locate & mark existing supply lines, drains, vents', photo:true},
+        {desc:'Identify pipe material (copper, PEX, CPVC, cast iron, ABS, PVC)', photo:true},
+        {desc:'Check water pressure (40–80 PSI acceptable range)', photo:true},
+        {desc:'Photograph existing conditions before demo', photo:true, important:true},
+      ]},
+      { phase:'Phase 2 — Rough-In DWV', tasks:[
+        {desc:'Install / relocate closet flange (verify height to finished floor)', photo:true},
+        {desc:'Install tub/shower drain — set trap below subfloor', photo:true},
+        {desc:'Install lavatory drain — 1-1/4" or 1-1/2" per code', photo:true},
+        {desc:'Verify all drain slopes: 1/4" per foot (min)', photo:true},
+        {desc:'Install P-traps at correct height for each fixture', photo:true},
+        {desc:'Install wet vent or individual vents per code', photo:true},
+        {desc:'Tie vents through roof or to existing stack', photo:true},
+        {desc:'Verify all DWV pipe sizes meet code minimums', photo:true},
+        {desc:'Secure all DWV piping with proper hangers & strapping', photo:true},
+      ]},
+      { phase:'Phase 3 — Rough-In Water Supply', tasks:[
+        {desc:'Run hot & cold supply lines to each fixture location', photo:true},
+        {desc:'Install shutoff valve (angle stop) at each fixture', photo:true},
+        {desc:'Install mixing valve / anti-scald valve at shower (code req.)', photo:true},
+        {desc:'Pressure test supply lines — 80 PSI for 15 min, no drop', photo:true, important:true},
+        {desc:'Insulate hot water lines (energy code / prevent sweating)', photo:true},
+        {desc:'Secure supply piping with proper clips / strapping', photo:true},
+      ]},
+      { phase:'Phase 4 — Testing & Inspection', tasks:[
+        {desc:'DWV air test or water test per local code', photo:true},
+        {desc:'Supply pressure test — hold for required duration', photo:true},
+        {desc:'Verify no leaks at all joints & connections', photo:true},
+        {desc:'📋 SCHEDULE & PASS ROUGH PLUMBING INSPECTION', photo:false, important:true},
+        {desc:'Photograph rough-in before walls close', photo:true, important:true},
+      ]},
+      { phase:'Phase 5 — Trim-Out: Fixtures & Connections', tasks:[
+        {desc:'Set toilet — wax ring, level, bolt down, no rocking', photo:true},
+        {desc:'Connect toilet supply line', photo:true},
+        {desc:'Install tub/shower valve trim & showerhead', photo:true},
+        {desc:'Test tub/shower drain — fill & release, check for leaks below', photo:true},
+        {desc:'Install vanity faucet & connect supply lines', photo:true},
+        {desc:'Connect lavatory P-trap to wall/floor drain stub', photo:true},
+        {desc:'Install pop-up drain assembly in lavatory', photo:true},
+      ]},
+      { phase:'Phase 6 — Final Checks & Hand-Off', tasks:[
+        {desc:'Flow-test every fixture — hot & cold', photo:true},
+        {desc:'Check all connections for drips under pressure', photo:true},
+        {desc:'Flush toilet 3x — verify fill, flush, no running', photo:true},
+        {desc:'Check drain speed at each fixture — no slow drains', photo:true},
+        {desc:'Verify all shut-off valves operate properly', photo:true},
+        {desc:'📋 SCHEDULE & PASS FINAL PLUMBING INSPECTION', photo:false, important:true},
+        {desc:'Walk customer through all new work & shut-off locations', photo:false},
+        {desc:'Provide warranty info & emergency contact', photo:false},
+      ]},
+    ]
+  },
+
+};
+
+/* Generate task list from template */
+/* generateTasksFromTemplate — see templates script */
+
+/* Open template selector modal */
+function openTemplateSelector(projId) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if(!proj) return;
+
+  var old = document.getElementById('template-modal');
+  if(old) old.remove();
+
+  var mo = document.createElement('div');
+  mo.id = 'template-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+
+  var cards = Object.keys(TRADE_TEMPLATES).map(function(key) {
+    var tpl = TRADE_TEMPLATES[key];
+    var totalTasks = tpl.phases.reduce(function(s,p){ return s+p.tasks.length; }, 0);
+    return '<div onclick="applyTemplate(\''+projId+'\',\''+key+'\')" style="background:#1a2a1a;border:1px solid #2a3a2a;border-radius:12px;padding:14px;cursor:pointer;transition:border-color .2s" onmouseenter="this.style.borderColor=\''+tpl.color+'\'" onmouseleave="this.style.borderColor=\'#2a3a2a\'">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">'
+      + '<div style="font-size:24px">'+tpl.icon+'</div>'
+      + '<div><div style="font-size:13px;font-weight:700;color:#D4E8D4">'+key+'</div>'
+      + '<div style="font-size:11px;color:#7A9E7A;margin-top:2px">'+tpl.phases.length+' phases · '+totalTasks+' tasks</div>'
+      + '</div></div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:4px">'
+      + tpl.phases.map(function(p){ return '<span style="font-size:9px;padding:2px 6px;border-radius:99px;background:'+tpl.color+'22;color:'+tpl.color+'">'+p.phase.replace(/Phase \d+ — /,'')+'</span>'; }).join('')
+      + '</div></div>';
+  }).join('');
+
+  mo.innerHTML = '<div style="background:#0D1B0D;border:1px solid #243024;border-radius:18px;padding:22px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    + '<div><div style="font-size:17px;font-weight:800;color:#4CAF50">📋 Task Templates</div>'
+    + '<div style="font-size:12px;color:#7A9E7A;margin-top:2px">'+proj.name+'</div></div>'
+    + '<button onclick="document.getElementById(\'template-modal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#7A9E7A">✕</button>'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:10px">' + cards + '</div>'
+    + '<button onclick="document.getElementById(\'template-modal\').remove()" style="width:100%;margin-top:16px;padding:12px;border-radius:10px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+}
+
+function applyTemplate(projId, key) {
+  document.getElementById('template-modal')?.remove();
+  generateTasksFromTemplate(projId, key);
+  if(typeof renderTasks==='function') renderTasks();
+  if(typeof renderProjects==='function') renderProjects();
+}
+
+</script>
+<script>
+const PIPE_FITTINGS_CATALOG = [{"name": "PVC Sch 40 Pipe — Plain End", "size": "1/4\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "1/4\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "3/8\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "3/8\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "1/2\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "1/2\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "3/4\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "3/4\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "1\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "1\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "1-1/4\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "1-1/4\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "1-1/2\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "1-1/2\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "2\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "2\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "2-1/2\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "2-1/2\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "3\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "3\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "3-1/2\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "3-1/2\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "4\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "4\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 40 Pipe — Plain End", "size": "5\"", "sch": "Sch 40", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 04", "notes": "ASTM D1785 / D2665", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "PVC Sch 80 Pipe — Plain End", "size": "5\"", "sch": "Sch 80", "conn": "Solvent Weld", "material": "PVC 1120", "part": "Charlotte PVC 08", "notes": "ASTM D1785 — higher pressure", "section": "PVC PIPE — SCHEDULE 40 & 80 PRESSURE / DWV"}, {"name": "90° Elbow (Hub×Hub)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #100", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "90° Long Sweep Elbow", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #106", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "90° Street Elbow (Hub×Spg)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #300A", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "90° Vent Elbow", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #300R", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "45° Elbow (Hub×Hub)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #120", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "45° Street Elbow (Hub×Spg)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #321", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "22-1/2° Elbow", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #116", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Tee — Sanitary", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #400", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Tee — Sanitary Street", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #401", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Tee — Reducing Sanitary", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #401A", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Tee — Test Tee w/ Plug", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #416", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Wye — Standard", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #600", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Wye — Reducing", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #601", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Combo Wye & 1/8 Bend", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #700", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Coupling — Standard", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #101", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Coupling — Repair (No Stop)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #110A", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Coupling — Reducing", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #101X", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Coupling — FPT×Hub", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Threaded×Solvent", "material": "PVC", "part": "Charlotte #101F", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Adapter — Male (MPT×Hub)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Threaded×Solvent", "material": "PVC", "part": "Charlotte #104", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Adapter — Female (FPT×Hub)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Threaded×Solvent", "material": "PVC", "part": "Charlotte #103", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Adapter — Trap (Hub×SJ)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent×Slip Joint", "material": "PVC", "part": "Charlotte #104T", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Bushing — Flush (Spg×Hub)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #117", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Bushing — Reducing", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #118", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Cap — Hub", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #119", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Cap — FPT Threaded", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Threaded", "material": "PVC", "part": "Charlotte #119F", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Plug — MPT Threaded", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Threaded", "material": "PVC", "part": "Charlotte #119M", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Cleanout Body w/ Plug", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #105", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Cleanout Adapter — FPT×Hub", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Threaded×Solvent", "material": "PVC", "part": "Charlotte #105A", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "P-Trap — Hub×Hub", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #700P", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "P-Trap — Hub×SJ", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent×Slip Joint", "material": "PVC", "part": "Charlotte #700PS", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Closet Flange — Hub (4×3)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #800", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Closet Flange — Inside Fit", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #801", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Closet Bend — 90° (4×3)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #802", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Closet Bend — 22-1/2°", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #803", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Fernco Flexible Coupling", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Banded Rubber", "material": "PVC", "part": "Fernco 1056", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "Transition — CI to PVC (Fernco)", "size": "1-1/2\" – 5\"", "sch": "Sch 40 DWV", "conn": "Banded Rubber", "material": "PVC", "part": "Fernco 1002", "notes": "", "section": "PVC DWV FITTINGS — SCHEDULE 40"}, {"name": "90° Elbow — Socket×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8300", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "90° Elbow — Socket×FPT", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent×Threaded", "material": "PVC", "part": "Charlotte #8302", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "90° Street Elbow — Spg×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8309", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "45° Elbow — Socket×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8100", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "45° Street Elbow — Spg×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8109", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Tee — Socket×Socket×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8400", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Tee — Socket×Socket×FPT", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent×Threaded", "material": "PVC", "part": "Charlotte #8402", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Coupling — Socket×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8101", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Union — Socket×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8113", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Male Adapter — MPT×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Threaded×Solvent", "material": "PVC", "part": "Charlotte #8108", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Female Adapter — FPT×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Threaded×Solvent", "material": "PVC", "part": "Charlotte #8101F", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Cap — Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8116", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Plug — MPT", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Threaded", "material": "PVC", "part": "Charlotte #8117", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Cross — Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Charlotte #8500", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Flange — Van Stone", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Bolted", "material": "PVC", "part": "Charlotte #8700", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Ball Valve — Socket×Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Various", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}, {"name": "Check Valve — Socket", "size": "1/4\" – 5\"", "sch": "Sch 40/80", "conn": "Solvent Weld", "material": "PVC", "part": "Various", "notes": "ASTM D2466/D2467", "section": "PVC PRESSURE FITTINGS — SCHEDULE 40 & 80"}];
+
+/* ══════════════════════════════════════════════════════════════
+   PIPE FITTINGS ORDERING TOOL
+══════════════════════════════════════════════════════════════ */
+
+const FITTING_MATERIAL_COLORS = {
+  'PVC':'#3b82f6','PVC 1120':'#3b82f6','CPVC':'#f97316','ABS':'#10b981',
+  'Copper':'#f59e0b','Cast Iron':'#6b7280','Black Iron':'#374151',
+  'Galvanized':'#9ca3af','Brass':'#d97706','Sprinkler':'#ef4444',
+  'Threaded Rod':'#8b5cf6','Consumables':'#ec4899'
+};
+
+function renderPipeFittingsTool() {
+  var container = document.getElementById('fittings-tool-container');
+  if(!container) return;
+
+  var searchVal = document.getElementById('fittings-search')?.value?.toLowerCase()||'';
+  var matFilter = document.getElementById('fittings-mat')?.value||'';
+  var sectionFilter = document.getElementById('fittings-section')?.value||'';
+
+  // Get cart
+  if(!window._fittingsCart) window._fittingsCart = {};
+  var cart = window._fittingsCart;
+
+  var filtered = PIPE_FITTINGS_CATALOG.filter(function(f) {
+    if(matFilter && !f.material.includes(matFilter)) return false;
+    if(sectionFilter && f.section !== sectionFilter) return false;
+    if(searchVal && !f.name.toLowerCase().includes(searchVal) && !f.part.toLowerCase().includes(searchVal)) return false;
+    return true;
+  });
+
+  // Group by section
+  var sections = {};
+  filtered.forEach(function(f) {
+    if(!sections[f.section]) sections[f.section]=[];
+    sections[f.section].push(f);
+  });
+
+  var html = '';
+  Object.keys(sections).forEach(function(sec) {
+    html += '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#7A9E7A;padding:10px 0 6px;border-bottom:1px solid #243024;margin-bottom:8px">'+sec+'</div>';
+    sections[sec].forEach(function(f, i) {
+      var key = f.part+'|'+f.name+'|'+f.size;
+      var qty = cart[key]||0;
+      var matColor = FITTING_MATERIAL_COLORS[f.material]||'#7A9E7A';
+      html += '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:'+(qty>0?'rgba(76,175,80,.06)':'#1B261B')+';border:1px solid '+(qty>0?'rgba(76,175,80,.3)':'#243024')+';margin-bottom:4px">'
+        + '<div style="min-width:0">'
+        + '<div style="font-size:12px;font-weight:700;color:#D4E8D4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.name+'</div>'
+        + '<div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap">'
+        + '<span style="font-size:9px;font-weight:700;color:'+matColor+'">'+f.material+'</span>'
+        + (f.size?'<span style="font-size:9px;color:#7A9E7A">'+f.size+'</span>':'')
+        + (f.sch&&f.sch!=='—'?'<span style="font-size:9px;color:#7A9E7A">'+f.sch+'</span>':'')
+        + (f.conn?'<span style="font-size:9px;color:#7A9E7A">'+f.conn+'</span>':'')
+        + (f.part?'<span style="font-size:9px;font-family:monospace;color:#4CAF50">'+f.part+'</span>':'')
+        + '</div>'
+        + (f.notes&&f.notes!=='None'?'<div style="font-size:9px;color:#3A5A3A;margin-top:2px">'+f.notes+'</div>':'')
+        + '</div>'
+        + '<div style="display:flex;align-items:center;gap:4px;flex-shrink:0">'
+        + '<button onclick="fittingsDec(\''+escAttr(key)+'\')" style="width:24px;height:24px;border-radius:6px;border:1px solid #243024;background:#162016;color:#D4E8D4;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'
+        + '<input type="number" min="0" value="'+(qty||'')+'" placeholder="0" onchange="fittingsSet(\''+escAttr(key)+'\',this.value)" style="width:36px;text-align:center;padding:3px 4px;border-radius:6px;border:1px solid #243024;background:#0D1B0D;color:#D4E8D4;font-size:12px;font-family:inherit"/>'
+        + '<button onclick="fittingsInc(\''+escAttr(key)+'\')" style="width:24px;height:24px;border-radius:6px;border:1px solid #243024;background:#162016;color:#4CAF50;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'
+        + '</div>'
+        + '</div>';
+    });
+  });
+
+  container.innerHTML = html || '<div style="text-align:center;padding:40px;color:#3A5A3A">No items match your filters</div>';
+
+  // Update cart count
+  var cartCount = Object.values(cart).reduce(function(s,v){ return s+(v||0); },0);
+  var cartBtn = document.getElementById('fittings-cart-btn');
+  if(cartBtn) cartBtn.textContent = cartCount>0 ? '🛒 Order List ('+cartCount+')' : '🛒 Order List';
+  var countEl = document.getElementById('fittings-count');
+  if(countEl) countEl.textContent = filtered.length+' items';
+}
+
+function escAttr(s){ return s.replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+
+function fittingsInc(key){ if(!window._fittingsCart)window._fittingsCart={}; window._fittingsCart[key]=(window._fittingsCart[key]||0)+1; renderPipeFittingsTool(); }
+function fittingsDec(key){ if(!window._fittingsCart)window._fittingsCart={}; window._fittingsCart[key]=Math.max(0,(window._fittingsCart[key]||0)-1); if(window._fittingsCart[key]===0)delete window._fittingsCart[key]; renderPipeFittingsTool(); }
+function fittingsSet(key,val){ if(!window._fittingsCart)window._fittingsCart={}; var n=Math.max(0,parseInt(val)||0); if(n===0)delete window._fittingsCart[key]; else window._fittingsCart[key]=n; renderPipeFittingsTool(); }
+
+function showFittingsOrderList() {
+  var cart = window._fittingsCart||{};
+  var items = Object.keys(cart).filter(function(k){ return (cart[k]||0)>0; });
+  if(!items.length){ toast('No items in order list'); return; }
+
+  var mo = document.createElement('div');
+  mo.id = 'fittings-order-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+
+  var rows = items.map(function(key) {
+    var parts = key.split('|');
+    var partNum = parts[0], name = parts[1], size = parts[2];
+    var qty = cart[key];
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid #243024">'
+      + '<div style="font-size:15px;font-weight:800;color:#4CAF50;width:40px;text-align:right">'+qty+'×</div>'
+      + '<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#D4E8D4">'+name+'</div>'
+      + '<div style="font-size:10px;color:#7A9E7A">'+size+(partNum&&partNum!=='None'?' · '+partNum:'')+'</div></div>'
+      + '</div>';
+  }).join('');
+
+  var totalItems = items.reduce(function(s,k){ return s+(cart[k]||0); },0);
+
+  mo.innerHTML = '<div style="background:#0D1B0D;border:1px solid #243024;border-radius:18px;padding:22px;max-width:480px;width:100%;max-height:85vh;display:flex;flex-direction:column">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    + '<div style="font-size:17px;font-weight:800;color:#4CAF50">🛒 Order List — '+totalItems+' items</div>'
+    + '<button onclick="document.getElementById(\'fittings-order-modal\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#7A9E7A">✕</button>'
+    + '</div>'
+    + '<div style="flex:1;overflow-y:auto;margin-bottom:14px">'+rows+'</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button onclick="fittingsClearCart()" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(239,83,80,.4);background:rgba(239,83,80,.1);color:#EF5350;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Clear</button>'
+    + '<button onclick="fittingsExportOrder()" style="flex:2;padding:11px;border-radius:10px;border:none;background:#4CAF50;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">📥 Export Order List</button>'
+    + '</div></div>';
+  document.body.appendChild(mo);
+}
+
+function fittingsClearCart(){ window._fittingsCart={}; document.getElementById('fittings-order-modal')?.remove(); renderPipeFittingsTool(); toast('Cart cleared'); }
+
+function fittingsExportOrder(){
+  var cart = window._fittingsCart||{};
+  var lines = ['PIPE FITTINGS ORDER LIST','Generated: '+new Date().toLocaleString(),'─'.repeat(60),'QTY  ITEM                                     PART #  SIZE','─'.repeat(60)];
+  Object.keys(cart).filter(function(k){ return (cart[k]||0)>0; }).forEach(function(key){
+    var parts=key.split('|'); var qty=cart[key];
+    lines.push(String(qty).padStart(3)+' × '+parts[1].slice(0,40).padEnd(42)+parts[0].slice(0,16).padEnd(18)+parts[2]);
+  });
+  lines.push('─'.repeat(60));
+  lines.push('Total items: '+Object.values(cart).reduce(function(s,v){return s+(v||0);},0));
+
+  var blob = new Blob([lines.join('\n')], {type:'text/plain'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url; a.download='pipe_order_list.txt'; a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 Order list exported');
+}
+
+/* Build sections list for filter */
+function getFittingsSections(){
+  var secs = {};
+  PIPE_FITTINGS_CATALOG.forEach(function(f){ secs[f.section]=true; });
+  return Object.keys(secs);
+}
+
+
+function initFittingsView(){
+  var secSel = document.getElementById('fittings-section');
+  if(secSel && secSel.options.length<=1){
+    getFittingsSections().forEach(function(s){
+      var opt=document.createElement('option'); opt.value=s; opt.textContent=s.replace(/[A-Z& ]+— /,'').slice(0,50); secSel.appendChild(opt);
+    });
+  }
+  renderPipeFittingsTool();
+}
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS TRADE TEMPLATES + PIPE FITTINGS TOOL
+   v1.0
+══════════════════════════════════════════════════════════════ */
+
+/* ── TASK TEMPLATES ─────────────────────────────────────────── */
+const TASK_TEMPLATES = {
+
+  'bathroom_remodel': {
+    name: 'Bathroom Remodel',
+    icon: '🚿',
+    trade: 'General Contracting',
+    phases: [
+      { phase:'Phase 1 — Tear Out & Prep', tasks:[
+        {t:'Shut off water, disconnect fixtures',photo:true},
+        {t:'Demo existing tile, vanity, toilet, tub/shower',photo:true},
+        {t:'Remove drywall / backer board down to studs',photo:true},
+        {t:'Inspect subfloor for rot — replace if soft',photo:true},
+        {t:'Inspect / update framing as needed',photo:true},
+      ]},
+      { phase:'Phase 2 — Rough-Ins', tasks:[
+        {t:'Rough plumbing — relocate / add supply & drain lines',photo:true},
+        {t:'Rough electrical — GFCI outlets, fan, lighting circuits',photo:true},
+        {t:'Install / relocate vent stack if needed',photo:false},
+        {t:'SCHEDULE ROUGH INSPECTION',photo:false,flag:'inspection'},
+      ]},
+      { phase:'Phase 3 — Close Up Walls & Waterproof', tasks:[
+        {t:'Install blocking (grab bars, shower fixtures)',photo:true},
+        {t:'Hang cement backer board (wet areas)',photo:true},
+        {t:'Waterproof membrane — shower/tub walls & floor',photo:true},
+        {t:'Mud & tape drywall seams',photo:false},
+      ]},
+      { phase:'Phase 4 — Finish Surfaces', tasks:[
+        {t:'Set tile — floor first, then walls',photo:true},
+        {t:'Grout & seal tile',photo:true},
+        {t:'Prime & paint walls / ceiling',photo:false},
+      ]},
+      { phase:'Phase 5 — Install Fixtures & Trim', tasks:[
+        {t:'Set tub / shower base or pan',photo:true},
+        {t:'Install vanity & countertop',photo:true},
+        {t:'Set toilet',photo:true},
+        {t:'Trim plumbing — faucets, shower valve, supply lines',photo:true},
+        {t:'Install lighting, exhaust fan, switches / outlets',photo:true},
+        {t:'Hang mirror, towel bars, accessories',photo:false},
+        {t:'Install door / trim, transition strips',photo:false},
+        {t:'Caulk all wet edges',photo:true},
+      ]},
+      { phase:'Phase 6 — Final', tasks:[
+        {t:'SCHEDULE FINAL INSPECTION',photo:false,flag:'inspection'},
+        {t:'Final clean & punch list walkthrough',photo:true},
+      ]},
+    ]
+  },
+
+  'plumbing': {
+    name: 'Plumbing — Bathroom',
+    icon: '🔧',
+    trade: 'Plumbing',
+    phases: [
+      { phase:'Phase 1 — Pre-Work / Site Assessment', tasks:[
+        {t:'Verify scope of work with customer — get sign-off',photo:false},
+        {t:'Pull plumbing permit if required',photo:false},
+        {t:'Locate main shut-off valve & verify operation',photo:true},
+        {t:'Locate & mark existing supply lines, drains, vents',photo:true},
+        {t:'Check water pressure (40–80 PSI range)',photo:false},
+        {t:'Photograph existing conditions before demo',photo:true},
+      ]},
+      { phase:'Phase 2 — Rough-In: DWV', tasks:[
+        {t:'Install / relocate closet flange',photo:true},
+        {t:'Install tub/shower drain — set trap below subfloor',photo:true},
+        {t:'Install lavatory drain',photo:true},
+        {t:'Verify all drain slopes: 1/4" per foot (min)',photo:false},
+        {t:'Install P-traps at correct height',photo:true},
+        {t:'Install wet vent or individual vents per code',photo:true},
+        {t:'Tie vents through roof or to existing stack',photo:true},
+        {t:'Install cleanout access where required',photo:true},
+        {t:'Secure all DWV piping with proper hangers',photo:false},
+      ]},
+      { phase:'Phase 3 — Rough-In: Water Supply', tasks:[
+        {t:'Run hot & cold supply lines to each fixture',photo:true},
+        {t:'Install shutoff valve at each fixture',photo:true},
+        {t:'Install mixing valve / anti-scald valve at shower',photo:true},
+        {t:'Pressure test supply lines — 80 PSI for 15 min',photo:false},
+        {t:'Insulate hot water lines',photo:false},
+        {t:'Secure supply piping with proper clips',photo:false},
+      ]},
+      { phase:'Phase 4 — Testing & Inspection', tasks:[
+        {t:'DWV air test or water test per local code',photo:false},
+        {t:'Supply pressure test — hold for required duration',photo:false},
+        {t:'Verify no leaks at all joints & connections',photo:true},
+        {t:'SCHEDULE & PASS ROUGH PLUMBING INSPECTION',photo:false,flag:'inspection'},
+        {t:'Photograph rough-in before walls close',photo:true},
+      ]},
+      { phase:'Phase 5 — Trim-Out: Fixtures', tasks:[
+        {t:'Set toilet — wax ring, level, bolt down',photo:true},
+        {t:'Connect toilet supply line',photo:false},
+        {t:'Install tub/shower valve trim & showerhead',photo:true},
+        {t:'Test tub/shower drain — fill & release',photo:true},
+        {t:'Install vanity faucet & connect supply lines',photo:true},
+        {t:'Connect lavatory P-trap to wall/floor drain',photo:true},
+        {t:'Install pop-up drain assembly in lavatory',photo:false},
+      ]},
+      { phase:'Phase 6 — Final Checks & Hand-Off', tasks:[
+        {t:'Flow-test every fixture — hot & cold',photo:false},
+        {t:'Check all connections for drips under pressure',photo:true},
+        {t:'Flush toilet 3x — verify fill, flush, no running',photo:false},
+        {t:'Verify hot water reaches all fixtures',photo:false},
+        {t:'Check drain speed at each fixture',photo:false},
+        {t:'Verify all shut-off valves operate properly',photo:false},
+        {t:'Check caulk seal at toilet base, tub/shower',photo:true},
+        {t:'Verify exhaust fan vents to exterior (not attic)',photo:false},
+        {t:'Clean up work area',photo:false},
+        {t:'SCHEDULE & PASS FINAL PLUMBING INSPECTION',photo:false,flag:'inspection'},
+        {t:'Walk customer through all new work & shut-off locations',photo:false},
+        {t:'Provide warranty info & emergency contact',photo:false},
+      ]},
+    ]
+  },
+
+  'tub_replacement': {
+    name: 'Tub Replacement',
+    icon: '🛁',
+    trade: 'Plumbing',
+    phases: [
+      { phase:'Phase 1 — Pre-Work & Planning', tasks:[
+        {t:'Confirm tub type with customer',photo:false},
+        {t:'Verify new tub dimensions fit rough opening',photo:true},
+        {t:'Check door/hallway clearance for delivery path',photo:true},
+        {t:'Confirm drain location matches (left/right/center)',photo:false},
+        {t:'Verify subfloor can handle new tub weight',photo:false},
+        {t:'Order tub, drain kit, valve trim, supplies',photo:false},
+        {t:'Photograph existing conditions',photo:true},
+        {t:'Lay drop cloths / floor protection on path',photo:false},
+      ]},
+      { phase:'Phase 2 — Shut Down & Protect', tasks:[
+        {t:'Shut off water — main or local shut-offs',photo:false},
+        {t:'Open faucet to drain remaining pressure',photo:false},
+        {t:'Shut off power to nearby circuits',photo:false},
+        {t:'Remove toilet if it blocks removal path',photo:true},
+        {t:'Protect fixtures staying in place',photo:false},
+      ]},
+      { phase:'Phase 3 — Demo & Removal', tasks:[
+        {t:'Remove faucet handles, spout, showerhead',photo:true},
+        {t:'Disconnect overflow & drain',photo:true},
+        {t:'Cut caulk line where tub meets wall / tile',photo:false},
+        {t:'Remove bottom row of tile or surround panels',photo:true},
+        {t:'Remove screws / nails from tub flange to studs',photo:false},
+        {t:'Slide tub out — protect floor',photo:true},
+        {t:'Inspect subfloor under tub for rot / mold',photo:true},
+        {t:'Replace any damaged subfloor',photo:true},
+        {t:'Inspect studs / blocking behind walls',photo:true},
+      ]},
+      { phase:'Phase 4 — Rough Plumbing', tasks:[
+        {t:'Verify drain aligns with new tub drain location',photo:true},
+        {t:'Install / replace P-trap',photo:true},
+        {t:'Install new waste & overflow assembly',photo:true},
+        {t:'Inspect / replace shut-off valves if corroded',photo:true},
+        {t:'Verify anti-scald valve is code-compliant',photo:false},
+        {t:'Stub out supply lines to correct height',photo:true},
+        {t:'Stub out shower arm drop-ear elbow',photo:true},
+        {t:'Pressure test all new supply joints — 80 PSI / 15 min',photo:false},
+        {t:'Water test drain assembly — fill tub to overflow',photo:true},
+      ]},
+      { phase:'Phase 5 — Set the Tub', tasks:[
+        {t:'Dry-fit tub in opening — check level',photo:true},
+        {t:'Verify drain lines up with waste shoe',photo:false},
+        {t:'Apply mortar bed or expanding foam under tub',photo:true},
+        {t:'Set tub into mortar / foam — press down firmly & level',photo:true},
+        {t:'Screw tub flange to studs',photo:true},
+        {t:'Connect waste & overflow',photo:true},
+        {t:'Fill tub with water BEFORE finishing walls — check for leaks',photo:true},
+      ]},
+      { phase:'Phase 6 — Waterproofing & Wall Closure', tasks:[
+        {t:'Install cement backer board on walls above tub',photo:true},
+        {t:'Tape & thinset all backer board seams',photo:true},
+        {t:'Apply waterproof membrane — RedGard / Kerdi',photo:true},
+        {t:'Waterproof all penetrations',photo:true},
+        {t:'Let membrane cure fully',photo:false},
+      ]},
+      { phase:'Phase 7 — Tile / Surround', tasks:[
+        {t:'Snap level lines, set tile from 2nd row up',photo:true},
+        {t:'Set tile with appropriate thinset — bottom to top',photo:true},
+        {t:'Install corner trim, edge trim, niches',photo:true},
+        {t:'Let thinset cure 24 hrs before grouting',photo:false},
+        {t:'Grout all joints — wipe clean',photo:true},
+        {t:'Seal grout after 48–72 hr cure',photo:false},
+      ]},
+      { phase:'Phase 8 — Trim-Out & Finish', tasks:[
+        {t:'Install valve trim / handle(s)',photo:true},
+        {t:'Install tub spout',photo:true},
+        {t:'Install showerhead & arm',photo:true},
+        {t:'Install shower door track / rod',photo:true},
+        {t:'Install drain cover / stopper',photo:false},
+        {t:'Caulk tub-to-tile joint with 100% silicone',photo:true},
+        {t:'Caulk around valve escutcheon, spout escutcheon',photo:true},
+        {t:'Reinstall toilet if removed — new wax ring',photo:true},
+        {t:'Install grab bar(s) if specified',photo:true},
+      ]},
+      { phase:'Phase 9 — Final Test & Hand-Off', tasks:[
+        {t:'Flow-test hot & cold — verify anti-scald valve',photo:false},
+        {t:'Fill tub to overflow — check drain speed',photo:true},
+        {t:'Check all connections for leaks',photo:true},
+        {t:'Verify diverter sends water to shower & back',photo:false},
+        {t:'Check all caulk lines — no gaps, no voids',photo:true},
+        {t:'Test GFCI outlets in bathroom',photo:false},
+        {t:'Verify exhaust fan operates',photo:false},
+        {t:'SCHEDULE & PASS FINAL INSPECTION',photo:false,flag:'inspection'},
+        {t:'Clean tub, wipe down all surfaces',photo:true},
+        {t:'Walk customer through: shut-offs, valve operation, diverter',photo:false},
+        {t:'Provide warranty & contact info',photo:false},
+        {t:'Take final photos for records',photo:true},
+      ]},
+    ]
+  },
+};
+
+/* ── Generate tasks from template ─────────────────────────── */
+function generateTasksFromTemplate(projId, templateKey) {
+  const tpl = TASK_TEMPLATES[templateKey];
+  if (!tpl) return;
+  if (!DB.tasks) DB.tasks = [];
+
+  // Don't duplicate if already has tasks from this template
+  const existing = DB.tasks.filter(t => t.projectId === projId && t.templateKey === templateKey);
+  if (existing.length > 0) {
+    toast('Tasks already loaded for this template');
+    return;
+  }
+
+  let order = (DB.tasks.filter(t => t.projectId === projId).length);
+  let count = 0;
+
+  tpl.phases.forEach(function(ph) {
+    // Add phase header as a non-actionable divider task
+    DB.tasks.push({
+      id:           uid(),
+      projectId:    projId,
+      desc:         ph.phase,
+      isPhaseHeader: true,
+      done:         false,
+      photoRequired: false,
+      templateKey,
+      order:        order++,
+      isStandard:   false,
+    });
+
+    ph.tasks.forEach(function(taskDef) {
+      DB.tasks.push({
+        id:           uid(),
+        projectId:    projId,
+        desc:         taskDef.t,
+        done:         false,
+        photoRequired: taskDef.photo,
+        isInspection: taskDef.flag === 'inspection',
+        templateKey,
+        order:        order++,
+        isStandard:   false,
+        isPhaseHeader: false,
+      });
+      count++;
+    });
+  });
+
+  // Update project trade if not set
+  const proj = DB.projects.find(p => p.id === projId);
+  if (proj && !proj.trade) proj.trade = tpl.trade;
+
+  saveToLocal();
+  broadcastData();
+  if (typeof renderTasks === 'function') renderTasks();
+  if (typeof renderProjects === 'function') renderProjects();
+  toast('✅ ' + count + ' tasks loaded from ' + tpl.name + ' template');
+  logChange('TEMPLATE_APPLIED', 'project', projId, { template: tpl.name, tasks: count });
+}
+
+/* ── Template picker modal ─────────────────────────────────── */
+function openTemplatePicker(projId) {
+  var proj = DB.projects.find(p => p.id === projId);
+  if (!proj) return;
+
+  var mo = document.createElement('div');
+  mo.id = 'template-modal';
+  mo.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+
+  mo.innerHTML = '<div style="background:#1a1a1a;border:1px solid #333;border-radius:16px;padding:22px;max-width:480px;width:100%">'
+    + '<div style="font-size:18px;font-weight:800;color:#fff;margin-bottom:4px">📋 Task Templates</div>'
+    + '<div style="font-size:12px;color:#888;margin-bottom:18px">' + proj.name + ' — Auto-populate task list</div>'
+    + Object.keys(TASK_TEMPLATES).map(function(key) {
+        var tpl = TASK_TEMPLATES[key];
+        var taskCount = tpl.phases.reduce((s,p) => s + p.tasks.length, 0);
+        return '<div onclick="generateTasksFromTemplate(\'' + projId + '\',\'' + key + '\');pbCloseTemplateModal()" '
+          + 'style="display:flex;align-items:center;gap:14px;padding:14px;border-radius:12px;background:#242424;border:1px solid #333;cursor:pointer;margin-bottom:8px;transition:background .15s" '
+          + 'onmouseenter="this.style.background=\'#2e2e2e\'" onmouseleave="this.style.background=\'#242424\'">'
+          + '<div style="font-size:28px">' + tpl.icon + '</div>'
+          + '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#fff">' + tpl.name + '</div>'
+          + '<div style="font-size:11px;color:#888;margin-top:2px">' + taskCount + ' tasks · ' + tpl.phases.length + ' phases · ' + tpl.trade + '</div></div>'
+          + '<div style="color:#4CAF50;font-size:18px">›</div>'
+          + '</div>';
+      }).join('')
+    + '<button onclick="pbCloseTemplateModal()" style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:1px solid #333;background:transparent;color:#888;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+}
+function pbCloseTemplateModal() { document.getElementById('template-modal')?.remove(); }
+
+/* ══════════════════════════════════════════════════════════════
+   PIPE FITTINGS ORDERING TOOL
+══════════════════════════════════════════════════════════════ */
+const PIPE_FITTINGS = [
+  // PVC DWV
+  {id:1,name:'90° Elbow',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub',part:'Charlotte #100',trade:['Plumbing']},
+  {id:2,name:'90° Long Sweep Elbow',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub',part:'Charlotte #106',trade:['Plumbing']},
+  {id:3,name:'90° Street Elbow',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Spigot',part:'Charlotte #300A',trade:['Plumbing']},
+  {id:4,name:'45° Elbow',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub',part:'Charlotte #120',trade:['Plumbing']},
+  {id:5,name:'22½° Elbow',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–4"',conn:'Hub×Hub',part:'Charlotte #116',trade:['Plumbing']},
+  {id:6,name:'Sanitary Tee',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub×Hub',part:'Charlotte #400',trade:['Plumbing']},
+  {id:7,name:'Wye (Y-Branch)',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub×Hub',part:'Charlotte #600',trade:['Plumbing']},
+  {id:8,name:'Combo Wye & ⅛ Bend',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub×Hub',part:'Charlotte #700',trade:['Plumbing']},
+  {id:9,name:'Coupling (with Stop)',mat:'PVC',sch:'Sch 40',sizes:'½"–5"',conn:'Hub×Hub',part:'Charlotte #101',trade:['Plumbing']},
+  {id:10,name:'Repair Coupling (No Stop)',mat:'PVC',sch:'Sch 40',sizes:'½"–5"',conn:'Hub×Hub',part:'Charlotte #110A',trade:['Plumbing']},
+  {id:11,name:'Male Adapter (MPT×Hub)',mat:'PVC',sch:'Sch 40',sizes:'½"–4"',conn:'Thread×Weld',part:'Charlotte #104',trade:['Plumbing']},
+  {id:12,name:'Female Adapter (FPT×Hub)',mat:'PVC',sch:'Sch 40',sizes:'½"–4"',conn:'Thread×Weld',part:'Charlotte #103',trade:['Plumbing']},
+  {id:13,name:'Flush Bushing',mat:'PVC',sch:'Sch 40',sizes:'¾"×½"–5"×4"',conn:'Spigot×Hub',part:'Charlotte #117',trade:['Plumbing']},
+  {id:14,name:'Cap',mat:'PVC',sch:'Sch 40',sizes:'½"–5"',conn:'Hub',part:'Charlotte #119',trade:['Plumbing']},
+  {id:15,name:'Cleanout w/ Plug',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–4"',conn:'Hub×Hub×FPT',part:'Charlotte #105',trade:['Plumbing']},
+  {id:16,name:'P-Trap',mat:'PVC',sch:'Sch 40 DWV',sizes:'1½"–2"',conn:'Hub×Hub',part:'Charlotte #700P',trade:['Plumbing']},
+  {id:17,name:'Closet Flange (4"×3")',mat:'PVC',sch:'Sch 40 DWV',sizes:'4"×3"',conn:'Hub',part:'Charlotte #800',trade:['Plumbing']},
+  {id:18,name:'Closet Bend 90°',mat:'PVC',sch:'Sch 40 DWV',sizes:'4"×3"',conn:'Hub×Hub',part:'Charlotte #802',trade:['Plumbing']},
+  {id:19,name:'Union (Pressure)',mat:'PVC',sch:'Sch 80',sizes:'½"–4"',conn:'Socket×Socket',part:'Charlotte #8113',trade:['Plumbing']},
+  // ABS DWV
+  {id:20,name:'90° Elbow',mat:'ABS',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Cement Only',part:'Charlotte ABS 100',trade:['Plumbing']},
+  {id:21,name:'45° Elbow',mat:'ABS',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Cement Only',part:'Charlotte ABS 120',trade:['Plumbing']},
+  {id:22,name:'Sanitary Tee',mat:'ABS',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub×Hub',part:'Charlotte ABS 400',trade:['Plumbing']},
+  {id:23,name:'Wye',mat:'ABS',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Hub×Hub×Hub',part:'Charlotte ABS 600',trade:['Plumbing']},
+  {id:24,name:'Coupling',mat:'ABS',sch:'Sch 40 DWV',sizes:'1½"–5"',conn:'Cement Only',part:'Charlotte ABS 101',trade:['Plumbing']},
+  {id:25,name:'P-Trap',mat:'ABS',sch:'Sch 40 DWV',sizes:'1½"–2"',conn:'Hub×Hub',part:'Charlotte ABS 700P',trade:['Plumbing']},
+  // Copper
+  {id:30,name:'90° Elbow (C×C)',mat:'Copper',sch:'—',sizes:'¼"–5"',conn:'Sweat/Solder',part:'Wrought Cu ASTM B16.22',trade:['Plumbing','HVAC']},
+  {id:31,name:'90° Street Elbow (C×FTG)',mat:'Copper',sch:'—',sizes:'¼"–4"',conn:'Sweat/Solder',part:'Street — fits inside fitting',trade:['Plumbing','HVAC']},
+  {id:32,name:'45° Elbow (C×C)',mat:'Copper',sch:'—',sizes:'¼"–5"',conn:'Sweat/Solder',part:'Wrought Cu',trade:['Plumbing','HVAC']},
+  {id:33,name:'Tee (C×C×C)',mat:'Copper',sch:'—',sizes:'¼"–5"',conn:'Sweat/Solder',part:'Standard/reducing/street',trade:['Plumbing','HVAC']},
+  {id:34,name:'Coupling (C×C with stop)',mat:'Copper',sch:'—',sizes:'¼"–5"',conn:'Sweat/Solder',part:'Clean+flux+heat+solder',trade:['Plumbing','HVAC']},
+  {id:35,name:'Male Adapter (C×MPT)',mat:'Copper',sch:'—',sizes:'¼"–4"',conn:'Sweat×Thread',part:'Brass body',trade:['Plumbing','HVAC']},
+  {id:36,name:'Union (C×C)',mat:'Copper',sch:'—',sizes:'½"–4"',conn:'Sweat/Solder',part:'Removable ring nut',trade:['Plumbing','HVAC']},
+  {id:37,name:'Dielectric Union (Cu→Steel)',mat:'Copper',sch:'—',sizes:'½"–2"',conn:'Sweat×Thread',part:'Prevents galvanic corrosion',trade:['Plumbing']},
+  {id:38,name:'Press-Fit 90° Elbow (ProPress)',mat:'Copper',sch:'—',sizes:'½"–4"',conn:'Press (Viega/Nibco)',part:'No flame — O-ring seal',trade:['Plumbing','HVAC']},
+  {id:39,name:'Press-Fit Tee (ProPress)',mat:'Copper',sch:'—',sizes:'½"–4"',conn:'Press Tool',part:'Viega/Nibco',trade:['Plumbing','HVAC']},
+  {id:40,name:'Press-Fit Coupling (ProPress)',mat:'Copper',sch:'—',sizes:'½"–4"',conn:'Press Tool',part:'No flame',trade:['Plumbing','HVAC']},
+  // Cast Iron
+  {id:50,name:'90° Elbow (¼ Bend)',mat:'Cast Iron',sch:'SV',sizes:'1½"–5"',conn:'No-Hub',part:'Charlotte CI NH',trade:['Plumbing']},
+  {id:51,name:'45° Elbow (⅛ Bend)',mat:'Cast Iron',sch:'SV',sizes:'1½"–5"',conn:'No-Hub',part:'CI No-Hub',trade:['Plumbing']},
+  {id:52,name:'Sanitary Tee',mat:'Cast Iron',sch:'SV',sizes:'1½"–5"',conn:'No-Hub',part:'Charlotte CI NH',trade:['Plumbing']},
+  {id:53,name:'Wye',mat:'Cast Iron',sch:'SV',sizes:'1½"–5"',conn:'No-Hub',part:'CI No-Hub',trade:['Plumbing']},
+  {id:54,name:'No-Hub Coupling — Heavy Duty (4-bolt)',mat:'Cast Iron',sch:'—',sizes:'1½"–5"',conn:'Banded 4-bolt SS',part:'Husky/Mission CISPI 310',trade:['Plumbing']},
+  {id:55,name:'No-Hub Coupling — Standard (2-clamp)',mat:'Cast Iron',sch:'—',sizes:'1½"–5"',conn:'Banded 2-clamp',part:'Mission — underground only',trade:['Plumbing']},
+  {id:56,name:'Transition Coupling (CI↔PVC)',mat:'Cast Iron',sch:'—',sizes:'1½"–5"',conn:'Banded Rubber',part:'Fernco 1002',trade:['Plumbing']},
+  {id:57,name:'Closet Bend 90° (4×3)',mat:'Cast Iron',sch:'SV',sizes:'4"×3"',conn:'No-Hub',part:'CI No-Hub',trade:['Plumbing']},
+  {id:58,name:'P-Trap',mat:'Cast Iron',sch:'SV',sizes:'1½"–4"',conn:'No-Hub',part:'CI No-Hub',trade:['Plumbing']},
+  // Black Iron / Threaded
+  {id:60,name:'90° Elbow (FPT×FPT)',mat:'Black Iron',sch:'Std',sizes:'¼"–4"',conn:'NPT Thread',part:'Malleable iron',trade:['Plumbing','HVAC','Fire Protection']},
+  {id:61,name:'45° Elbow (FPT×FPT)',mat:'Black Iron',sch:'Std',sizes:'¼"–4"',conn:'NPT Thread',part:'Malleable iron',trade:['Plumbing','HVAC']},
+  {id:62,name:'Tee (FPT×FPT×FPT)',mat:'Black Iron',sch:'Std',sizes:'¼"–4"',conn:'NPT Thread',part:'Malleable iron',trade:['Plumbing','HVAC','Fire Protection']},
+  {id:63,name:'Coupling (FPT×FPT)',mat:'Black Iron',sch:'Std',sizes:'¼"–4"',conn:'NPT Thread',part:'Malleable iron',trade:['Plumbing','HVAC']},
+  {id:64,name:'Union — Ground Face',mat:'Black Iron',sch:'Std',sizes:'¼"–3"',conn:'NPT Thread',part:'3-piece union',trade:['Plumbing','HVAC','Fire Protection']},
+  {id:65,name:'Cap (FPT)',mat:'Black Iron',sch:'Std',sizes:'¼"–4"',conn:'NPT Thread',part:'Malleable iron',trade:['Plumbing','HVAC']},
+  // Sprinkler Heads
+  {id:70,name:'Pendent — Standard (K5.6)',mat:'Sprinkler',sch:'½" NPT',sizes:'½" NPT',conn:'Threaded',part:'NFPA 13/13D/13R',trade:['Fire Protection']},
+  {id:71,name:'Pendent — Quick Response (K5.6)',mat:'Sprinkler',sch:'½" NPT',sizes:'½" NPT',conn:'Threaded',part:'QR rated',trade:['Fire Protection']},
+  {id:72,name:'Upright — Standard (K5.6)',mat:'Sprinkler',sch:'½" NPT',sizes:'½" NPT',conn:'Threaded',part:'Warehouses/mechanical rooms',trade:['Fire Protection']},
+  {id:73,name:'ESFR Upright (K14.0)',mat:'Sprinkler',sch:'½" NPT',sizes:'½" NPT',conn:'Threaded',part:'High bay storage',trade:['Fire Protection']},
+  {id:74,name:'Sidewall — Horizontal Brass',mat:'Sprinkler',sch:'½" NPT',sizes:'½" NPT',conn:'Threaded',part:'Hallways/hotel rooms',trade:['Fire Protection']},
+  {id:75,name:'Concealed Pendent — White',mat:'Sprinkler',sch:'½" NPT',sizes:'½" NPT',conn:'Threaded',part:'Hotels/lobbies',trade:['Fire Protection']},
+  {id:76,name:'Spare Head Cabinet (6 or 12)',mat:'Sprinkler',sch:'—',sizes:'—',conn:'—',part:'NFPA 13 REQUIRED',trade:['Fire Protection']},
+  // Threaded Rod & Supports
+  {id:80,name:'All-Thread Rod — Zinc ⅜"-16',mat:'Threaded Rod',sch:'—',sizes:'¼"–1"',conn:'3ft/6ft/10ft/12ft',part:'Most common for pipe hanging',trade:['Plumbing','HVAC','Electrical']},
+  {id:81,name:'All-Thread Rod — HDG',mat:'Threaded Rod',sch:'—',sizes:'¼"–1"',conn:'3ft/6ft/10ft/12ft',part:'Hot-dip galvanized',trade:['Plumbing','HVAC','Fire Protection']},
+  {id:82,name:'All-Thread Rod — SS 304',mat:'Threaded Rod',sch:'—',sizes:'¼"–1"',conn:'Stainless',part:'Corrosive environments',trade:['Plumbing','HVAC']},
+  {id:83,name:'Clevis Hanger (Split Ring)',mat:'Threaded Rod',sch:'—',sizes:'½"–5" pipe',conn:'Bolt to rod',part:'Standard pipe support',trade:['Plumbing','HVAC','Fire Protection']},
+  {id:84,name:'Beam Clamp',mat:'Threaded Rod',sch:'—',sizes:'¼"–¾" rod',conn:'Clamps to I-beam',part:'B-Line/Unistrut',trade:['Plumbing','HVAC','Electrical']},
+  {id:85,name:'Unistrut / Strut Channel 1⅝"',mat:'Threaded Rod',sch:'—',sizes:'10ft/20ft lengths',conn:'Spring nuts + bolts',part:'Universal support',trade:['Plumbing','HVAC','Electrical']},
+  {id:86,name:'Trapeze Hanger Assembly',mat:'Threaded Rod',sch:'—',sizes:'Multiple pipes',conn:'Rod+Strut+Clamps',part:'Multiple parallel runs',trade:['Plumbing','HVAC','Electrical']},
+  {id:87,name:'Wedge Anchor',mat:'Threaded Rod',sch:'—',sizes:'¼"–¾"',conn:'Drilled into concrete',part:'Expansion type',trade:['Plumbing','HVAC','Electrical']},
+  {id:88,name:'Rod Coupling Nut',mat:'Threaded Rod',sch:'—',sizes:'¼"–1"',conn:'Extends rod length',part:'Hex coupler',trade:['Plumbing','HVAC','Electrical']},
+  {id:89,name:'Riser Clamp',mat:'Threaded Rod',sch:'—',sizes:'½"–6"',conn:'Supports vertical riser',part:'Cast iron or steel',trade:['Plumbing','HVAC','Fire Protection']},
+  // Consumables
+  {id:90,name:'PVC Primer — Purple',mat:'Consumables',sch:'—',sizes:'4oz–32oz',conn:'PVC/CPVC',part:'Oatey/Weld-On — code required',trade:['Plumbing']},
+  {id:91,name:'PVC Cement — Medium Blue',mat:'Consumables',sch:'—',sizes:'4oz–32oz',conn:'PVC Sch 40/80',part:'Oatey/Weld-On #711',trade:['Plumbing']},
+  {id:92,name:'ABS Cement — Black',mat:'Consumables',sch:'—',sizes:'4oz–32oz',conn:'ABS Only — no primer',part:'Oatey/Weld-On #765',trade:['Plumbing']},
+  {id:93,name:'Soldering Flux Paste (Lead-Free)',mat:'Consumables',sch:'—',sizes:'2oz–8oz',conn:'Copper',part:'Oatey #95 — ASTM B813',trade:['Plumbing','HVAC']},
+  {id:94,name:'Lead-Free Solder 95/5',mat:'Consumables',sch:'—',sizes:'¼lb–1lb spool',conn:'Copper',part:'Tin/antimony — potable water',trade:['Plumbing','HVAC']},
+  {id:95,name:'Teflon Tape — White (Water)',mat:'Consumables',sch:'—',sizes:'½"×260"',conn:'All threaded joints',part:'3–5 wraps clockwise',trade:['Plumbing','HVAC']},
+  {id:96,name:'Teflon Tape — Yellow (Gas)',mat:'Consumables',sch:'—',sizes:'½"×260"',conn:'Gas-rated threaded joints',part:'Yellow = gas rated',trade:['Plumbing','HVAC']},
+  {id:97,name:'Pipe Thread Compound (Dope)',mat:'Consumables',sch:'—',sizes:'4oz–16oz',conn:'All threaded joints',part:'Rectorseal/Blue Monster',trade:['Plumbing','HVAC']},
+  {id:98,name:'Silver Braze Alloy — 15% Silver',mat:'Consumables',sch:'—',sizes:'1/16" rod',conn:'Copper ACR/Med Gas',part:'Harris — nitrogen purge req.',trade:['HVAC','Refrigeration']},
+];
+
+const FITTING_MAT_COLORS = {
+  'PVC':'#3b82f6','CPVC':'#f97316','ABS':'#10b981','Copper':'#f59e0b',
+  'Cast Iron':'#94a3b8','Black Iron':'#6b7280','Sprinkler':'#ef4444',
+  'Threaded Rod':'#a78bfa','Consumables':'#34d399',
+};
+
+var _fittingQtys = {};
+var _fittingSearch = '';
+var _fittingMat    = 'All';
+var _fittingTrade  = 'All';
+
+function renderFittingsTool() {
+  var el = document.getElementById('fittings-tool-container');
+  if (!el) return;
+
+  var mats   = ['All','PVC','ABS','Copper','Cast Iron','Black Iron','Sprinkler','Threaded Rod','Consumables'];
+  var trades = ['All','Plumbing','HVAC','Fire Protection','Electrical'];
+
+  var filtered = PIPE_FITTINGS.filter(function(f) {
+    if (_fittingMat   !== 'All' && f.mat   !== _fittingMat)   return false;
+    if (_fittingTrade !== 'All' && !f.trade.includes(_fittingTrade)) return false;
+    if (_fittingSearch && !f.name.toLowerCase().includes(_fittingSearch.toLowerCase())
+        && !f.part.toLowerCase().includes(_fittingSearch.toLowerCase())) return false;
+    return true;
+  });
+
+  var orderItems = PIPE_FITTINGS.filter(function(f){ return (_fittingQtys[f.id]||0) > 0; });
+  var orderCount = orderItems.reduce(function(s,f){ return s + (_fittingQtys[f.id]||0); }, 0);
+
+  el.innerHTML = '<div style="padding:12px">'
+
+    // Search + filters
+    + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+    + '<input id="fitting-search" value="' + _fittingSearch + '" placeholder="Search fittings or part #..." '
+    + 'oninput="_fittingSearch=this.value;renderFittingsTool()" '
+    + 'style="flex:2;min-width:160px;padding:9px 12px;border-radius:8px;border:1px solid #333;background:#222;color:#fff;font-size:13px;font-family:inherit"/>'
+    + '<select id="fitting-mat" onchange="_fittingMat=this.value;renderFittingsTool()" '
+    + 'style="flex:1;min-width:100px;padding:9px;border-radius:8px;border:1px solid #333;background:#222;color:#fff;font-size:12px">'
+    + mats.map(function(m){ return '<option' + (m===_fittingMat?' selected':'') + '>' + m + '</option>'; }).join('')
+    + '</select>'
+    + '<select id="fitting-trade" onchange="_fittingTrade=this.value;renderFittingsTool()" '
+    + 'style="flex:1;min-width:100px;padding:9px;border-radius:8px;border:1px solid #333;background:#222;color:#fff;font-size:12px">'
+    + trades.map(function(t){ return '<option' + (t===_fittingTrade?' selected':'') + '>' + t + '</option>'; }).join('')
+    + '</select>'
+    + '</div>'
+
+    // Order bar
+    + (orderCount > 0
+      ? '<div style="background:#1c2333;border:1px solid #f59e0b44;border-radius:10px;padding:12px;margin-bottom:10px">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+        + '<span style="font-size:13px;font-weight:700;color:#f59e0b">📦 Order List — ' + orderCount + ' items</span>'
+        + '<button onclick="exportFittingsOrder()" style="padding:5px 14px;border-radius:8px;border:none;background:#f59e0b;color:#000;font-size:11px;font-weight:800;cursor:pointer">Export TXT</button>'
+        + '</div>'
+        + orderItems.map(function(f){
+            return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:#ccc"><span><b style="color:#f59e0b">' + _fittingQtys[f.id] + '×</b> ' + f.name + ' (' + f.mat + ')</span><span style="color:#888;font-size:10px">' + f.part + '</span></div>';
+          }).join('')
+        + '</div>'
+      : '')
+
+    // Count
+    + '<div style="font-size:11px;color:#888;margin-bottom:8px">' + filtered.length + ' items shown</div>'
+
+    // Grid
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px">'
+    + filtered.map(function(f) {
+        var qty = _fittingQtys[f.id] || 0;
+        var col = FITTING_MAT_COLORS[f.mat] || '#888';
+        return '<div style="background:#1a1a1a;border:1px solid ' + (qty>0?'#f59e0b55':'#2a2a2a') + ';border-radius:10px;padding:10px">'
+          + '<div style="font-size:11px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:4px;min-height:30px">' + f.name + '</div>'
+          + '<div style="font-size:9px;font-weight:700;color:' + col + ';margin-bottom:2px">' + f.mat + '</div>'
+          + '<div style="font-size:9px;color:#666;font-family:monospace;margin-bottom:2px">' + f.sizes + '</div>'
+          + '<div style="font-size:8px;color:#555;margin-bottom:6px">' + f.part + '</div>'
+          // qty controls
+          + '<div style="display:flex;align-items:center;gap:4px">'
+          + '<button data-fid="' + f.id + '" onclick="fittingAdj(this,-1)" style="width:24px;height:24px;border-radius:6px;border:1px solid #333;background:#111;color:#fff;font-size:14px;cursor:pointer;line-height:1">−</button>'
+          + '<input type="number" min="0" value="' + (qty||'') + '" placeholder="0" '
+          + 'data-fid="' + f.id + '" onchange="fittingSet(this)" '
+          + 'style="flex:1;padding:4px;border-radius:6px;border:1px solid #333;background:#111;color:#fff;font-size:12px;text-align:center;font-family:inherit"/>'
+          + '<button data-fid="' + f.id + '" onclick="fittingAdj(this,1)" style="width:24px;height:24px;border-radius:6px;border:1px solid #333;background:#4CAF50;color:#fff;font-size:14px;cursor:pointer;line-height:1">+</button>'
+          + '</div>'
+          + '<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:5px">'
+          + f.trade.map(function(t){ return '<span style="font-size:7px;padding:1px 5px;border-radius:4px;background:' + col + '22;color:' + col + '">' + t + '</span>'; }).join('')
+          + '</div></div>';
+      }).join('')
+    + '</div></div>';
+}
+
+function fittingAdj(btn, delta) {
+  var id = +btn.getAttribute('data-fid');
+  _fittingQtys[id] = Math.max(0, (_fittingQtys[id]||0) + delta);
+  renderFittingsTool();
+}
+function fittingSet(input) {
+  var id = +input.getAttribute('data-fid');
+  _fittingQtys[id] = Math.max(0, parseInt(input.value)||0);
+  renderFittingsTool();
+}
+
+function exportFittingsOrder() {
+  var lines = ['QTY | ITEM | MATERIAL | SIZE | PART #', '─'.repeat(60)];
+  PIPE_FITTINGS.forEach(function(f) {
+    var qty = _fittingQtys[f.id]||0;
+    if (qty > 0) lines.push(qty + '  | ' + f.name + ' | ' + f.mat + ' | ' + f.sizes + ' | ' + f.part);
+  });
+  lines.push('', '─'.repeat(60));
+  lines.push('Generated by ProBuilders · ' + new Date().toLocaleString());
+  var text = lines.join('\n');
+  // Download
+  try {
+    var blob = new Blob([text], {type:'text/plain'});
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = 'pipe_order_list.txt'; a.click();
+    URL.revokeObjectURL(url);
+    toast('📦 Order list exported');
+  } catch(e) {
+    // Fallback: copy to clipboard
+    navigator.clipboard?.writeText(text).then(function(){
+      toast('📋 Order list copied to clipboard');
+    }).catch(function(){
+      toast('Order list: ' + text.slice(0,100) + '...');
+    });
+  }
+}
+
+/* ── Add template button to project lifecycle modal ───────── */
+var _origOpenLifecycle = typeof openProjectLifecycle !== 'undefined' ? openProjectLifecycle : null;
+
+</script>
+
