@@ -59,6 +59,1130 @@ window.addEventListener('keydown', e => {
 });
 
 </script>
+<script>
+
+/* ── Migrate existing data to workspace-scoped key ── */
+function pbMigrateLocalData(wsCode) {
+  var wsKey  = 'probuilders_data_v2_' + wsCode;
+  var oldKey = 'probuilders_data_v2';
+
+  // If workspace key already has data, nothing to migrate
+  var existing = localStorage.getItem(wsKey);
+  if (existing) {
+    try {
+      var parsed = JSON.parse(existing);
+      if (parsed.projects && parsed.projects.length > 0) return; // already has real data
+    } catch(e) {}
+  }
+
+  // Check all possible old keys for data
+  var oldKeys = [oldKey, 'pb_data', 'probuilders_data'];
+  for (var i=0; i<oldKeys.length; i++) {
+    var raw = localStorage.getItem(oldKeys[i]);
+    if (!raw) continue;
+    try {
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') continue;
+      // Has real projects/tasks? Copy to workspace key
+      var hasData = (data.projects && data.projects.length > 0)
+                 || (data.tasks    && data.tasks.length    > 0)
+                 || (data.photos   && data.photos.length   > 0);
+      if (hasData) {
+        localStorage.setItem(wsKey, raw);
+        console.log('[ProBuilders] Migrated data from', oldKeys[i], 'to', wsKey,
+          '—', data.projects.length, 'projects');
+        return;
+      }
+    } catch(e) { continue; }
+  }
+}
+
+
+/* ── App detection ── */
+function pbCurrentApp(){
+  var path = window.location.pathname.toLowerCase();
+  if(path.includes('desktop')) return 'desktop';
+  return 'field';
+}
+function pbOtherAppUrl(){
+  var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
+  if(pbCurrentApp() === 'field') return base + 'desktop.html';
+  return base.replace('desktop.html','') + 'index.html';
+}
+/* strip trailing filename for GitHub Pages */
+function pbBaseUrl(){
+  return window.location.href.replace(/\/[^\/]*$/, '/');
+}
+
+
+function pbCloseTeamModal()    { var m=document.getElementById('team-modal');    if(m)m.remove(); }
+function pbCloseDayModal()     { var m=document.getElementById('day-modal');     if(m)m.remove(); }
+function pbCloseEventModal()   { var m=document.getElementById('add-event-modal'); if(m)m.remove(); }
+function pbCloseEditEvent()    { var m=document.getElementById('edit-event-modal'); if(m)m.remove(); }
+
+function _buildWsList(wsList) {
+  return wsList.map(function(ws) {
+    return '<div data-wsid="' + ws.id + '" onclick="pbWsClick(this)" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#231508;border:1px solid #3d2410;cursor:pointer;margin-bottom:6px" id="ws-card-' + ws.id + '">'
+      + '<div style="width:42px;height:42px;border-radius:10px;background:' + ws.color + ';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏗️</div>'
+      + '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#F5E6D3">' + ws.name + '</div>'
+      + '<div style="font-size:11px;color:#A08060;margin-top:2px">Code: ' + ws.id + ' · ' + ws.members.length + ' member' + (ws.members.length !== 1 ? 's' : '') + '</div></div>'
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="#A08060" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div>';
+  }).join('');
+}
+/* ═══════════════════════════════════════════════════════════
+   PROBUILDERS — MULTI-TEAM AUTH LAYER
+   Injected at top of both field app and command center
+═══════════════════════════════════════════════════════════ */
+
+/* ── Workspace storage ── */
+const WS_KEY      = 'pb_workspace';        // current workspace id
+const WS_LIST_KEY = 'pb_workspaces';       // all workspaces on device
+const DB_KEY_PFX  = 'probuilders_data_v2'; // + _workspaceId
+
+const ROLES = {
+  owner:   { label:'Owner',        badge:'👑', color:'#9C27B0', can:['*'] },
+  admin:   { label:'Administrator', badge:'⚙️', color:'#2196F3', can:['*'] },
+  foreman: { label:'Foreman',       badge:'🦺', color:'#FF9800', can:['field','reports','photos','safety','workers'] },
+  worker:  { label:'Field Worker',  badge:'🔨', color:'#C8935A', can:['field','reports','photos','safety'] },
+  client:  { label:'Client',        badge:'📋', color:'#E91E8C', can:['client_portal'] },
+};
+
+let _currentWorkspace = null;  // { id, name, role, pin, members[], ... }
+let _currentUser      = null;  // { name, role, pin }
+
+/* ── Bootstrap ── */
+function pbAuthInit() {
+  const savedWsId = localStorage.getItem(WS_KEY);
+  if (savedWsId) {
+    const ws = getWorkspace(savedWsId);
+    if (ws) {
+      _currentWorkspace = ws;
+      // Restore last user session
+      const savedUser = localStorage.getItem('pb_user_' + savedWsId);
+      if (savedUser) {
+        try { _currentUser = JSON.parse(savedUser); } catch(e){}
+      }
+    }
+  }
+
+  if (!_currentUser) {
+    showAuthScreen();
+    return false;
+  }
+  applyRole(_currentUser.role);
+  return true;
+}
+
+/* ── Workspace CRUD ── */
+function getWorkspaceList() {
+  try { return JSON.parse(localStorage.getItem(WS_LIST_KEY) || '[]'); } catch(e){ return []; }
+}
+function saveWorkspaceList(list) {
+  localStorage.setItem(WS_LIST_KEY, JSON.stringify(list));
+}
+function getWorkspace(id) {
+  return getWorkspaceList().find(function(w){ return w.id === id; }) || null;
+}
+function saveWorkspace(ws) {
+  var list = getWorkspaceList();
+  var idx  = list.findIndex(function(w){ return w.id === ws.id; });
+  if (idx >= 0) list[idx] = ws; else list.push(ws);
+  saveWorkspaceList(list);
+}
+function generateCode(n) {
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:n}, function(){ return chars[Math.floor(Math.random()*chars.length)]; }).join('');
+}
+
+/* ── Auth screen ── */
+function showAuthScreen() {
+  // Remove any existing auth screen
+  var ex = document.getElementById('pb-auth-screen');
+  if (ex) ex.remove();
+
+  var div = document.createElement('div');
+  div.id = 'pb-auth-screen';
+  div.style.cssText = 'position:fixed;inset:0;background:#150c07;z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;font-family:Plus Jakarta Sans,system-ui,sans-serif;padding:20px 0 40px';
+
+  var wsList = getWorkspaceList();
+
+  div.innerHTML = `
+    <div style="width:100%;max-width:480px;padding:24px 20px">
+      <!-- Logo / brand -->
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#C8935A,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
+        <div style="font-size:13px;color:#A08060;margin-top:4px">Field & Command Center</div>
+        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v9.2</div>
+      </div>
+
+      <!-- App switcher -->
+      <div id="app-switcher" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px"></div>
+
+      <!-- Login tabs -->
+      <div style="display:flex;gap:0;background:#2e1a0d;border-radius:10px;padding:4px;margin-bottom:24px">
+        <button id="tab-login" onclick="authTab('login')" style="flex:1;padding:9px;border:none;border-radius:8px;background:#C8935A;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
+        <button id="tab-create" onclick="authTab('create')" style="flex:1;padding:9px;border:none;border-radius:0;background:transparent;color:#A08060;font-size:13px;font-weight:600;cursor:pointer">New Workspace</button>
+        <button id="tab-join" onclick="authTab('join')" style="flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:#A08060;font-size:13px;font-weight:600;cursor:pointer">Join Team</button>
+      </div>
+
+      <!-- Sign in panel -->
+      <div id="auth-login">
+        ${wsList.length ? `
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#A08060;margin-bottom:8px">YOUR WORKSPACES</div>
+          <div style="max-height:210px;overflow-y:auto;padding-right:2px">
+            ${_buildWsList(wsList)}
+          </div>
+        </div>
+        <div id="login-form" style="display:none">` : '<div id="login-form">'}
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">WORKSPACE CODE</div>
+            <input id="li-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">YOUR NAME</div>
+            <input id="li-name" placeholder="Your name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
+          </div>
+          <div style="margin-bottom:20px">
+            <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">PIN</div>
+            <input id="li-pin" type="password" placeholder="4-digit PIN" maxlength="4" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit;letter-spacing:.2em" />
+          </div>
+          <button onclick="signIn()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#C8935A,#8B6240);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Sign In →</button>
+        </div>
+        <div id="li-error" style="color:#EF5350;font-size:12px;margin-top:10px;text-align:center"></div>
+      </div>
+
+      <!-- Create workspace panel -->
+      <div id="auth-create" style="display:none">
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">COMPANY / TEAM NAME *</div>
+          <input id="cr-name" placeholder="e.g. ABC Construction Co." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">YOUR NAME (OWNER) *</div>
+          <input id="cr-owner" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
+        </div>
+        <div style="margin-bottom:20px">
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">SET YOUR PIN (4 digits)</div>
+          <input id="cr-pin" type="password" maxlength="4" placeholder="Choose a 4-digit PIN" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit;letter-spacing:.2em" />
+        </div>
+        <button onclick="createWorkspace()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#E91E8C,#C2185B);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Create Workspace →</button>
+        <div id="cr-error" style="color:#EF5350;font-size:12px;margin-top:10px;text-align:center"></div>
+      </div>
+
+      <!-- Join team panel -->
+      <div id="auth-join" style="display:none">
+        <div style="background:#2e1a0d;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:#A08060;line-height:1.6">
+          <div style="font-weight:800;color:#F5E6D3;margin-bottom:6px">How to join:</div>
+          <div>1. Get the <strong style="color:#C8935A">Workspace Code</strong> from your owner (6 letters)</div>
+          <div>2. Get your <strong style="color:#C8935A">PIN</strong> — owner adds you in Team Members</div>
+          <div>3. Enter your name, code, and PIN below</div>
+          <div style="margin-top:8px;padding:8px;background:#150c07;border-radius:8px;font-size:11px;color:#604030">
+            💡 Tip: Your name doesn't have to match exactly — just enter how you want to appear
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">WORKSPACE CODE *</div>
+          <input id="jo-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">YOUR NAME *</div>
+          <input id="jo-name" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
+        </div>
+        <div style="margin-bottom:20px">
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">PIN (assigned by your admin)</div>
+          <input id="jo-pin" type="password" maxlength="4" placeholder="4-digit PIN" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit;letter-spacing:.2em" />
+        </div>
+        <button onclick="joinWorkspace()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#C8935A,#8B6240);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Join Team →</button>
+        <div id="jo-error" style="color:#EF5350;font-size:12px;margin-top:10px;text-align:center"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(div);
+  // Render app switcher
+  _renderAppSwitcher();
+}
+
+function authTab(tab) {
+  ['login','create','join'].forEach(function(t) {
+    var panel = document.getElementById('auth-'+t);
+    var btn   = document.getElementById('tab-'+t);
+    if (panel) panel.style.display = t===tab ? 'block' : 'none';
+    if (btn) {
+      btn.style.background = t===tab ? '#C8935A' : 'transparent';
+      btn.style.color      = t===tab ? '#fff'    : '#A08060';
+    }
+  });
+}
+
+function selectWorkspaceLogin(wsId) {
+  var ws = getWorkspace(wsId);
+  if (!ws) return;
+  document.getElementById('li-code').value = wsId;
+  var form = document.getElementById('login-form');
+  if (form) { form.style.display='block'; }
+
+  // Show member list for quick PIN entry
+  var nameInput = document.getElementById('li-name');
+  if(nameInput) nameInput.focus();
+
+  // Highlight selected card
+  document.querySelectorAll('[id^="ws-card-"]').forEach(function(el){ el.style.borderColor='#3d2410'; });
+  var card = document.getElementById('ws-card-'+wsId);
+  if (card) card.style.borderColor = '#C8935A';
+
+  // Show member hints
+  var existing = document.getElementById('li-member-hint');
+  if(existing) existing.remove();
+  if(ws.members && ws.members.length) {
+    var hint = document.createElement('div');
+    hint.id  = 'li-member-hint';
+    hint.style.cssText = 'margin-bottom:10px;font-size:12px;color:#A08060';
+    hint.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Members — tap to auto-fill name</div>'
+      + ws.members.map(function(m){
+          var roleInfo = (typeof ROLES!=='undefined' && ROLES[m.role]) ? ROLES[m.role] : {badge:'👤',color:'#A08060'};
+          var btn = document.createElement('button');
+          btn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;margin:3px;padding:5px 10px;border-radius:99px;border:1px solid #3d2410;background:#1a0f07;color:#F5E6D3;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit';
+          btn.textContent = roleInfo.badge+' '+m.name;
+          btn.setAttribute('data-mname', m.name);
+          btn.onclick = function(){ document.getElementById('li-name').value = this.getAttribute('data-mname'); document.getElementById('li-pin').focus(); };
+          return btn.outerHTML;
+        }).join('');
+    var codeField = document.getElementById('li-code');
+    if(codeField && codeField.parentNode) {
+      form.insertBefore(hint, form.firstChild);
+    }
+  }
+}
+
+function signIn() {
+  var code = (document.getElementById('li-code')?.value||'').trim().toUpperCase();
+  var name = (document.getElementById('li-name')?.value||'').trim();
+  var pin  = (document.getElementById('li-pin')?.value||'').trim();
+  var err  = document.getElementById('li-error');
+  if (!code||!name||!pin) { if(err) err.textContent='All fields required.'; return; }
+
+  var ws = getWorkspace(code);
+  if (!ws) {
+    if(err) err.textContent='Workspace "'+code+'" not on this device yet. Use the "Join Team" tab to register on a new device.';
+    // Auto-switch to Join tab
+    if(typeof authTab==='function') authTab('join');
+    var jo = document.getElementById('jo-code');
+    if(jo) jo.value = code;
+    var jn = document.getElementById('jo-name');
+    if(jn) { jn.value = name; jn.focus(); }
+    return;
+  }
+
+  // Find matching member
+  // Match by PIN first, then verify name loosely
+  var member = ws.members.find(function(m){ return m.pin===pin; });
+  if (!member) {
+    if(err) err.textContent='PIN not found for this workspace.';
+    return;
+  }
+  // Accept if name matches OR if only 1 member with that PIN (owner bypass)
+  var nameOk = !name || member.name.toLowerCase()===name.toLowerCase() || member.role==='owner';
+  if (!nameOk) {
+    // Still let them in but update name
+    member.name = name;
+    saveWorkspace(ws);
+  }
+
+  _currentWorkspace = ws;
+  _currentUser      = { name:member.name, role:member.role, pin };
+  localStorage.setItem(WS_KEY, code);
+  localStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
+
+  // Set DB_KEY to workspace-scoped key
+  window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+  // Migrate any existing data to workspace key
+  pbMigrateLocalData(code);
+
+  document.getElementById('pb-auth-screen')?.remove();
+  applyRole(member.role);
+  // Show app switcher for admin/owner after login
+  if(member.role === 'owner' || member.role === 'admin'){
+    _showPostLoginSwitcher(member.role, member.name);
+  }
+  if (typeof loadFromLocal === 'function') {
+    loadFromLocal();
+    if (typeof refreshAll === 'function') refreshAll();
+    else if (typeof refreshHome === 'function') { refreshHome(); renderProjects?.(); renderTasks?.(); renderInventory?.(); }
+  }
+}
+
+function createWorkspace() {
+  var name  = (document.getElementById('cr-name')?.value||'').trim();
+  var owner = (document.getElementById('cr-owner')?.value||'').trim();
+  var pin   = (document.getElementById('cr-pin')?.value||'').trim();
+  var err   = document.getElementById('cr-error');
+  if (!name||!owner||!pin) { if(err) err.textContent='All fields required.'; return; }
+  if (pin.length < 4 || !/^\d+$/.test(pin)) { if(err) err.textContent='PIN must be exactly 4 digits.'; return; }
+
+  var wsId = generateCode(6);
+  var ws = {
+    id:      wsId,
+    name,
+    color:   '#C8935A',
+    created: new Date().toLocaleString(),
+    members: [{ id:generateCode(8), name:owner, role:'owner', pin, created:new Date().toLocaleString() }],
+  };
+  saveWorkspace(ws);
+  _currentWorkspace = ws;
+  _currentUser = { name:owner, role:'owner', pin };
+  localStorage.setItem(WS_KEY, wsId);
+  localStorage.setItem('pb_user_'+wsId, JSON.stringify(_currentUser));
+  window._WS_LS_KEY = DB_KEY_PFX + '_' + wsId;
+  pbMigrateLocalData(wsId);
+
+  document.getElementById('pb-auth-screen')?.remove();
+  applyRole('owner');
+  // Show welcome modal with workspace code
+  showWorkspaceCode(wsId, name);
+  if (typeof loadFromLocal === 'function') loadFromLocal();
+  if (typeof refreshAll === 'function') refreshAll();
+  else if (typeof refreshHome === 'function') refreshHome();
+}
+
+function joinWorkspace() {
+  var code = ((document.getElementById('jo-code')?.value)||'').trim().toUpperCase();
+  var name = ((document.getElementById('jo-name')?.value)||'').trim();
+  var pin  = ((document.getElementById('jo-pin')?.value)||'').trim();
+  var err  = document.getElementById('jo-error');
+
+  if (!code) { if(err) err.textContent='Enter the workspace code.'; return; }
+  if (!name) { if(err) err.textContent='Enter your name.'; return; }
+
+  // Clear any old error
+  if(err) err.textContent = '';
+
+  var ws = getWorkspace(code);
+
+  if (!ws) {
+    // ── NEW DEVICE: workspace not in this device's storage ──
+    // Register it locally — data syncs later via cloud
+    var newMember = {
+      id:      code + '_' + Date.now(),
+      name:    name,
+      role:    'worker',
+      pin:     pin || '0000',
+      created: new Date().toLocaleString()
+    };
+    var newWs = {
+      id:        code,
+      name:      'Workspace ' + code,
+      color:     '#C8935A',
+      created:   new Date().toLocaleString(),
+      members:   [newMember],
+      _newDevice: true
+    };
+    saveWorkspace(newWs);
+    _currentWorkspace = newWs;
+    _currentUser      = { name: name, role: 'worker', pin: pin||'0000' };
+    localStorage.setItem(WS_KEY, code);
+    localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
+    window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+    // ── Migrate any existing local data to workspace key ──
+    pbMigrateLocalData(code);
+    document.getElementById('pb-auth-screen')?.remove();
+    applyRole('worker');
+    if (typeof loadFromLocal === 'function') loadFromLocal();
+    if (typeof refreshAll   === 'function') refreshAll();
+    else if (typeof refreshHome === 'function') refreshHome();
+    setTimeout(function(){
+      if (typeof toast === 'function')
+        toast('✅ Joined workspace ' + code + ' — your projects are loaded');
+    }, 800);
+    return;
+  }
+
+  // ── Workspace found locally ──
+  // Try to find member by PIN, then by name, then add them
+  var member = null;
+  if (pin) member = ws.members.find(function(m){ return m.pin === pin; });
+  if (!member) member = ws.members.find(function(m){ return m.name.toLowerCase() === name.toLowerCase(); });
+  if (!member) {
+    // Auto-add as worker
+    member = { id: code+'_'+Date.now(), name: name, role: 'worker',
+               pin: pin||'0000', created: new Date().toLocaleString() };
+    ws.members.push(member);
+    saveWorkspace(ws);
+  }
+
+  // Update name if different
+  if (name && name !== member.name) { member.name = name; saveWorkspace(ws); }
+
+  _currentWorkspace = ws;
+  _currentUser      = { name: name||member.name, role: member.role, pin: member.pin };
+  localStorage.setItem(WS_KEY, code);
+  localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
+  window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
+  // Migrate any existing data to workspace key
+  pbMigrateLocalData(code);
+
+  document.getElementById('pb-auth-screen')?.remove();
+  applyRole(member.role);
+  if (typeof loadFromLocal === 'function') loadFromLocal();
+  if (typeof refreshAll   === 'function') refreshAll();
+  else if (typeof refreshHome === 'function') refreshHome();
+  if (typeof toast === 'function') toast('👋 Welcome, ' + (name||member.name) + '!');
+}
+
+function showWorkspaceCode(wsId, wsName) {
+  var mo = document.createElement('div');
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9998;display:flex;align-items:center;justify-content:center';
+  mo.innerHTML = '<div style="background:#231508;border-radius:16px;padding:28px 32px;max-width:440px;width:90%;text-align:center">'
+    +'<div style="font-size:24px;font-weight:900;color:#C8935A;margin-bottom:6px">🎉 Workspace Created!</div>'
+    +'<div style="font-size:15px;color:#A08060;margin-bottom:24px">Share this code with your team</div>'
+    +'<div style="background:#1a0f07;border-radius:12px;padding:20px;margin-bottom:16px">'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#A08060;margin-bottom:8px">Workspace Code</div>'
+    +'<div style="font-size:42px;font-weight:900;letter-spacing:.2em;color:#F5E6D3;font-family:monospace">'+wsId+'</div>'
+    +'<div style="font-size:12px;color:#604030;margin-top:6px">'+wsName+'</div></div>'
+    +'<div style="font-size:12px;color:#A08060;margin-bottom:20px;line-height:1.5">Team members need this code + their PIN to sign in.<br>Add members from Settings → Team Members.</div>'
+    +'<button onclick="pbCloseWelcome(this)" style="background:#C8935A;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer">Got It →</button>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
+/* ── Role-based UI ── */
+function applyRole(role) {
+  var body = document.body;
+  body.setAttribute('data-role', role);
+
+  // Inject user badge in header
+  setTimeout(function() {
+    var existing = document.getElementById('user-badge');
+    if (existing) existing.remove();
+    var roleInfo = ROLES[role] || ROLES.worker;
+    var name = (_currentUser && _currentUser.name) ? _currentUser.name : 'User';
+    // Get initials (up to 2 chars)
+    var initials = name.split(' ').map(function(n){ return n[0]; }).join('').slice(0,2).toUpperCase();
+    var isLoggedIn = role !== 'guest';
+    var circleColor = isLoggedIn ? '#C8935A' : '#E91E8C';
+    var circleBorder = isLoggedIn ? 'rgba(200,147,90,.6)' : 'rgba(233,30,140,.6)';
+    var glowColor   = isLoggedIn ? 'rgba(200,147,90,.35)' : 'rgba(233,30,140,.35)';
+
+    // Build badge: floating glass circle bottom-right
+    var badge = document.createElement('div');
+    badge.id = 'user-badge';
+    badge.setAttribute('data-open','false');
+    badge.style.cssText = [
+      'position:fixed',
+      'bottom:74px',       /* above field app bottom nav bar */
+      'right:14px',
+      'z-index:600',
+      'display:flex',
+      'flex-direction:column',
+      'align-items:flex-end',
+      'gap:0',
+      'pointer-events:none',
+    ].join(';');
+
+    // Circle button
+    var circle = document.createElement('button');
+    circle.id = 'user-circle';
+    circle.title = name + ' · ' + roleInfo.label + ' · Tap for options';
+    circle.style.cssText = [
+      'width:14px',
+      'height:14px',
+      'border-radius:50%',
+      'background:' + circleColor,
+      'border:2px solid ' + circleBorder,
+      'color:transparent',         /* initials hidden in collapsed state */
+      'font-size:0px',
+      'font-weight:800',
+      'font-family:Plus Jakarta Sans,system-ui,sans-serif',
+      'cursor:pointer',
+      'pointer-events:all',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'letter-spacing:.02em',
+      'position:relative',
+      'opacity:0.45',
+      'transition:all .3s cubic-bezier(.16,1,.3,1)',
+      'box-shadow:0 0 6px ' + glowColor,
+      'backdrop-filter:blur(20px) saturate(180%)',
+      '-webkit-backdrop-filter:blur(20px) saturate(180%)',
+    ].join(';');
+    circle.innerHTML = '<span style="position:relative;z-index:1;text-shadow:0 1px 3px rgba(0,0,0,.5)">' + initials + '</span>';
+
+    // Glass overlay shimmer inside circle
+    var shimmer = document.createElement('div');
+    shimmer.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'border-radius:50%',
+      'background:linear-gradient(135deg,rgba(255,255,255,.25) 0%,rgba(255,255,255,.05) 50%,transparent 100%)',
+      'pointer-events:none',
+    ].join(';');
+    circle.appendChild(shimmer);
+
+    // Popup panel (hidden by default)
+    var panel = document.createElement('div');
+    panel.id = 'user-panel';
+    panel.style.cssText = [
+      'position:absolute',
+      'bottom:58px',
+      'right:0',
+      'min-width:190px',
+      'border-radius:16px',
+      'padding:14px 16px',
+      'display:none',
+      'flex-direction:column',
+      'gap:10px',
+      'pointer-events:all',
+      'background:rgba(13,27,13,.72)',
+      'border:1px solid rgba(200,147,90,.25)',
+      'backdrop-filter:blur(28px) saturate(200%)',
+      '-webkit-backdrop-filter:blur(28px) saturate(200%)',
+      'box-shadow:0 8px 32px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)',
+    ].join(';');
+
+    // Panel header row
+    var row1 = document.createElement('div');
+    row1.style.cssText = 'display:flex;align-items:center;gap:10px';
+    row1.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;background:' + circleColor + '44;border:1.5px solid ' + circleBorder + ';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;backdrop-filter:blur(10px)">' + initials + '</div>'
+      + '<div><div style="font-size:13px;font-weight:700;color:#F5E6D3">' + name + '</div>'
+      + '<div style="font-size:10px;font-weight:800;color:' + roleInfo.color + ';margin-top:1px">' + roleInfo.badge + ' ' + roleInfo.label + '</div></div>';
+    panel.appendChild(row1);
+
+    // Divider
+    var div = document.createElement('div');
+    div.style.cssText = 'height:1px;background:rgba(255,255,255,.08);margin:0 -4px';
+    panel.appendChild(div);
+
+    // Team button (if admin/owner)
+    if (role === 'owner' || role === 'admin') {
+      var teamBtn = document.createElement('button');
+      teamBtn.onclick = function(){ pbCloseUserPanel(); openTeamManager(); };
+      teamBtn.style.cssText = 'background:rgba(200,147,90,.12);border:1px solid rgba(200,147,90,.2);border-radius:10px;color:#E0C4A0;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;align-items:center;gap:8px;transition:background .15s';
+      teamBtn.onmouseenter = function(){ this.style.background='rgba(200,147,90,.22)'; };
+      teamBtn.onmouseleave = function(){ this.style.background='rgba(200,147,90,.12)'; };
+      teamBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Members';
+      panel.appendChild(teamBtn);
+    }
+
+    // Sign out button
+    var signOutBtn = document.createElement('button');
+    signOutBtn.onclick = function(){ pbCloseUserPanel(); pbSignOut(); };
+    signOutBtn.style.cssText = 'background:rgba(233,30,140,.1);border:1px solid rgba(233,30,140,.2);border-radius:10px;color:#F48FB1;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;align-items:center;gap:8px;transition:background .15s';
+    signOutBtn.onmouseenter = function(){ this.style.background='rgba(233,30,140,.2)'; };
+    signOutBtn.onmouseleave = function(){ this.style.background='rgba(233,30,140,.1)'; };
+    signOutBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out';
+    panel.appendChild(signOutBtn);
+
+    badge.appendChild(panel);
+    badge.appendChild(circle);
+    document.body.appendChild(badge);
+
+    // Toggle panel on circle click — expands circle, shows panel
+    circle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var open = panel.style.display === 'flex';
+      if (open) {
+        pbCloseUserPanel();
+      } else {
+        // Expand circle to full size
+        circle.style.width = '48px';
+        circle.style.height = '48px';
+        circle.style.fontSize = '15px';
+        circle.style.color = '#fff';
+        circle.style.opacity = '1';
+        circle.style.boxShadow = '0 0 28px ' + glowColor + ',0 4px 20px rgba(0,0,0,.5)';
+        circle.style.transform = 'scale(1.05)';
+        panel.style.display = 'flex';
+        panel.style.flexDirection = 'column';
+      }
+    });
+
+    // Hover — expand slightly to hint
+    circle.addEventListener('mouseenter', function() {
+      if(panel.style.display !== 'flex'){
+        circle.style.width = '36px';
+        circle.style.height = '36px';
+        circle.style.fontSize = '11px';
+        circle.style.color = '#fff';
+        circle.style.opacity = '0.85';
+        circle.style.boxShadow = '0 0 14px ' + glowColor;
+      }
+    });
+    circle.addEventListener('mouseleave', function() {
+      if(panel.style.display !== 'flex'){
+        circle.style.width = '14px';
+        circle.style.height = '14px';
+        circle.style.fontSize = '0px';
+        circle.style.color = 'transparent';
+        circle.style.opacity = '0.45';
+        circle.style.boxShadow = '0 0 6px ' + glowColor;
+        circle.style.transform = '';
+      }
+    });
+
+    // Close panel when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!badge.contains(e.target)) pbCloseUserPanel();
+    });
+
+    // Tiny breathing pulse so user knows it's there
+    var style = document.getElementById('pb-badge-style');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'pb-badge-style';
+      style.textContent = '@keyframes pbBreath{0%,100%{opacity:0.35}50%{opacity:0.65}}';
+      document.head.appendChild(style);
+    }
+    circle.style.animation = 'pbBreath 3s ease-in-out infinite';
+  }, 200);
+
+  // For client role: hide sidebar, show only client portal
+  if (role === 'client') {
+    setTimeout(function() {
+      var sidebar  = document.querySelector('.sidebar');
+      var topbar   = document.querySelector('.topbar');
+      if (sidebar) sidebar.style.display = 'none';
+      // Hide all views except client portal
+      document.querySelectorAll('.view').forEach(function(v){ v.style.display='none'; });
+      showClientPortal();
+    }, 300);
+  }
+
+  // For field worker: restrict to field views only (in field app)
+  if (role === 'worker' || role === 'foreman') {
+    setTimeout(function() {
+      // Hide desktop-only nav items if any
+      document.querySelectorAll('[data-desktop-only]').forEach(function(el){ el.style.display='none'; });
+    }, 300);
+  }
+}
+
+/* ── Client Portal ── */
+function showClientPortal() {
+  var existing = document.getElementById('client-portal');
+  if (existing) { existing.style.display='block'; return; }
+
+  var portal = document.createElement('div');
+  portal.id = 'client-portal';
+  portal.style.cssText = 'padding:24px;max-width:900px;margin:0 auto;font-family:Plus Jakarta Sans,system-ui,sans-serif';
+
+  renderClientPortal(portal);
+  var main = document.getElementById('main') || document.body;
+  main.appendChild(portal);
+}
+
+function renderClientPortal(container) {
+  var ws  = _currentWorkspace;
+  var user = _currentUser;
+  // Show only projects the client is assigned to (or all if no assignment filter)
+  var myProjects = (DB.projects||[]);  // Could filter by clientId later
+
+  var html = '<div style="margin-bottom:24px">'
+    +'<div style="font-size:28px;font-weight:900;color:#C8935A">📋 Your Projects</div>'
+    +'<div style="font-size:14px;color:#A08060;margin-top:4px">'+(ws?.name||'')+'</div>'
+    +'</div>';
+
+  if (!myProjects.length) {
+    html += '<div style="text-align:center;padding:60px;color:#A08060"><div style="font-size:48px;margin-bottom:12px">🏗️</div><div style="font-size:16px;font-weight:700">No projects yet</div><div style="font-size:13px;margin-top:4px">Your contractor will add your project here</div></div>';
+  } else {
+    html += myProjects.map(function(p) {
+      var paid = (DB.payments||[]).filter(function(pay){return pay.projectId===p.id;}).reduce(function(s,pay){return s+(+pay.amount||0);},0);
+      var contract = +p.contract||0;
+      var pct = contract>0 ? Math.min(100,Math.round(paid/contract*100)) : 0;
+      var tasks = (DB.tasks||[]).filter(function(t){return t.projectId===p.id;});
+      var doneTasks = tasks.filter(function(t){return t.done;});
+      var lastReport = [...(DB.reports||[])].filter(function(r){return r.projectId===p.id;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).shift();
+
+      return '<div style="background:#231508;border:1px solid #3d2410;border-radius:16px;padding:20px;margin-bottom:16px">'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">'
+        +'<div><div style="font-size:18px;font-weight:800;color:#F5E6D3">'+p.name+'</div>'
+        +'<div style="font-size:12px;color:#A08060;margin-top:3px">📍 '+p.city+(p.state?', '+p.state:'')+(p.start?' · Started '+p.start:'')+'</div></div>'
+        +'<span style="font-size:12px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(200,147,90,.15);color:#E0C4A0">'+p.status+'</span>'
+        +'</div>'
+        // Progress bar
+        +'<div style="margin-bottom:14px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:12px;color:#A08060;margin-bottom:5px"><span>Project progress</span><span>'+(p.progress||0)+'%</span></div>'
+        +'<div style="height:8px;background:#3d2410;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+(p.progress||0)+'%;background:linear-gradient(90deg,#C8935A,#8B6240);border-radius:99px"></div></div>'
+        +'</div>'
+        // Stats grid
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+        +'<div style="background:#2e1a0d;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#C8935A">'+doneTasks.length+'/'+tasks.length+'</div><div style="font-size:10px;color:#A08060;margin-top:2px;font-weight:700;text-transform:uppercase">Tasks</div></div>'
+        +'<div style="background:#2e1a0d;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#C8935A">$'+contract.toLocaleString()+'</div><div style="font-size:10px;color:#A08060;margin-top:2px;font-weight:700;text-transform:uppercase">Contract</div></div>'
+        +'<div style="background:#2e1a0d;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#E91E8C">$'+paid.toLocaleString()+'</div><div style="font-size:10px;color:#A08060;margin-top:2px;font-weight:700;text-transform:uppercase">Paid</div></div>'
+        +'<div style="background:#2e1a0d;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:'+(contract-paid>0?'#FF9800':'#C8935A')+'">'+(contract-paid<=0?'✅ Paid':'$'+(contract-paid).toLocaleString())+'</div><div style="font-size:10px;color:#A08060;margin-top:2px;font-weight:700;text-transform:uppercase">Balance</div></div>'
+        +'</div>'
+        // Latest report
+        +(lastReport ? '<div style="background:#2e1a0d;border-radius:10px;padding:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#A08060;margin-bottom:6px">📋 Latest Field Report · '+lastReport.date+'</div>'
+          +'<div style="font-size:13px;color:#F5E6D3;line-height:1.5">'+(lastReport.completed||'No details')+'</div>'
+          +(lastReport.incomplete?'<div style="font-size:12px;color:#FF9800;margin-top:4px">⚠️ Pending: '+lastReport.incomplete+'</div>':'')
+          +'</div>' : '')
+        +'</div>';
+    }).join('');
+  }
+
+  container.innerHTML = html;
+}
+
+/* ── Sign out ── */
+function pbSignOut() {
+  var wsId = _currentWorkspace?.id;
+  if (wsId) sessionStorage.removeItem('pb_user_'+wsId);
+  _currentUser = null;
+  _currentWorkspace = null;
+  var badge = document.getElementById('user-badge');
+  if (badge) badge.remove();
+  showAuthScreen();
+}
+
+/* ── Team management ── */
+function openTeamManager() {
+  if (!_currentWorkspace) return;
+  if (_currentUser?.role !== 'owner' && _currentUser?.role !== 'admin') { toast('Admin access required'); return; }
+
+  var ws = getWorkspace(_currentWorkspace.id);
+  var mo = document.createElement('div');
+  mo.className = 'mo open'; mo.id = 'team-modal';
+
+  var isOwner = _currentUser?.role === 'owner';
+
+  var memberRows = ws.members.map(function(m) {
+    var roleInfo = ROLES[m.role] || ROLES.worker;
+    var initials = m.name.split(' ').map(function(n){ return n[0]; }).join('').slice(0,2).toUpperCase();
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--s2);margin-bottom:6px;border:1px solid var(--div)">'
+      + '<div style="width:38px;height:38px;border-radius:50%;background:'+roleInfo.color+'33;border:1.5px solid '+roleInfo.color+'66;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:'+roleInfo.color+';flex-shrink:0">'+initials+'</div>'
+      + '<div style="flex:1;min-width:0">'
+      +   '<div style="font-size:13px;font-weight:700">'+m.name+'</div>'
+      +   '<div style="display:flex;align-items:center;gap:6px;margin-top:2px">'
+      +     '<span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;background:'+roleInfo.color+'22;color:'+roleInfo.color+'">'+roleInfo.badge+' '+roleInfo.label+'</span>'
+      +     '<span style="font-size:10px;color:var(--txf)">PIN: '+m.pin+'</span>'
+      +   '</div>'
+      + '</div>'
+      + (m.role !== 'owner'
+          ? '<div style="display:flex;gap:5px">'
+            + '<button class="btn btn-o btn-xs" data-mid="'+m.id+'" onclick="pbEditMember(this)" title="Edit member">✏️</button>'
+            + '<button class="btn btn-d btn-xs" data-mid="'+m.id+'" onclick="pbRemoveMember(this)" title="Remove member">🗑</button>'
+            + '</div>'
+          : '<span style="font-size:10px;font-weight:700;color:var(--txf);padding:2px 8px;background:var(--s3);border-radius:99px">Owner</span>')
+      + '</div>';
+  }).join('');
+
+  mo.innerHTML = '<div class="mc" style="max-width:580px">'
+
+    // Header
+    + '<div class="mh"><div class="mt">⚙️ Workspace Settings</div><button class="icon-btn" onclick="pbCloseTeamModal()">✕</button></div>'
+
+    // Workspace info card
+    + '<div class="mb">'
+    + '<div style="background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:14px 16px;margin-bottom:16px">'
+    +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">'
+    +     '<div>'
+    +       '<div style="font-size:16px;font-weight:800">'+ws.name+'</div>'
+    +       '<div style="font-size:11px;color:var(--txm);margin-top:3px">Workspace Code: <strong style="font-family:monospace;font-size:14px;color:var(--g);letter-spacing:.1em">'+ws.id+'</strong></div>'
+    +     '</div>'
+    +     (isOwner
+        ? '<div style="display:flex;gap:6px">'
+          + '<button class="btn btn-o btn-sm" onclick="openEditWorkspace()">✏️ Edit</button>'
+          + '<button class="btn btn-d btn-sm" onclick="confirmDeleteWorkspace()">🗑 Delete</button>'
+          + '</div>'
+        : '')
+    +   '</div>'
+    +   '<div style="font-size:11px;color:var(--txf)">'+ws.members.length+' member'+(ws.members.length!==1?'s':'')+' · Created '+ws.created+'</div>'
+    + '</div>'
+
+    // Members list
+    + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txm);margin-bottom:8px">Team Members</div>'
+    + memberRows
+
+    // Divider
+    + '<div class="divider" style="margin:16px 0"></div>'
+
+    // Add member form
+    + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txm);margin-bottom:10px">Add Team Member</div>'
+    + '<div class="fg">'
+    +   '<div class="fl fl-full"><div class="flbl">Name *</div><input class="fc" id="tm-name" placeholder="Full name"/></div>'
+    +   '<div class="fl"><div class="flbl">Role</div>'
+    +     '<select class="fc" id="tm-role">'
+    +       '<option value="worker">🔨 Field Worker</option>'
+    +       '<option value="foreman">🦺 Foreman</option>'
+    +       '<option value="admin">⚙️ Admin</option>'
+    +       '<option value="client">📋 Client (read-only)</option>'
+    +     '</select>'
+    +   '</div>'
+    +   '<div class="fl"><div class="flbl">PIN (4 digits) *</div><input class="fc" type="password" id="tm-pin" maxlength="4" placeholder="4-digit PIN"/></div>'
+    + '</div>'
+    + '</div>'
+
+    + '<div class="mf"><button class="btn btn-o" onclick="pbCloseTeamModal()">Close</button><button class="btn btn-g" onclick="addTeamMember()">+ Add Member</button></div>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+}
+
+/* ── Edit member ── */
+function pbEditMember(btn) {
+  var mid = btn.getAttribute('data-mid');
+  var ws  = getWorkspace(_currentWorkspace.id);
+  var m   = ws.members.find(function(x){ return x.id === mid; });
+  if(!m) return;
+  var newName = prompt('Name:', m.name); if(newName===null) return;
+  var newPin  = prompt('PIN (4 digits):', m.pin); if(newPin===null) return;
+  var newRole = prompt('Role (worker / foreman / admin / client):', m.role); if(newRole===null) return;
+  if(!ROLES[newRole]) { toast('Invalid role'); return; }
+  if(newPin.length !== 4 || !/^\d+$/.test(newPin)) { toast('PIN must be 4 digits'); return; }
+  m.name = newName.trim() || m.name;
+  m.pin  = newPin;
+  m.role = newRole;
+  saveWorkspace(ws);
+  _currentWorkspace = ws;
+  document.getElementById('team-modal')?.remove();
+  toast('✅ '+m.name+' updated');
+  openTeamManager();
+}
+
+/* ── Edit workspace name ── */
+function openEditWorkspace() {
+  var ws = getWorkspace(_currentWorkspace.id);
+  var mo = document.createElement('div');
+  mo.className = 'mo open'; mo.id = 'edit-ws-modal';
+  mo.innerHTML = '<div class="mc" style="max-width:420px">'
+    + '<div class="mh"><div class="mt">✏️ Edit Workspace</div><button class="icon-btn" onclick="document.getElementById(\'edit-ws-modal\').remove()">✕</button></div>'
+    + '<div class="mb">'
+    +   '<div class="fl" style="margin-bottom:16px"><div class="flbl">Workspace Name *</div><input class="fc" id="ews-name" value="'+ws.name+'" placeholder="Company name"/></div>'
+    +   '<div class="fl"><div class="flbl">Workspace Code (read-only)</div>'
+    +     '<div style="font-family:monospace;font-size:20px;font-weight:900;letter-spacing:.15em;color:var(--g);padding:10px 14px;background:var(--s2);border-radius:var(--r8);border:1px solid var(--br)">'+ws.id+'</div>'
+    +     '<div style="font-size:11px;color:var(--txf);margin-top:4px">Share this code with your team so they can join.</div>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="mf"><button class="btn btn-o" onclick="document.getElementById(\'edit-ws-modal\').remove()">Cancel</button><button class="btn btn-g" onclick="saveEditWorkspace()">💾 Save Changes</button></div>'
+    + '</div>';
+  document.body.appendChild(mo);
+}
+
+function saveEditWorkspace() {
+  var newName = document.getElementById('ews-name')?.value?.trim();
+  if(!newName) { toast('Name required'); return; }
+  var ws  = getWorkspace(_currentWorkspace.id);
+  ws.name = newName;
+  saveWorkspace(ws);
+  _currentWorkspace = ws;
+  document.getElementById('edit-ws-modal')?.remove();
+  document.getElementById('team-modal')?.remove();
+  // Update the ws-display badge
+  var wsDisp = document.getElementById('ws-display');
+  if(wsDisp) wsDisp.textContent = '🏗️ ' + newName;
+  toast('✅ Workspace renamed to "'+newName+'"');
+  openTeamManager();
+}
+
+/* ── Delete workspace ── */
+function confirmDeleteWorkspace() {
+  var ws = getWorkspace(_currentWorkspace.id);
+  var mo = document.createElement('div');
+  mo.className = 'mo open'; mo.id = 'del-ws-modal';
+  mo.innerHTML = '<div class="mc" style="max-width:440px">'
+    + '<div class="mh"><div class="mt" style="color:var(--err)">⚠️ Delete Workspace</div><button class="icon-btn" onclick="document.getElementById(\'del-ws-modal\').remove()">✕</button></div>'
+    + '<div class="mb">'
+    +   '<div style="background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.3);border-radius:var(--r12);padding:16px;margin-bottom:16px">'
+    +     '<div style="font-size:14px;font-weight:800;color:var(--err);margin-bottom:8px">This cannot be undone.</div>'
+    +     '<div style="font-size:13px;color:var(--tx);line-height:1.6">Deleting <strong>'+ws.name+'</strong> will permanently remove:<br>'
+    +       '• All project, task, and report data<br>'
+    +       '• All team members and their access<br>'
+    +       '• All photos, inventory, and documents<br>'
+    +       '• The workspace code <strong style="font-family:monospace;color:var(--err)">'+ws.id+'</strong>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="fl"><div class="flbl">Type the workspace code to confirm</div>'
+    +     '<input class="fc" id="del-ws-confirm" placeholder="'+ws.id+'" style="font-family:monospace;font-size:16px;letter-spacing:.1em"/>'
+    +   '</div>'
+    + '</div>'
+    + '<div class="mf"><button class="btn btn-o" onclick="document.getElementById(\'del-ws-modal\').remove()">Cancel</button><button class="btn btn-d" onclick="executeDeleteWorkspace()">🗑 Delete Forever</button></div>'
+    + '</div>';
+  document.body.appendChild(mo);
+}
+
+function executeDeleteWorkspace() {
+  var ws   = getWorkspace(_currentWorkspace.id);
+  var typed = document.getElementById('del-ws-confirm')?.value?.trim().toUpperCase();
+  if(typed !== ws.id) { toast('Code does not match — type exactly: '+ws.id); return; }
+
+  // Delete all data for this workspace
+  localStorage.removeItem('probuilders_data_v2_' + ws.id);
+
+  // Remove from workspace list
+  var list = getWorkspaceList().filter(function(w){ return w.id !== ws.id; });
+  saveWorkspaceList(list);
+
+  // Clear current session
+  sessionStorage.removeItem('pb_user_' + ws.id);
+  localStorage.removeItem(WS_KEY);
+  _currentWorkspace = null;
+  _currentUser      = null;
+
+  document.getElementById('del-ws-modal')?.remove();
+  document.getElementById('team-modal')?.remove();
+  var badge = document.getElementById('user-badge');
+  if(badge) badge.remove();
+
+  // If more workspaces exist, show login; else fresh start
+  showAuthScreen();
+  toast('Workspace deleted');
+}
+
+function addTeamMember() {
+  var name = document.getElementById('tm-name')?.value?.trim();
+  var role = document.getElementById('tm-role')?.value || 'worker';
+  var pin  = document.getElementById('tm-pin')?.value?.trim();
+  if (!name||!pin||pin.length<4) { toast('Name and 4-digit PIN required'); return; }
+
+  var ws = getWorkspace(_currentWorkspace.id);
+  if (!ws) return;
+  ws.members.push({ id:generateCode(8), name, role, pin, created:new Date().toLocaleString() });
+  saveWorkspace(ws);
+  _currentWorkspace = ws;
+  document.getElementById('team-modal')?.remove();
+  toast('✅ '+name+' added as '+ROLES[role].label);
+  // Re-open to show updated list
+  openTeamManager();
+}
+
+function removeMember(memberId) {
+  if (!confirm('Remove this team member?')) return;
+  var ws = getWorkspace(_currentWorkspace.id);
+  ws.members = ws.members.filter(function(m){ return m.id !== memberId; });
+  saveWorkspace(ws);
+  _currentWorkspace = ws;
+  document.getElementById('team-modal')?.remove();
+  toast('Member removed');
+  openTeamManager();
+}
+
+/* Patch the LS_KEY to be workspace-scoped */
+function pbGetLSKey() {
+  // Return workspace-scoped key if logged in, otherwise fallback to base key
+  return window._WS_LS_KEY || window.LS_KEY || 'probuilders_data_v2';
+}
+
+function pbWsClick(el){ selectWorkspaceLogin(el.getAttribute('data-wsid')); }
+
+function pbCloseWelcome(btn){ var p=btn.parentElement; while(p&&!p.style.position) p=p.parentElement; if(p) p.remove(); }
+
+function pbRemoveMember(btn){ removeMember(btn.getAttribute('data-mid')); }
+
+function pbCloseUserPanel(){
+  var panel  = document.getElementById('user-panel');
+  var circle = document.getElementById('user-circle');
+  if(panel) panel.style.display='none';
+  if(circle){
+    circle.style.transform = '';
+    circle.style.animation = '';
+    circle.style.width    = '14px';
+    circle.style.height   = '14px';
+    circle.style.fontSize = '0px';
+    circle.style.color    = 'transparent';
+    circle.style.opacity  = '0.45';
+  }
+}
+
+
+function _getAppUrls(){
+  var href = window.location.href;
+  var isGithub = href.includes('github.io');
+  var isFile   = href.startsWith('file://');
+  var isLocal  = href.includes('localhost') || href.includes('127.0.0.1');
+
+  // Always use exact hardcoded GitHub Pages URLs when on GitHub
+  if(isGithub){
+    return {
+      field:   'https://f666cdx5tg-sudo.github.io/probuilders/index.html',
+      desktop: 'https://f666cdx5tg-sudo.github.io/probuilders/desktop.html'
+    };
+  }
+  // File:// — can't navigate between files reliably; point to GitHub
+  if(isFile){
+    return {
+      field:   'https://f666cdx5tg-sudo.github.io/probuilders/index.html',
+      desktop: 'https://f666cdx5tg-sudo.github.io/probuilders/desktop.html',
+      _isFile: true
+    };
+  }
+  // Localhost — build relative
+  var base = href.substring(0, href.lastIndexOf('/') + 1);
+  return {
+    field:   base + 'index.html',
+    desktop: base + 'desktop.html'
+  };
+}
+
+function _renderAppSwitcher(){
+  var sw = document.getElementById('app-switcher');
+  if(!sw) return;
+  var current = pbCurrentApp();
+  var urls = _getAppUrls();
+  var fieldUrl   = urls.field;
+  var desktopUrl = urls.desktop;
+
+  var isFile = urls._isFile;
+  var fileNote = isFile ? '<div style="font-size:11px;color:#FF9800;text-align:center;padding:6px 0;grid-column:1/-1">⚠️ Open from GitHub Pages for navigation to work</div>' : '';
+
+  sw.innerHTML = fileNote +
+    '<a href="' + fieldUrl + '" style="text-decoration:none">'
+    + '<div style="padding:12px;border-radius:12px;text-align:center;cursor:pointer;border:2px solid '+(current==='field'?'#C8935A':'rgba(200,147,90,.2)')+';background:'+(current==='field'?'rgba(200,147,90,.15)':'rgba(200,147,90,.05)')+';transition:all .2s">'
+    +   '<div style="font-size:22px;margin-bottom:4px">📱</div>'
+    +   '<div style="font-size:12px;font-weight:800;color:'+(current==='field'?'#C8935A':'#A08060')+'">Field App</div>'
+    +   '<div style="font-size:10px;color:#604030;margin-top:2px">'+(current==='field'?'▶ You are here':'iPhone / Tablet')+'</div>'
+    + '</div></a>'
+    + '<a href="' + desktopUrl + '" style="text-decoration:none">'
+    + '<div style="padding:12px;border-radius:12px;text-align:center;cursor:pointer;border:2px solid '+(current==='desktop'?'#E91E8C':'rgba(233,30,140,.2)')+';background:'+(current==='desktop'?'rgba(233,30,140,.15)':'rgba(233,30,140,.05)')+';transition:all .2s">'
+    +   '<div style="font-size:22px;margin-bottom:4px">🖥️</div>'
+    +   '<div style="font-size:12px;font-weight:800;color:'+(current==='desktop'?'#E91E8C':'#A08060')+'">Command Center</div>'
+    +   '<div style="font-size:10px;color:#3A2A3A;margin-top:2px">'+(current==='desktop'?'▶ You are here':'Mac / Desktop')+'</div>'
+    + '</div></a>';
+}
+
+
+function _showPostLoginSwitcher(role, name) {
+  var roleInfo = ROLES[role] || ROLES.admin;
+  var current  = pbCurrentApp();
+  var urls = _getAppUrls();
+  var fieldUrl   = urls.field;
+  var desktopUrl = urls.desktop;
+
+  var mo = document.createElement('div');
+  mo.id = 'post-login-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:flex;align-items:center;justify-content:center;font-family:Plus Jakarta Sans,system-ui,sans-serif';
+
+  mo.innerHTML = '<div style="background:#231508;border-radius:20px;padding:28px 28px;max-width:400px;width:90%;text-align:center;border:1px solid #3d2410">'
+    + '<div style="font-size:22px;margin-bottom:4px">'+roleInfo.badge+' Welcome back!</div>'
+    + '<div style="font-size:18px;font-weight:800;color:#F5E6D3;margin-bottom:4px">'+name+'</div>'
+    + '<div style="font-size:12px;font-weight:700;padding:3px 12px;border-radius:99px;display:inline-block;background:'+roleInfo.color+'22;color:'+roleInfo.color+';margin-bottom:24px">'+roleInfo.label+'</div>'
+    + '<div style="font-size:13px;color:#A08060;margin-bottom:16px">Where would you like to go?</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'
+    +   '<a href="'+fieldUrl+'" style="text-decoration:none">'
+    +     '<div style="padding:16px 12px;border-radius:14px;background:rgba(200,147,90,.1);border:2px solid rgba(200,147,90,.3);cursor:pointer">'
+    +       '<div style="font-size:28px;margin-bottom:6px">📱</div>'
+    +       '<div style="font-size:13px;font-weight:800;color:#C8935A">Field App</div>'
+    +       '<div style="font-size:10px;color:#604030;margin-top:3px">iPhone · Tablet</div>'
+    +     '</div></a>'
+    +   '<a href="'+desktopUrl+'" style="text-decoration:none">'
+    +     '<div style="padding:16px 12px;border-radius:14px;background:rgba(233,30,140,.1);border:2px solid rgba(233,30,140,.3);cursor:pointer">'
+    +       '<div style="font-size:28px;margin-bottom:6px">🖥️</div>'
+    +       '<div style="font-size:13px;font-weight:800;color:#E91E8C">Command Center</div>'
+    +       '<div style="font-size:10px;color:#3A2030;margin-top:3px">Mac · Desktop</div>'
+    +     '</div></a>'
+    + '</div>'
+    + '<button onclick="pbClosePostLogin()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#A08060;font-size:12px;font-weight:700;padding:9px 24px;cursor:pointer;font-family:inherit">Stay on '+( current==='field'?'Field App':'Command Center')+'</button>'
+    + '</div>';
+  document.body.appendChild(mo);
+}
+
+function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); if(m)m.remove(); }
+
+</script>
+
+<!-- auth-dup -->
+
+
+
 <script src="https://accounts.google.com/gsi/client" async defer>
 /* ══ LIGHTBOX ══ */
 let _lbPhotos = [], _lbIdx = 0;
@@ -377,7 +1501,7 @@ textarea.fc{resize:vertical;min-height:80px}
       <span id="t-weather-ico" style="font-size:18px;line-height:1">🌤</span>
       <span id="t-weather-txt">Loading...</span>
     </div>
-    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v7.3</div>
+    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v9.2</div>
   </div>
   <div class="t-actions">
     <div class="alert-pill" id="alerts-pill" onclick="showView('safety')" style="display:none">⚠️ <span id="alerts-count">0</span></div>
@@ -837,1125 +1961,11 @@ textarea.fc{resize:vertical;min-height:80px}
 </main>
 </div>
 <div class="tw-wrap" id="toast-wrap"></div>
-<script>
+<!-- auth duplicate removed -->
 
-/* ── Migrate existing data to workspace-scoped key ── */
-function pbMigrateLocalData(wsCode) {
-  var wsKey  = 'probuilders_data_v2_' + wsCode;
-  var oldKey = 'probuilders_data_v2';
 
-  // If workspace key already has data, nothing to migrate
-  var existing = localStorage.getItem(wsKey);
-  if (existing) {
-    try {
-      var parsed = JSON.parse(existing);
-      if (parsed.projects && parsed.projects.length > 0) return; // already has real data
-    } catch(e) {}
-  }
 
-  // Check all possible old keys for data
-  var oldKeys = [oldKey, 'pb_data', 'probuilders_data'];
-  for (var i=0; i<oldKeys.length; i++) {
-    var raw = localStorage.getItem(oldKeys[i]);
-    if (!raw) continue;
-    try {
-      var data = JSON.parse(raw);
-      if (!data || typeof data !== 'object') continue;
-      // Has real projects/tasks? Copy to workspace key
-      var hasData = (data.projects && data.projects.length > 0)
-                 || (data.tasks    && data.tasks.length    > 0)
-                 || (data.photos   && data.photos.length   > 0);
-      if (hasData) {
-        localStorage.setItem(wsKey, raw);
-        console.log('[ProBuilders] Migrated data from', oldKeys[i], 'to', wsKey,
-          '—', data.projects.length, 'projects');
-        return;
-      }
-    } catch(e) { continue; }
-  }
-}
 
-
-/* ── App detection ── */
-function pbCurrentApp(){
-  var path = window.location.pathname.toLowerCase();
-  if(path.includes('desktop')) return 'desktop';
-  return 'field';
-}
-function pbOtherAppUrl(){
-  var base = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/');
-  if(pbCurrentApp() === 'field') return base + 'desktop.html';
-  return base.replace('desktop.html','') + 'index.html';
-}
-/* strip trailing filename for GitHub Pages */
-function pbBaseUrl(){
-  return window.location.href.replace(/\/[^\/]*$/, '/');
-}
-
-
-function pbCloseTeamModal()    { var m=document.getElementById('team-modal');    if(m)m.remove(); }
-function pbCloseDayModal()     { var m=document.getElementById('day-modal');     if(m)m.remove(); }
-function pbCloseEventModal()   { var m=document.getElementById('add-event-modal'); if(m)m.remove(); }
-function pbCloseEditEvent()    { var m=document.getElementById('edit-event-modal'); if(m)m.remove(); }
-
-function _buildWsList(wsList) {
-  return wsList.map(function(ws) {
-    return '<div data-wsid="' + ws.id + '" onclick="pbWsClick(this)" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#1B261B;border:1px solid #243024;cursor:pointer;margin-bottom:6px" id="ws-card-' + ws.id + '">'
-      + '<div style="width:42px;height:42px;border-radius:10px;background:' + ws.color + ';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏗️</div>'
-      + '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#D4E8D4">' + ws.name + '</div>'
-      + '<div style="font-size:11px;color:#7A9E7A;margin-top:2px">Code: ' + ws.id + ' · ' + ws.members.length + ' member' + (ws.members.length !== 1 ? 's' : '') + '</div></div>'
-      + '<svg viewBox="0 0 24 24" fill="none" stroke="#7A9E7A" stroke-width="2" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg></div>';
-  }).join('');
-}
-/* ═══════════════════════════════════════════════════════════
-   PROBUILDERS — MULTI-TEAM AUTH LAYER
-   Injected at top of both field app and command center
-═══════════════════════════════════════════════════════════ */
-
-/* ── Workspace storage ── */
-const WS_KEY      = 'pb_workspace';        // current workspace id
-const WS_LIST_KEY = 'pb_workspaces';       // all workspaces on device
-const DB_KEY_PFX  = 'probuilders_data_v2'; // + _workspaceId
-
-const ROLES = {
-  owner:   { label:'Owner',        badge:'👑', color:'#9C27B0', can:['*'] },
-  admin:   { label:'Administrator', badge:'⚙️', color:'#2196F3', can:['*'] },
-  foreman: { label:'Foreman',       badge:'🦺', color:'#FF9800', can:['field','reports','photos','safety','workers'] },
-  worker:  { label:'Field Worker',  badge:'🔨', color:'#4CAF50', can:['field','reports','photos','safety'] },
-  client:  { label:'Client',        badge:'📋', color:'#E91E8C', can:['client_portal'] },
-};
-
-let _currentWorkspace = null;  // { id, name, role, pin, members[], ... }
-let _currentUser      = null;  // { name, role, pin }
-
-/* ── Bootstrap ── */
-function pbAuthInit() {
-  const savedWsId = localStorage.getItem(WS_KEY);
-  if (savedWsId) {
-    const ws = getWorkspace(savedWsId);
-    if (ws) {
-      _currentWorkspace = ws;
-      // Restore last user session
-      const savedUser = localStorage.getItem('pb_user_' + savedWsId);
-      if (savedUser) {
-        try { _currentUser = JSON.parse(savedUser); } catch(e){}
-      }
-    }
-  }
-
-  if (!_currentUser) {
-    showAuthScreen();
-    return false;
-  }
-  applyRole(_currentUser.role);
-  return true;
-}
-
-/* ── Workspace CRUD ── */
-function getWorkspaceList() {
-  try { return JSON.parse(localStorage.getItem(WS_LIST_KEY) || '[]'); } catch(e){ return []; }
-}
-function saveWorkspaceList(list) {
-  localStorage.setItem(WS_LIST_KEY, JSON.stringify(list));
-}
-function getWorkspace(id) {
-  return getWorkspaceList().find(function(w){ return w.id === id; }) || null;
-}
-function saveWorkspace(ws) {
-  var list = getWorkspaceList();
-  var idx  = list.findIndex(function(w){ return w.id === ws.id; });
-  if (idx >= 0) list[idx] = ws; else list.push(ws);
-  saveWorkspaceList(list);
-}
-function generateCode(n) {
-  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({length:n}, function(){ return chars[Math.floor(Math.random()*chars.length)]; }).join('');
-}
-
-/* ── Auth screen ── */
-function showAuthScreen() {
-  // Remove any existing auth screen
-  var ex = document.getElementById('pb-auth-screen');
-  if (ex) ex.remove();
-
-  var div = document.createElement('div');
-  div.id = 'pb-auth-screen';
-  div.style.cssText = 'position:fixed;inset:0;background:#0D1B0D;z-index:9999;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;font-family:Plus Jakarta Sans,system-ui,sans-serif;padding:20px 0 40px';
-
-  var wsList = getWorkspaceList();
-
-  div.innerHTML = `
-    <div style="width:100%;max-width:480px;padding:24px 20px">
-      <!-- Logo / brand -->
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#4CAF50,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
-        <div style="font-size:13px;color:#7A9E7A;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(76,175,80,.15);border:1px solid rgba(76,175,80,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#4CAF50;letter-spacing:.05em">v7.3</div>
-      </div>
-
-      <!-- App switcher -->
-      <div id="app-switcher" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px"></div>
-
-      <!-- Login tabs -->
-      <div style="display:flex;gap:0;background:#162016;border-radius:10px;padding:4px;margin-bottom:24px">
-        <button id="tab-login" onclick="authTab('login')" style="flex:1;padding:9px;border:none;border-radius:8px;background:#4CAF50;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
-        <button id="tab-create" onclick="authTab('create')" style="flex:1;padding:9px;border:none;border-radius:0;background:transparent;color:#7A9E7A;font-size:13px;font-weight:600;cursor:pointer">New Workspace</button>
-        <button id="tab-join" onclick="authTab('join')" style="flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:#7A9E7A;font-size:13px;font-weight:600;cursor:pointer">Join Team</button>
-      </div>
-
-      <!-- Sign in panel -->
-      <div id="auth-login">
-        ${wsList.length ? `
-        <div style="margin-bottom:16px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7A9E7A;margin-bottom:8px">YOUR WORKSPACES</div>
-          <div style="max-height:210px;overflow-y:auto;padding-right:2px">
-            ${_buildWsList(wsList)}
-          </div>
-        </div>
-        <div id="login-form" style="display:none">` : '<div id="login-form">'}
-          <div style="margin-bottom:12px">
-            <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">WORKSPACE CODE</div>
-            <input id="li-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit" />
-          </div>
-          <div style="margin-bottom:12px">
-            <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">YOUR NAME</div>
-            <input id="li-name" placeholder="Your name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit" />
-          </div>
-          <div style="margin-bottom:20px">
-            <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">PIN</div>
-            <input id="li-pin" type="password" placeholder="4-digit PIN" maxlength="4" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit;letter-spacing:.2em" />
-          </div>
-          <button onclick="signIn()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#4CAF50,#2E7D32);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Sign In →</button>
-        </div>
-        <div id="li-error" style="color:#EF5350;font-size:12px;margin-top:10px;text-align:center"></div>
-      </div>
-
-      <!-- Create workspace panel -->
-      <div id="auth-create" style="display:none">
-        <div style="margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">COMPANY / TEAM NAME *</div>
-          <input id="cr-name" placeholder="e.g. ABC Construction Co." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit" />
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">YOUR NAME (OWNER) *</div>
-          <input id="cr-owner" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit" />
-        </div>
-        <div style="margin-bottom:20px">
-          <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">SET YOUR PIN (4 digits)</div>
-          <input id="cr-pin" type="password" maxlength="4" placeholder="Choose a 4-digit PIN" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit;letter-spacing:.2em" />
-        </div>
-        <button onclick="createWorkspace()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#E91E8C,#C2185B);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Create Workspace →</button>
-        <div id="cr-error" style="color:#EF5350;font-size:12px;margin-top:10px;text-align:center"></div>
-      </div>
-
-      <!-- Join team panel -->
-      <div id="auth-join" style="display:none">
-        <div style="background:#162016;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:#7A9E7A;line-height:1.6">
-          <div style="font-weight:800;color:#D4E8D4;margin-bottom:6px">How to join:</div>
-          <div>1. Get the <strong style="color:#4CAF50">Workspace Code</strong> from your owner (6 letters)</div>
-          <div>2. Get your <strong style="color:#4CAF50">PIN</strong> — owner adds you in Team Members</div>
-          <div>3. Enter your name, code, and PIN below</div>
-          <div style="margin-top:8px;padding:8px;background:#0D1B0D;border-radius:8px;font-size:11px;color:#3A5A3A">
-            💡 Tip: Your name doesn't have to match exactly — just enter how you want to appear
-          </div>
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">WORKSPACE CODE *</div>
-          <input id="jo-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit" />
-        </div>
-        <div style="margin-bottom:12px">
-          <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">YOUR NAME *</div>
-          <input id="jo-name" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit" />
-        </div>
-        <div style="margin-bottom:20px">
-          <div style="font-size:11px;font-weight:700;color:#7A9E7A;margin-bottom:4px">PIN (assigned by your admin)</div>
-          <input id="jo-pin" type="password" maxlength="4" placeholder="4-digit PIN" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#1B261B;color:#D4E8D4;font-size:14px;font-family:inherit;letter-spacing:.2em" />
-        </div>
-        <button onclick="joinWorkspace()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#2196F3,#1565C0);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Join Team →</button>
-        <div id="jo-error" style="color:#EF5350;font-size:12px;margin-top:10px;text-align:center"></div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(div);
-  // Render app switcher
-  _renderAppSwitcher();
-}
-
-function authTab(tab) {
-  ['login','create','join'].forEach(function(t) {
-    var panel = document.getElementById('auth-'+t);
-    var btn   = document.getElementById('tab-'+t);
-    if (panel) panel.style.display = t===tab ? 'block' : 'none';
-    if (btn) {
-      btn.style.background = t===tab ? '#4CAF50' : 'transparent';
-      btn.style.color      = t===tab ? '#fff'    : '#7A9E7A';
-    }
-  });
-}
-
-function selectWorkspaceLogin(wsId) {
-  var ws = getWorkspace(wsId);
-  if (!ws) return;
-  document.getElementById('li-code').value = wsId;
-  var form = document.getElementById('login-form');
-  if (form) { form.style.display='block'; }
-
-  // Show member list for quick PIN entry
-  var nameInput = document.getElementById('li-name');
-  if(nameInput) nameInput.focus();
-
-  // Highlight selected card
-  document.querySelectorAll('[id^="ws-card-"]').forEach(function(el){ el.style.borderColor='#243024'; });
-  var card = document.getElementById('ws-card-'+wsId);
-  if (card) card.style.borderColor = '#4CAF50';
-
-  // Show member hints
-  var existing = document.getElementById('li-member-hint');
-  if(existing) existing.remove();
-  if(ws.members && ws.members.length) {
-    var hint = document.createElement('div');
-    hint.id  = 'li-member-hint';
-    hint.style.cssText = 'margin-bottom:10px;font-size:12px;color:#7A9E7A';
-    hint.innerHTML = '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Members — tap to auto-fill name</div>'
-      + ws.members.map(function(m){
-          var roleInfo = (typeof ROLES!=='undefined' && ROLES[m.role]) ? ROLES[m.role] : {badge:'👤',color:'#7A9E7A'};
-          var btn = document.createElement('button');
-          btn.style.cssText = 'display:inline-flex;align-items:center;gap:5px;margin:3px;padding:5px 10px;border-radius:99px;border:1px solid #243024;background:#162016;color:#D4E8D4;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit';
-          btn.textContent = roleInfo.badge+' '+m.name;
-          btn.setAttribute('data-mname', m.name);
-          btn.onclick = function(){ document.getElementById('li-name').value = this.getAttribute('data-mname'); document.getElementById('li-pin').focus(); };
-          return btn.outerHTML;
-        }).join('');
-    var codeField = document.getElementById('li-code');
-    if(codeField && codeField.parentNode) {
-      form.insertBefore(hint, form.firstChild);
-    }
-  }
-}
-
-function signIn() {
-  var code = (document.getElementById('li-code')?.value||'').trim().toUpperCase();
-  var name = (document.getElementById('li-name')?.value||'').trim();
-  var pin  = (document.getElementById('li-pin')?.value||'').trim();
-  var err  = document.getElementById('li-error');
-  if (!code||!name||!pin) { if(err) err.textContent='All fields required.'; return; }
-
-  var ws = getWorkspace(code);
-  if (!ws) {
-    if(err) err.textContent='Workspace "'+code+'" not on this device yet. Use the "Join Team" tab to register on a new device.';
-    // Auto-switch to Join tab
-    if(typeof authTab==='function') authTab('join');
-    var jo = document.getElementById('jo-code');
-    if(jo) jo.value = code;
-    var jn = document.getElementById('jo-name');
-    if(jn) { jn.value = name; jn.focus(); }
-    return;
-  }
-
-  // Find matching member
-  // Match by PIN first, then verify name loosely
-  var member = ws.members.find(function(m){ return m.pin===pin; });
-  if (!member) {
-    if(err) err.textContent='PIN not found for this workspace.';
-    return;
-  }
-  // Accept if name matches OR if only 1 member with that PIN (owner bypass)
-  var nameOk = !name || member.name.toLowerCase()===name.toLowerCase() || member.role==='owner';
-  if (!nameOk) {
-    // Still let them in but update name
-    member.name = name;
-    saveWorkspace(ws);
-  }
-
-  _currentWorkspace = ws;
-  _currentUser      = { name:member.name, role:member.role, pin };
-  localStorage.setItem(WS_KEY, code);
-  localStorage.setItem('pb_user_'+code, JSON.stringify(_currentUser));
-
-  // Set DB_KEY to workspace-scoped key
-  window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
-  // Migrate any existing data to workspace key
-  pbMigrateLocalData(code);
-
-  document.getElementById('pb-auth-screen')?.remove();
-  applyRole(member.role);
-  // Show app switcher for admin/owner after login
-  if(member.role === 'owner' || member.role === 'admin'){
-    _showPostLoginSwitcher(member.role, member.name);
-  }
-  if (typeof loadFromLocal === 'function') {
-    loadFromLocal();
-    if (typeof refreshAll === 'function') refreshAll();
-    else if (typeof refreshHome === 'function') { refreshHome(); renderProjects?.(); renderTasks?.(); renderInventory?.(); }
-  }
-}
-
-function createWorkspace() {
-  var name  = (document.getElementById('cr-name')?.value||'').trim();
-  var owner = (document.getElementById('cr-owner')?.value||'').trim();
-  var pin   = (document.getElementById('cr-pin')?.value||'').trim();
-  var err   = document.getElementById('cr-error');
-  if (!name||!owner||!pin) { if(err) err.textContent='All fields required.'; return; }
-  if (pin.length < 4 || !/^\d+$/.test(pin)) { if(err) err.textContent='PIN must be exactly 4 digits.'; return; }
-
-  var wsId = generateCode(6);
-  var ws = {
-    id:      wsId,
-    name,
-    color:   '#4CAF50',
-    created: new Date().toLocaleString(),
-    members: [{ id:generateCode(8), name:owner, role:'owner', pin, created:new Date().toLocaleString() }],
-  };
-  saveWorkspace(ws);
-  _currentWorkspace = ws;
-  _currentUser = { name:owner, role:'owner', pin };
-  localStorage.setItem(WS_KEY, wsId);
-  localStorage.setItem('pb_user_'+wsId, JSON.stringify(_currentUser));
-  window._WS_LS_KEY = DB_KEY_PFX + '_' + wsId;
-  pbMigrateLocalData(wsId);
-
-  document.getElementById('pb-auth-screen')?.remove();
-  applyRole('owner');
-  // Show welcome modal with workspace code
-  showWorkspaceCode(wsId, name);
-  if (typeof loadFromLocal === 'function') loadFromLocal();
-  if (typeof refreshAll === 'function') refreshAll();
-  else if (typeof refreshHome === 'function') refreshHome();
-}
-
-function joinWorkspace() {
-  var code = ((document.getElementById('jo-code')?.value)||'').trim().toUpperCase();
-  var name = ((document.getElementById('jo-name')?.value)||'').trim();
-  var pin  = ((document.getElementById('jo-pin')?.value)||'').trim();
-  var err  = document.getElementById('jo-error');
-
-  if (!code) { if(err) err.textContent='Enter the workspace code.'; return; }
-  if (!name) { if(err) err.textContent='Enter your name.'; return; }
-
-  // Clear any old error
-  if(err) err.textContent = '';
-
-  var ws = getWorkspace(code);
-
-  if (!ws) {
-    // ── NEW DEVICE: workspace not in this device's storage ──
-    // Register it locally — data syncs later via cloud
-    var newMember = {
-      id:      code + '_' + Date.now(),
-      name:    name,
-      role:    'worker',
-      pin:     pin || '0000',
-      created: new Date().toLocaleString()
-    };
-    var newWs = {
-      id:        code,
-      name:      'Workspace ' + code,
-      color:     '#4CAF50',
-      created:   new Date().toLocaleString(),
-      members:   [newMember],
-      _newDevice: true
-    };
-    saveWorkspace(newWs);
-    _currentWorkspace = newWs;
-    _currentUser      = { name: name, role: 'worker', pin: pin||'0000' };
-    localStorage.setItem(WS_KEY, code);
-    localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
-    window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
-    // ── Migrate any existing local data to workspace key ──
-    pbMigrateLocalData(code);
-    document.getElementById('pb-auth-screen')?.remove();
-    applyRole('worker');
-    if (typeof loadFromLocal === 'function') loadFromLocal();
-    if (typeof refreshAll   === 'function') refreshAll();
-    else if (typeof refreshHome === 'function') refreshHome();
-    setTimeout(function(){
-      if (typeof toast === 'function')
-        toast('✅ Joined workspace ' + code + ' — your projects are loaded');
-    }, 800);
-    return;
-  }
-
-  // ── Workspace found locally ──
-  // Try to find member by PIN, then by name, then add them
-  var member = null;
-  if (pin) member = ws.members.find(function(m){ return m.pin === pin; });
-  if (!member) member = ws.members.find(function(m){ return m.name.toLowerCase() === name.toLowerCase(); });
-  if (!member) {
-    // Auto-add as worker
-    member = { id: code+'_'+Date.now(), name: name, role: 'worker',
-               pin: pin||'0000', created: new Date().toLocaleString() };
-    ws.members.push(member);
-    saveWorkspace(ws);
-  }
-
-  // Update name if different
-  if (name && name !== member.name) { member.name = name; saveWorkspace(ws); }
-
-  _currentWorkspace = ws;
-  _currentUser      = { name: name||member.name, role: member.role, pin: member.pin };
-  localStorage.setItem(WS_KEY, code);
-  localStorage.setItem('pb_user_' + code, JSON.stringify(_currentUser));
-  window._WS_LS_KEY = DB_KEY_PFX + '_' + code;
-  // Migrate any existing data to workspace key
-  pbMigrateLocalData(code);
-
-  document.getElementById('pb-auth-screen')?.remove();
-  applyRole(member.role);
-  if (typeof loadFromLocal === 'function') loadFromLocal();
-  if (typeof refreshAll   === 'function') refreshAll();
-  else if (typeof refreshHome === 'function') refreshHome();
-  if (typeof toast === 'function') toast('👋 Welcome, ' + (name||member.name) + '!');
-}
-
-function showWorkspaceCode(wsId, wsName) {
-  var mo = document.createElement('div');
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9998;display:flex;align-items:center;justify-content:center';
-  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:28px 32px;max-width:440px;width:90%;text-align:center">'
-    +'<div style="font-size:24px;font-weight:900;color:#4CAF50;margin-bottom:6px">🎉 Workspace Created!</div>'
-    +'<div style="font-size:15px;color:#7A9E7A;margin-bottom:24px">Share this code with your team</div>'
-    +'<div style="background:#162016;border-radius:12px;padding:20px;margin-bottom:16px">'
-    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#7A9E7A;margin-bottom:8px">Workspace Code</div>'
-    +'<div style="font-size:42px;font-weight:900;letter-spacing:.2em;color:#D4E8D4;font-family:monospace">'+wsId+'</div>'
-    +'<div style="font-size:12px;color:#3A5A3A;margin-top:6px">'+wsName+'</div></div>'
-    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:20px;line-height:1.5">Team members need this code + their PIN to sign in.<br>Add members from Settings → Team Members.</div>'
-    +'<button onclick="pbCloseWelcome(this)" style="background:#4CAF50;color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer">Got It →</button>'
-    +'</div>';
-  document.body.appendChild(mo);
-}
-
-/* ── Role-based UI ── */
-function applyRole(role) {
-  var body = document.body;
-  body.setAttribute('data-role', role);
-
-  // Inject user badge in header
-  setTimeout(function() {
-    var existing = document.getElementById('user-badge');
-    if (existing) existing.remove();
-    var roleInfo = ROLES[role] || ROLES.worker;
-    var name = (_currentUser && _currentUser.name) ? _currentUser.name : 'User';
-    // Get initials (up to 2 chars)
-    var initials = name.split(' ').map(function(n){ return n[0]; }).join('').slice(0,2).toUpperCase();
-    var isLoggedIn = role !== 'guest';
-    var circleColor = isLoggedIn ? '#4CAF50' : '#E91E8C';
-    var circleBorder = isLoggedIn ? 'rgba(76,175,80,.6)' : 'rgba(233,30,140,.6)';
-    var glowColor   = isLoggedIn ? 'rgba(76,175,80,.35)' : 'rgba(233,30,140,.35)';
-
-    // Build badge: floating glass circle bottom-right
-    var badge = document.createElement('div');
-    badge.id = 'user-badge';
-    badge.setAttribute('data-open','false');
-    badge.style.cssText = [
-      'position:fixed',
-      'bottom:74px',       /* above field app bottom nav bar */
-      'right:14px',
-      'z-index:600',
-      'display:flex',
-      'flex-direction:column',
-      'align-items:flex-end',
-      'gap:0',
-      'pointer-events:none',
-    ].join(';');
-
-    // Circle button
-    var circle = document.createElement('button');
-    circle.id = 'user-circle';
-    circle.title = name + ' · ' + roleInfo.label + ' · Tap for options';
-    circle.style.cssText = [
-      'width:14px',
-      'height:14px',
-      'border-radius:50%',
-      'background:' + circleColor,
-      'border:2px solid ' + circleBorder,
-      'color:transparent',         /* initials hidden in collapsed state */
-      'font-size:0px',
-      'font-weight:800',
-      'font-family:Plus Jakarta Sans,system-ui,sans-serif',
-      'cursor:pointer',
-      'pointer-events:all',
-      'display:flex',
-      'align-items:center',
-      'justify-content:center',
-      'letter-spacing:.02em',
-      'position:relative',
-      'opacity:0.45',
-      'transition:all .3s cubic-bezier(.16,1,.3,1)',
-      'box-shadow:0 0 6px ' + glowColor,
-      'backdrop-filter:blur(20px) saturate(180%)',
-      '-webkit-backdrop-filter:blur(20px) saturate(180%)',
-    ].join(';');
-    circle.innerHTML = '<span style="position:relative;z-index:1;text-shadow:0 1px 3px rgba(0,0,0,.5)">' + initials + '</span>';
-
-    // Glass overlay shimmer inside circle
-    var shimmer = document.createElement('div');
-    shimmer.style.cssText = [
-      'position:absolute',
-      'inset:0',
-      'border-radius:50%',
-      'background:linear-gradient(135deg,rgba(255,255,255,.25) 0%,rgba(255,255,255,.05) 50%,transparent 100%)',
-      'pointer-events:none',
-    ].join(';');
-    circle.appendChild(shimmer);
-
-    // Popup panel (hidden by default)
-    var panel = document.createElement('div');
-    panel.id = 'user-panel';
-    panel.style.cssText = [
-      'position:absolute',
-      'bottom:58px',
-      'right:0',
-      'min-width:190px',
-      'border-radius:16px',
-      'padding:14px 16px',
-      'display:none',
-      'flex-direction:column',
-      'gap:10px',
-      'pointer-events:all',
-      'background:rgba(13,27,13,.72)',
-      'border:1px solid rgba(76,175,80,.25)',
-      'backdrop-filter:blur(28px) saturate(200%)',
-      '-webkit-backdrop-filter:blur(28px) saturate(200%)',
-      'box-shadow:0 8px 32px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08)',
-    ].join(';');
-
-    // Panel header row
-    var row1 = document.createElement('div');
-    row1.style.cssText = 'display:flex;align-items:center;gap:10px';
-    row1.innerHTML = '<div style="width:34px;height:34px;border-radius:50%;background:' + circleColor + '44;border:1.5px solid ' + circleBorder + ';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;backdrop-filter:blur(10px)">' + initials + '</div>'
-      + '<div><div style="font-size:13px;font-weight:700;color:#D4E8D4">' + name + '</div>'
-      + '<div style="font-size:10px;font-weight:800;color:' + roleInfo.color + ';margin-top:1px">' + roleInfo.badge + ' ' + roleInfo.label + '</div></div>';
-    panel.appendChild(row1);
-
-    // Divider
-    var div = document.createElement('div');
-    div.style.cssText = 'height:1px;background:rgba(255,255,255,.08);margin:0 -4px';
-    panel.appendChild(div);
-
-    // Team button (if admin/owner)
-    if (role === 'owner' || role === 'admin') {
-      var teamBtn = document.createElement('button');
-      teamBtn.onclick = function(){ pbCloseUserPanel(); openTeamManager(); };
-      teamBtn.style.cssText = 'background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.2);border-radius:10px;color:#A5D6A7;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;align-items:center;gap:8px;transition:background .15s';
-      teamBtn.onmouseenter = function(){ this.style.background='rgba(76,175,80,.22)'; };
-      teamBtn.onmouseleave = function(){ this.style.background='rgba(76,175,80,.12)'; };
-      teamBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Members';
-      panel.appendChild(teamBtn);
-    }
-
-    // Sign out button
-    var signOutBtn = document.createElement('button');
-    signOutBtn.onclick = function(){ pbCloseUserPanel(); pbSignOut(); };
-    signOutBtn.style.cssText = 'background:rgba(233,30,140,.1);border:1px solid rgba(233,30,140,.2);border-radius:10px;color:#F48FB1;font-size:12px;font-weight:700;padding:8px 12px;cursor:pointer;text-align:left;font-family:inherit;display:flex;align-items:center;gap:8px;transition:background .15s';
-    signOutBtn.onmouseenter = function(){ this.style.background='rgba(233,30,140,.2)'; };
-    signOutBtn.onmouseleave = function(){ this.style.background='rgba(233,30,140,.1)'; };
-    signOutBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out';
-    panel.appendChild(signOutBtn);
-
-    badge.appendChild(panel);
-    badge.appendChild(circle);
-    document.body.appendChild(badge);
-
-    // Toggle panel on circle click — expands circle, shows panel
-    circle.addEventListener('click', function(e) {
-      e.stopPropagation();
-      var open = panel.style.display === 'flex';
-      if (open) {
-        pbCloseUserPanel();
-      } else {
-        // Expand circle to full size
-        circle.style.width = '48px';
-        circle.style.height = '48px';
-        circle.style.fontSize = '15px';
-        circle.style.color = '#fff';
-        circle.style.opacity = '1';
-        circle.style.boxShadow = '0 0 28px ' + glowColor + ',0 4px 20px rgba(0,0,0,.5)';
-        circle.style.transform = 'scale(1.05)';
-        panel.style.display = 'flex';
-        panel.style.flexDirection = 'column';
-      }
-    });
-
-    // Hover — expand slightly to hint
-    circle.addEventListener('mouseenter', function() {
-      if(panel.style.display !== 'flex'){
-        circle.style.width = '36px';
-        circle.style.height = '36px';
-        circle.style.fontSize = '11px';
-        circle.style.color = '#fff';
-        circle.style.opacity = '0.85';
-        circle.style.boxShadow = '0 0 14px ' + glowColor;
-      }
-    });
-    circle.addEventListener('mouseleave', function() {
-      if(panel.style.display !== 'flex'){
-        circle.style.width = '14px';
-        circle.style.height = '14px';
-        circle.style.fontSize = '0px';
-        circle.style.color = 'transparent';
-        circle.style.opacity = '0.45';
-        circle.style.boxShadow = '0 0 6px ' + glowColor;
-        circle.style.transform = '';
-      }
-    });
-
-    // Close panel when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!badge.contains(e.target)) pbCloseUserPanel();
-    });
-
-    // Tiny breathing pulse so user knows it's there
-    var style = document.getElementById('pb-badge-style');
-    if (!style) {
-      style = document.createElement('style');
-      style.id = 'pb-badge-style';
-      style.textContent = '@keyframes pbBreath{0%,100%{opacity:0.35}50%{opacity:0.65}}';
-      document.head.appendChild(style);
-    }
-    circle.style.animation = 'pbBreath 3s ease-in-out infinite';
-  }, 200);
-
-  // For client role: hide sidebar, show only client portal
-  if (role === 'client') {
-    setTimeout(function() {
-      var sidebar  = document.querySelector('.sidebar');
-      var topbar   = document.querySelector('.topbar');
-      if (sidebar) sidebar.style.display = 'none';
-      // Hide all views except client portal
-      document.querySelectorAll('.view').forEach(function(v){ v.style.display='none'; });
-      showClientPortal();
-    }, 300);
-  }
-
-  // For field worker: restrict to field views only (in field app)
-  if (role === 'worker' || role === 'foreman') {
-    setTimeout(function() {
-      // Hide desktop-only nav items if any
-      document.querySelectorAll('[data-desktop-only]').forEach(function(el){ el.style.display='none'; });
-    }, 300);
-  }
-}
-
-/* ── Client Portal ── */
-function showClientPortal() {
-  var existing = document.getElementById('client-portal');
-  if (existing) { existing.style.display='block'; return; }
-
-  var portal = document.createElement('div');
-  portal.id = 'client-portal';
-  portal.style.cssText = 'padding:24px;max-width:900px;margin:0 auto;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-
-  renderClientPortal(portal);
-  var main = document.getElementById('main') || document.body;
-  main.appendChild(portal);
-}
-
-function renderClientPortal(container) {
-  var ws  = _currentWorkspace;
-  var user = _currentUser;
-  // Show only projects the client is assigned to (or all if no assignment filter)
-  var myProjects = (DB.projects||[]);  // Could filter by clientId later
-
-  var html = '<div style="margin-bottom:24px">'
-    +'<div style="font-size:28px;font-weight:900;color:#4CAF50">📋 Your Projects</div>'
-    +'<div style="font-size:14px;color:#7A9E7A;margin-top:4px">'+(ws?.name||'')+'</div>'
-    +'</div>';
-
-  if (!myProjects.length) {
-    html += '<div style="text-align:center;padding:60px;color:#7A9E7A"><div style="font-size:48px;margin-bottom:12px">🏗️</div><div style="font-size:16px;font-weight:700">No projects yet</div><div style="font-size:13px;margin-top:4px">Your contractor will add your project here</div></div>';
-  } else {
-    html += myProjects.map(function(p) {
-      var paid = (DB.payments||[]).filter(function(pay){return pay.projectId===p.id;}).reduce(function(s,pay){return s+(+pay.amount||0);},0);
-      var contract = +p.contract||0;
-      var pct = contract>0 ? Math.min(100,Math.round(paid/contract*100)) : 0;
-      var tasks = (DB.tasks||[]).filter(function(t){return t.projectId===p.id;});
-      var doneTasks = tasks.filter(function(t){return t.done;});
-      var lastReport = [...(DB.reports||[])].filter(function(r){return r.projectId===p.id;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).shift();
-
-      return '<div style="background:#1B261B;border:1px solid #243024;border-radius:16px;padding:20px;margin-bottom:16px">'
-        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">'
-        +'<div><div style="font-size:18px;font-weight:800;color:#D4E8D4">'+p.name+'</div>'
-        +'<div style="font-size:12px;color:#7A9E7A;margin-top:3px">📍 '+p.city+(p.state?', '+p.state:'')+(p.start?' · Started '+p.start:'')+'</div></div>'
-        +'<span style="font-size:12px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(76,175,80,.15);color:#A5D6A7">'+p.status+'</span>'
-        +'</div>'
-        // Progress bar
-        +'<div style="margin-bottom:14px">'
-        +'<div style="display:flex;justify-content:space-between;font-size:12px;color:#7A9E7A;margin-bottom:5px"><span>Project progress</span><span>'+(p.progress||0)+'%</span></div>'
-        +'<div style="height:8px;background:#243024;border-radius:99px;overflow:hidden"><div style="height:100%;width:'+(p.progress||0)+'%;background:linear-gradient(90deg,#4CAF50,#2E7D32);border-radius:99px"></div></div>'
-        +'</div>'
-        // Stats grid
-        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
-        +'<div style="background:#162016;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#4CAF50">'+doneTasks.length+'/'+tasks.length+'</div><div style="font-size:10px;color:#7A9E7A;margin-top:2px;font-weight:700;text-transform:uppercase">Tasks</div></div>'
-        +'<div style="background:#162016;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#4CAF50">$'+contract.toLocaleString()+'</div><div style="font-size:10px;color:#7A9E7A;margin-top:2px;font-weight:700;text-transform:uppercase">Contract</div></div>'
-        +'<div style="background:#162016;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:#E91E8C">$'+paid.toLocaleString()+'</div><div style="font-size:10px;color:#7A9E7A;margin-top:2px;font-weight:700;text-transform:uppercase">Paid</div></div>'
-        +'<div style="background:#162016;border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:800;color:'+(contract-paid>0?'#FF9800':'#4CAF50')+'">'+(contract-paid<=0?'✅ Paid':'$'+(contract-paid).toLocaleString())+'</div><div style="font-size:10px;color:#7A9E7A;margin-top:2px;font-weight:700;text-transform:uppercase">Balance</div></div>'
-        +'</div>'
-        // Latest report
-        +(lastReport ? '<div style="background:#162016;border-radius:10px;padding:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7A9E7A;margin-bottom:6px">📋 Latest Field Report · '+lastReport.date+'</div>'
-          +'<div style="font-size:13px;color:#D4E8D4;line-height:1.5">'+(lastReport.completed||'No details')+'</div>'
-          +(lastReport.incomplete?'<div style="font-size:12px;color:#FF9800;margin-top:4px">⚠️ Pending: '+lastReport.incomplete+'</div>':'')
-          +'</div>' : '')
-        +'</div>';
-    }).join('');
-  }
-
-  container.innerHTML = html;
-}
-
-/* ── Sign out ── */
-function pbSignOut() {
-  var wsId = _currentWorkspace?.id;
-  if (wsId) sessionStorage.removeItem('pb_user_'+wsId);
-  _currentUser = null;
-  _currentWorkspace = null;
-  var badge = document.getElementById('user-badge');
-  if (badge) badge.remove();
-  showAuthScreen();
-}
-
-/* ── Team management ── */
-function openTeamManager() {
-  if (!_currentWorkspace) return;
-  if (_currentUser?.role !== 'owner' && _currentUser?.role !== 'admin') { toast('Admin access required'); return; }
-
-  var ws = getWorkspace(_currentWorkspace.id);
-  var mo = document.createElement('div');
-  mo.className = 'mo open'; mo.id = 'team-modal';
-
-  var isOwner = _currentUser?.role === 'owner';
-
-  var memberRows = ws.members.map(function(m) {
-    var roleInfo = ROLES[m.role] || ROLES.worker;
-    var initials = m.name.split(' ').map(function(n){ return n[0]; }).join('').slice(0,2).toUpperCase();
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--s2);margin-bottom:6px;border:1px solid var(--div)">'
-      + '<div style="width:38px;height:38px;border-radius:50%;background:'+roleInfo.color+'33;border:1.5px solid '+roleInfo.color+'66;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:'+roleInfo.color+';flex-shrink:0">'+initials+'</div>'
-      + '<div style="flex:1;min-width:0">'
-      +   '<div style="font-size:13px;font-weight:700">'+m.name+'</div>'
-      +   '<div style="display:flex;align-items:center;gap:6px;margin-top:2px">'
-      +     '<span style="font-size:10px;font-weight:800;padding:1px 7px;border-radius:99px;background:'+roleInfo.color+'22;color:'+roleInfo.color+'">'+roleInfo.badge+' '+roleInfo.label+'</span>'
-      +     '<span style="font-size:10px;color:var(--txf)">PIN: '+m.pin+'</span>'
-      +   '</div>'
-      + '</div>'
-      + (m.role !== 'owner'
-          ? '<div style="display:flex;gap:5px">'
-            + '<button class="btn btn-o btn-xs" data-mid="'+m.id+'" onclick="pbEditMember(this)" title="Edit member">✏️</button>'
-            + '<button class="btn btn-d btn-xs" data-mid="'+m.id+'" onclick="pbRemoveMember(this)" title="Remove member">🗑</button>'
-            + '</div>'
-          : '<span style="font-size:10px;font-weight:700;color:var(--txf);padding:2px 8px;background:var(--s3);border-radius:99px">Owner</span>')
-      + '</div>';
-  }).join('');
-
-  mo.innerHTML = '<div class="mc" style="max-width:580px">'
-
-    // Header
-    + '<div class="mh"><div class="mt">⚙️ Workspace Settings</div><button class="icon-btn" onclick="pbCloseTeamModal()">✕</button></div>'
-
-    // Workspace info card
-    + '<div class="mb">'
-    + '<div style="background:var(--s2);border:1px solid var(--br);border-radius:12px;padding:14px 16px;margin-bottom:16px">'
-    +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">'
-    +     '<div>'
-    +       '<div style="font-size:16px;font-weight:800">'+ws.name+'</div>'
-    +       '<div style="font-size:11px;color:var(--txm);margin-top:3px">Workspace Code: <strong style="font-family:monospace;font-size:14px;color:var(--g);letter-spacing:.1em">'+ws.id+'</strong></div>'
-    +     '</div>'
-    +     (isOwner
-        ? '<div style="display:flex;gap:6px">'
-          + '<button class="btn btn-o btn-sm" onclick="openEditWorkspace()">✏️ Edit</button>'
-          + '<button class="btn btn-d btn-sm" onclick="confirmDeleteWorkspace()">🗑 Delete</button>'
-          + '</div>'
-        : '')
-    +   '</div>'
-    +   '<div style="font-size:11px;color:var(--txf)">'+ws.members.length+' member'+(ws.members.length!==1?'s':'')+' · Created '+ws.created+'</div>'
-    + '</div>'
-
-    // Members list
-    + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txm);margin-bottom:8px">Team Members</div>'
-    + memberRows
-
-    // Divider
-    + '<div class="divider" style="margin:16px 0"></div>'
-
-    // Add member form
-    + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txm);margin-bottom:10px">Add Team Member</div>'
-    + '<div class="fg">'
-    +   '<div class="fl fl-full"><div class="flbl">Name *</div><input class="fc" id="tm-name" placeholder="Full name"/></div>'
-    +   '<div class="fl"><div class="flbl">Role</div>'
-    +     '<select class="fc" id="tm-role">'
-    +       '<option value="worker">🔨 Field Worker</option>'
-    +       '<option value="foreman">🦺 Foreman</option>'
-    +       '<option value="admin">⚙️ Admin</option>'
-    +       '<option value="client">📋 Client (read-only)</option>'
-    +     '</select>'
-    +   '</div>'
-    +   '<div class="fl"><div class="flbl">PIN (4 digits) *</div><input class="fc" type="password" id="tm-pin" maxlength="4" placeholder="4-digit PIN"/></div>'
-    + '</div>'
-    + '</div>'
-
-    + '<div class="mf"><button class="btn btn-o" onclick="pbCloseTeamModal()">Close</button><button class="btn btn-g" onclick="addTeamMember()">+ Add Member</button></div>'
-    + '</div>';
-
-  document.body.appendChild(mo);
-}
-
-/* ── Edit member ── */
-function pbEditMember(btn) {
-  var mid = btn.getAttribute('data-mid');
-  var ws  = getWorkspace(_currentWorkspace.id);
-  var m   = ws.members.find(function(x){ return x.id === mid; });
-  if(!m) return;
-  var newName = prompt('Name:', m.name); if(newName===null) return;
-  var newPin  = prompt('PIN (4 digits):', m.pin); if(newPin===null) return;
-  var newRole = prompt('Role (worker / foreman / admin / client):', m.role); if(newRole===null) return;
-  if(!ROLES[newRole]) { toast('Invalid role'); return; }
-  if(newPin.length !== 4 || !/^\d+$/.test(newPin)) { toast('PIN must be 4 digits'); return; }
-  m.name = newName.trim() || m.name;
-  m.pin  = newPin;
-  m.role = newRole;
-  saveWorkspace(ws);
-  _currentWorkspace = ws;
-  document.getElementById('team-modal')?.remove();
-  toast('✅ '+m.name+' updated');
-  openTeamManager();
-}
-
-/* ── Edit workspace name ── */
-function openEditWorkspace() {
-  var ws = getWorkspace(_currentWorkspace.id);
-  var mo = document.createElement('div');
-  mo.className = 'mo open'; mo.id = 'edit-ws-modal';
-  mo.innerHTML = '<div class="mc" style="max-width:420px">'
-    + '<div class="mh"><div class="mt">✏️ Edit Workspace</div><button class="icon-btn" onclick="document.getElementById(\'edit-ws-modal\').remove()">✕</button></div>'
-    + '<div class="mb">'
-    +   '<div class="fl" style="margin-bottom:16px"><div class="flbl">Workspace Name *</div><input class="fc" id="ews-name" value="'+ws.name+'" placeholder="Company name"/></div>'
-    +   '<div class="fl"><div class="flbl">Workspace Code (read-only)</div>'
-    +     '<div style="font-family:monospace;font-size:20px;font-weight:900;letter-spacing:.15em;color:var(--g);padding:10px 14px;background:var(--s2);border-radius:var(--r8);border:1px solid var(--br)">'+ws.id+'</div>'
-    +     '<div style="font-size:11px;color:var(--txf);margin-top:4px">Share this code with your team so they can join.</div>'
-    +   '</div>'
-    + '</div>'
-    + '<div class="mf"><button class="btn btn-o" onclick="document.getElementById(\'edit-ws-modal\').remove()">Cancel</button><button class="btn btn-g" onclick="saveEditWorkspace()">💾 Save Changes</button></div>'
-    + '</div>';
-  document.body.appendChild(mo);
-}
-
-function saveEditWorkspace() {
-  var newName = document.getElementById('ews-name')?.value?.trim();
-  if(!newName) { toast('Name required'); return; }
-  var ws  = getWorkspace(_currentWorkspace.id);
-  ws.name = newName;
-  saveWorkspace(ws);
-  _currentWorkspace = ws;
-  document.getElementById('edit-ws-modal')?.remove();
-  document.getElementById('team-modal')?.remove();
-  // Update the ws-display badge
-  var wsDisp = document.getElementById('ws-display');
-  if(wsDisp) wsDisp.textContent = '🏗️ ' + newName;
-  toast('✅ Workspace renamed to "'+newName+'"');
-  openTeamManager();
-}
-
-/* ── Delete workspace ── */
-function confirmDeleteWorkspace() {
-  var ws = getWorkspace(_currentWorkspace.id);
-  var mo = document.createElement('div');
-  mo.className = 'mo open'; mo.id = 'del-ws-modal';
-  mo.innerHTML = '<div class="mc" style="max-width:440px">'
-    + '<div class="mh"><div class="mt" style="color:var(--err)">⚠️ Delete Workspace</div><button class="icon-btn" onclick="document.getElementById(\'del-ws-modal\').remove()">✕</button></div>'
-    + '<div class="mb">'
-    +   '<div style="background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.3);border-radius:var(--r12);padding:16px;margin-bottom:16px">'
-    +     '<div style="font-size:14px;font-weight:800;color:var(--err);margin-bottom:8px">This cannot be undone.</div>'
-    +     '<div style="font-size:13px;color:var(--tx);line-height:1.6">Deleting <strong>'+ws.name+'</strong> will permanently remove:<br>'
-    +       '• All project, task, and report data<br>'
-    +       '• All team members and their access<br>'
-    +       '• All photos, inventory, and documents<br>'
-    +       '• The workspace code <strong style="font-family:monospace;color:var(--err)">'+ws.id+'</strong>'
-    +     '</div>'
-    +   '</div>'
-    +   '<div class="fl"><div class="flbl">Type the workspace code to confirm</div>'
-    +     '<input class="fc" id="del-ws-confirm" placeholder="'+ws.id+'" style="font-family:monospace;font-size:16px;letter-spacing:.1em"/>'
-    +   '</div>'
-    + '</div>'
-    + '<div class="mf"><button class="btn btn-o" onclick="document.getElementById(\'del-ws-modal\').remove()">Cancel</button><button class="btn btn-d" onclick="executeDeleteWorkspace()">🗑 Delete Forever</button></div>'
-    + '</div>';
-  document.body.appendChild(mo);
-}
-
-function executeDeleteWorkspace() {
-  var ws   = getWorkspace(_currentWorkspace.id);
-  var typed = document.getElementById('del-ws-confirm')?.value?.trim().toUpperCase();
-  if(typed !== ws.id) { toast('Code does not match — type exactly: '+ws.id); return; }
-
-  // Delete all data for this workspace
-  localStorage.removeItem('probuilders_data_v2_' + ws.id);
-
-  // Remove from workspace list
-  var list = getWorkspaceList().filter(function(w){ return w.id !== ws.id; });
-  saveWorkspaceList(list);
-
-  // Clear current session
-  sessionStorage.removeItem('pb_user_' + ws.id);
-  localStorage.removeItem(WS_KEY);
-  _currentWorkspace = null;
-  _currentUser      = null;
-
-  document.getElementById('del-ws-modal')?.remove();
-  document.getElementById('team-modal')?.remove();
-  var badge = document.getElementById('user-badge');
-  if(badge) badge.remove();
-
-  // If more workspaces exist, show login; else fresh start
-  showAuthScreen();
-  toast('Workspace deleted');
-}
-
-function addTeamMember() {
-  var name = document.getElementById('tm-name')?.value?.trim();
-  var role = document.getElementById('tm-role')?.value || 'worker';
-  var pin  = document.getElementById('tm-pin')?.value?.trim();
-  if (!name||!pin||pin.length<4) { toast('Name and 4-digit PIN required'); return; }
-
-  var ws = getWorkspace(_currentWorkspace.id);
-  if (!ws) return;
-  ws.members.push({ id:generateCode(8), name, role, pin, created:new Date().toLocaleString() });
-  saveWorkspace(ws);
-  _currentWorkspace = ws;
-  document.getElementById('team-modal')?.remove();
-  toast('✅ '+name+' added as '+ROLES[role].label);
-  // Re-open to show updated list
-  openTeamManager();
-}
-
-function removeMember(memberId) {
-  if (!confirm('Remove this team member?')) return;
-  var ws = getWorkspace(_currentWorkspace.id);
-  ws.members = ws.members.filter(function(m){ return m.id !== memberId; });
-  saveWorkspace(ws);
-  _currentWorkspace = ws;
-  document.getElementById('team-modal')?.remove();
-  toast('Member removed');
-  openTeamManager();
-}
-
-/* Patch the LS_KEY to be workspace-scoped */
-function pbGetLSKey() {
-  // Return workspace-scoped key if logged in, otherwise fallback to base key
-  return window._WS_LS_KEY || window.LS_KEY || 'probuilders_data_v2';
-}
-
-function pbWsClick(el){ selectWorkspaceLogin(el.getAttribute('data-wsid')); }
-
-function pbCloseWelcome(btn){ var p=btn.parentElement; while(p&&!p.style.position) p=p.parentElement; if(p) p.remove(); }
-
-function pbRemoveMember(btn){ removeMember(btn.getAttribute('data-mid')); }
-
-function pbCloseUserPanel(){
-  var panel  = document.getElementById('user-panel');
-  var circle = document.getElementById('user-circle');
-  if(panel) panel.style.display='none';
-  if(circle){
-    circle.style.transform = '';
-    circle.style.animation = '';
-    circle.style.width    = '14px';
-    circle.style.height   = '14px';
-    circle.style.fontSize = '0px';
-    circle.style.color    = 'transparent';
-    circle.style.opacity  = '0.45';
-  }
-}
-
-
-function _getAppUrls(){
-  var href = window.location.href;
-  var isGithub = href.includes('github.io');
-  var isFile   = href.startsWith('file://');
-  var isLocal  = href.includes('localhost') || href.includes('127.0.0.1');
-
-  // Always use exact hardcoded GitHub Pages URLs when on GitHub
-  if(isGithub){
-    return {
-      field:   'https://f666cdx5tg-sudo.github.io/probuilders/index.html',
-      desktop: 'https://f666cdx5tg-sudo.github.io/probuilders/desktop.html'
-    };
-  }
-  // File:// — can't navigate between files reliably; point to GitHub
-  if(isFile){
-    return {
-      field:   'https://f666cdx5tg-sudo.github.io/probuilders/index.html',
-      desktop: 'https://f666cdx5tg-sudo.github.io/probuilders/desktop.html',
-      _isFile: true
-    };
-  }
-  // Localhost — build relative
-  var base = href.substring(0, href.lastIndexOf('/') + 1);
-  return {
-    field:   base + 'index.html',
-    desktop: base + 'desktop.html'
-  };
-}
-
-function _renderAppSwitcher(){
-  var sw = document.getElementById('app-switcher');
-  if(!sw) return;
-  var current = pbCurrentApp();
-  var urls = _getAppUrls();
-  var fieldUrl   = urls.field;
-  var desktopUrl = urls.desktop;
-
-  var isFile = urls._isFile;
-  var fileNote = isFile ? '<div style="font-size:11px;color:#FF9800;text-align:center;padding:6px 0;grid-column:1/-1">⚠️ Open from GitHub Pages for navigation to work</div>' : '';
-
-  sw.innerHTML = fileNote +
-    '<a href="' + fieldUrl + '" style="text-decoration:none">'
-    + '<div style="padding:12px;border-radius:12px;text-align:center;cursor:pointer;border:2px solid '+(current==='field'?'#4CAF50':'rgba(76,175,80,.2)')+';background:'+(current==='field'?'rgba(76,175,80,.15)':'rgba(76,175,80,.05)')+';transition:all .2s">'
-    +   '<div style="font-size:22px;margin-bottom:4px">📱</div>'
-    +   '<div style="font-size:12px;font-weight:800;color:'+(current==='field'?'#4CAF50':'#7A9E7A')+'">Field App</div>'
-    +   '<div style="font-size:10px;color:#3A5A3A;margin-top:2px">'+(current==='field'?'▶ You are here':'iPhone / Tablet')+'</div>'
-    + '</div></a>'
-    + '<a href="' + desktopUrl + '" style="text-decoration:none">'
-    + '<div style="padding:12px;border-radius:12px;text-align:center;cursor:pointer;border:2px solid '+(current==='desktop'?'#E91E8C':'rgba(233,30,140,.2)')+';background:'+(current==='desktop'?'rgba(233,30,140,.15)':'rgba(233,30,140,.05)')+';transition:all .2s">'
-    +   '<div style="font-size:22px;margin-bottom:4px">🖥️</div>'
-    +   '<div style="font-size:12px;font-weight:800;color:'+(current==='desktop'?'#E91E8C':'#7A9E7A')+'">Command Center</div>'
-    +   '<div style="font-size:10px;color:#3A2A3A;margin-top:2px">'+(current==='desktop'?'▶ You are here':'Mac / Desktop')+'</div>'
-    + '</div></a>';
-}
-
-
-function _showPostLoginSwitcher(role, name) {
-  var roleInfo = ROLES[role] || ROLES.admin;
-  var current  = pbCurrentApp();
-  var urls = _getAppUrls();
-  var fieldUrl   = urls.field;
-  var desktopUrl = urls.desktop;
-
-  var mo = document.createElement('div');
-  mo.id = 'post-login-modal';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:flex;align-items:center;justify-content:center;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-
-  mo.innerHTML = '<div style="background:#1B261B;border-radius:20px;padding:28px 28px;max-width:400px;width:90%;text-align:center;border:1px solid #243024">'
-    + '<div style="font-size:22px;margin-bottom:4px">'+roleInfo.badge+' Welcome back!</div>'
-    + '<div style="font-size:18px;font-weight:800;color:#D4E8D4;margin-bottom:4px">'+name+'</div>'
-    + '<div style="font-size:12px;font-weight:700;padding:3px 12px;border-radius:99px;display:inline-block;background:'+roleInfo.color+'22;color:'+roleInfo.color+';margin-bottom:24px">'+roleInfo.label+'</div>'
-    + '<div style="font-size:13px;color:#7A9E7A;margin-bottom:16px">Where would you like to go?</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">'
-    +   '<a href="'+fieldUrl+'" style="text-decoration:none">'
-    +     '<div style="padding:16px 12px;border-radius:14px;background:rgba(76,175,80,.1);border:2px solid rgba(76,175,80,.3);cursor:pointer">'
-    +       '<div style="font-size:28px;margin-bottom:6px">📱</div>'
-    +       '<div style="font-size:13px;font-weight:800;color:#4CAF50">Field App</div>'
-    +       '<div style="font-size:10px;color:#3A5A3A;margin-top:3px">iPhone · Tablet</div>'
-    +     '</div></a>'
-    +   '<a href="'+desktopUrl+'" style="text-decoration:none">'
-    +     '<div style="padding:16px 12px;border-radius:14px;background:rgba(233,30,140,.1);border:2px solid rgba(233,30,140,.3);cursor:pointer">'
-    +       '<div style="font-size:28px;margin-bottom:6px">🖥️</div>'
-    +       '<div style="font-size:13px;font-weight:800;color:#E91E8C">Command Center</div>'
-    +       '<div style="font-size:10px;color:#3A2030;margin-top:3px">Mac · Desktop</div>'
-    +     '</div></a>'
-    + '</div>'
-    + '<button onclick="pbClosePostLogin()" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#7A9E7A;font-size:12px;font-weight:700;padding:9px 24px;cursor:pointer;font-family:inherit">Stay on '+( current==='field'?'Field App':'Command Center')+'</button>'
-    + '</div>';
-  document.body.appendChild(mo);
-}
-
-function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); if(m)m.remove(); }
-
-</script>
 
 
 
@@ -2376,7 +2386,7 @@ function openEstimateBuilder(projId) {
           <input class="form-control" id="est-client" value="${proj.client||''}" placeholder="Client name"/></div>
         <div><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Date</div>
           <input class="form-control" type="date" id="est-date" value="${new Date().toISOString().slice(0,10)}"/></div>
-        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Scope of Work</div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Scope of Work <button type="button" onclick="pbVToggle(this)" data-vfield="est-scope" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;border:1px solid rgba(239,83,80,.3);background:rgba(239,83,80,.08);color:#EF9090;font-size:9px;font-weight:700;cursor:pointer;vertical-align:middle;font-family:inherit">🎤</button></div>
           <textarea class="form-control" id="est-scope" rows="3" placeholder="Describe the full scope of work...">${est?.scope||''}</textarea></div>
       </div>
 
@@ -3014,7 +3024,7 @@ function openChangeOrderRequest(projId) {
           <input class="form-control" type="number" id="co-amount" placeholder="0.00" min="0" step="0.01"/>
         </div>
         <div style="grid-column:1/-1">
-          <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Reason / Justification</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Reason / Justification <button type="button" onclick="pbVToggle(this)" data-vfield="co-reason" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;border:1px solid rgba(239,83,80,.3);background:rgba(239,83,80,.08);color:#EF9090;font-size:9px;font-weight:700;cursor:pointer;vertical-align:middle;font-family:inherit">🎤</button></div>
           <input class="form-control" id="co-reason" placeholder="e.g. Hidden damage discovered, client requested upgrade..."/>
         </div>
       </div>
@@ -3192,9 +3202,9 @@ function openDailyReport(projId) {
           <input class="form-control" type="number" id="rpt-workers" value="1" min="0"/></div>
         <div><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Weather</div>
           <input class="form-control" id="rpt-weather-input" value="${typeof currentWeather!=='undefined'?currentWeather.icon+' '+currentWeather.temp+' '+currentWeather.desc:''}"/></div>
-        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Work Completed Today</div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Work Completed Today <button type="button" onclick="pbVToggle(this)" data-vfield="rpt-completed" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;border:1px solid rgba(239,83,80,.3);background:rgba(239,83,80,.08);color:#EF9090;font-size:9px;font-weight:700;cursor:pointer;vertical-align:middle;font-family:inherit">🎤</button></div>
           <textarea class="form-control" id="rpt-completed" rows="2" placeholder="Describe work completed..."></textarea></div>
-        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Incomplete / Blockers</div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Incomplete / Blockers <button type="button" onclick="pbVToggle(this)" data-vfield="rpt-incomplete" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;border:1px solid rgba(239,83,80,.3);background:rgba(239,83,80,.08);color:#EF9090;font-size:9px;font-weight:700;cursor:pointer;vertical-align:middle;font-family:inherit">🎤</button></div>
           <textarea class="form-control" id="rpt-incomplete" rows="2" placeholder="What couldn't be finished? Why?"></textarea></div>
         <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase">Tomorrow's Plan</div>
           <textarea class="form-control" id="rpt-tomorrow" rows="2" placeholder="What's planned for tomorrow?"></textarea></div>
@@ -3226,6 +3236,9 @@ function toggleReportTask(taskId, checked) {
 }
 
 function submitDailyReport(projId) {
+  if(!DB.dprCounter) DB.dprCounter=0;
+  DB.dprCounter++;
+  var dprNum = 'DPR-'+String(DB.dprCounter).padStart(4,'0');
   const proj  = DB.projects.find(p=>p.id===projId);
   const tasks = (DB.tasks||[]).filter(t=>t.projectId===projId);
   const pct   = calcAutoCompletion(projId);
@@ -3253,120 +3266,14 @@ function submitDailyReport(projId) {
   document.getElementById('daily-report-modal')?.remove();
   saveToLocal(); broadcastData();
   renderProjects(); refreshHome();
-  toast('📤 Daily report submitted — project at '+pct+'%');
+  toast('📋 '+dprNum+' submitted — project at '+pct+'%');
   logChange('DAILY_REPORT','report',projId,{progress:pct});
 }
 
 /* ──────────────────────────────────────────────────────────
    PROJECT LIFECYCLE PANEL (on project card)
 ────────────────────────────────────────────────────────── */
-function openProjectLifecycle(projId) {
-  const proj  = DB.projects.find(p=>p.id===projId);
-  if(!proj)  return;
-  const stage = proj.lifecycleStage||'DRAFT';
-  const pct   = calcAutoCompletion(projId);
-  const tasks = (DB.tasks||[]).filter(t=>t.projectId===projId);
-  const est   = (DB.estimates||[]).find(e=>e.projectId===projId);
-  const takeoff = DB.materialsTakeoff?.[projId];
-
-  const mo = document.createElement('div');
-  mo.id    = 'lifecycle-modal';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;overflow-y:auto;font-family:inherit;padding:16px;display:flex;align-items:flex-start;justify-content:center';
-
-  // Stage progress bar
-  const stageOrder = ['DRAFT','ESTIMATE','PENDING_APPROVAL','APPROVED','MATERIALS_TAKEOFF','MATERIALS_ORDERED','IN_PROGRESS','INSPECTION','COMPLETED'];
-  const stageIdx   = stageOrder.indexOf(stage);
-
-  const stageBar = stageOrder.map((s,i)=>{
-    const cfg  = STAGES[s];
-    const done = i < stageIdx;
-    const curr = i === stageIdx;
-    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px">
-      <div style="width:28px;height:28px;border-radius:50%;background:${done?'var(--success)':curr?cfg.color:'var(--surface-2)'};border:2px solid ${curr?cfg.color:'transparent'};display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .3s">
-        ${done?'✓':cfg.icon}
-      </div>
-      <div style="font-size:8px;font-weight:700;text-align:center;color:${curr?cfg.color:done?'var(--success)':'var(--text-faint)'};line-height:1.2">${cfg.label}</div>
-    </div>`;
-  }).join('');
-
-  // Action buttons based on stage
-  const actions = {
-    DRAFT:             `<button onclick="document.getElementById('lifecycle-modal').remove();openEstimateBuilder('${projId}')" class="lifecycle-action-btn" style="background:#FF9800">💰 Create Estimate</button>`,
-    ESTIMATE:          `<button onclick="document.getElementById('lifecycle-modal').remove();openEstimateBuilder('${projId}')" class="lifecycle-action-btn" style="background:#FF9800">✏️ Edit Estimate</button>
-                        <button onclick="document.getElementById('lifecycle-modal').remove();openClientApproval('${projId}')" class="lifecycle-action-btn" style="background:#9C27B0">📤 Get Client Approval</button>`,
-    PENDING_APPROVAL:  `<button onclick="document.getElementById('lifecycle-modal').remove();openClientApproval('${projId}')" class="lifecycle-action-btn" style="background:#9C27B0">✍️ Capture Signature</button>`,
-    APPROVED:          `<button onclick="document.getElementById('lifecycle-modal').remove();openMaterialsTakeoff('${projId}')" class="lifecycle-action-btn" style="background:#FF5722">📋 Materials Takeoff</button>`,
-    MATERIALS_TAKEOFF: `<button onclick="document.getElementById('lifecycle-modal').remove();openMaterialsTakeoff('${projId}')" class="lifecycle-action-btn" style="background:#FF5722">✏️ Edit Takeoff</button>`,
-    MATERIALS_ORDERED: `<button onclick="document.getElementById('lifecycle-modal').remove();advanceStage('${projId}','IN_PROGRESS')" class="lifecycle-action-btn" style="background:#4CAF50">🔨 Start Work</button>`,
-    IN_PROGRESS:       `<button onclick="document.getElementById('lifecycle-modal').remove();openDailyReport('${projId}')" class="lifecycle-action-btn" style="background:#4CAF50">📋 Daily Report</button>
-                        <button onclick="document.getElementById('lifecycle-modal').remove();openChangeOrderRequest('${projId}')" class="lifecycle-action-btn" style="background:#FF9800">📝 Change Order</button>
-                        <button onclick="document.getElementById('lifecycle-modal').remove();advanceStage('${projId}','INSPECTION')" class="lifecycle-action-btn" style="background:#00BCD4">🔍 Submit for Inspection</button>`,
-    INSPECTION:        `<button onclick="document.getElementById('lifecycle-modal').remove();advanceStage('${projId}','COMPLETED')" class="lifecycle-action-btn" style="background:#4CAF50">🏁 Mark Complete</button>`,
-    COMPLETED:         `<div style="text-align:center;padding:16px;color:var(--success);font-weight:800;font-size:15px">🏁 Project Complete!</div>`,
-  };
-
-  mo.innerHTML = `
-    <div style="background:var(--surface-1);border-radius:16px;padding:22px;max-width:580px;width:100%;margin:auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div>
-          <div style="font-size:17px;font-weight:800">${proj.name}</div>
-          <div style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;background:${STAGES[stage]?.color||'#666'}22;padding:3px 10px;border-radius:99px">
-            <span>${STAGES[stage]?.icon}</span>
-            <span style="font-size:12px;font-weight:800;color:${STAGES[stage]?.color}">${STAGES[stage]?.label}</span>
-          </div>
-        </div>
-        <button onclick="document.getElementById('lifecycle-modal').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted)">✕</button>
-      </div>
-
-      <!-- Stage progress -->
-      <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:20px;overflow-x:auto;padding-bottom:4px">${stageBar}</div>
-
-      <!-- Completion -->
-      <div style="background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-size:13px;font-weight:700">Completion</span>
-          <span style="font-size:22px;font-weight:900;color:var(--success)">${pct}%</span>
-        </div>
-        <div style="height:8px;background:var(--surface-1);border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--success),#2E7D32);border-radius:99px"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text-faint);margin-top:4px">${tasks.filter(t=>t.done).length}/${tasks.length} tasks · Auto-calculated</div>
-      </div>
-
-      <!-- Key info -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-        <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:18px;font-weight:800;color:var(--success)">$${((est?.total)||0).toLocaleString()}</div>
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint);margin-top:2px">Contract</div>
-        </div>
-        <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:18px;font-weight:800;color:var(--primary-pink)">${(DB.photos||[]).filter(p=>p.projectId===projId).length}</div>
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint);margin-top:2px">Photos</div>
-        </div>
-        <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center">
-          <div style="font-size:18px;font-weight:800;color:var(--warning)">${(DB.changeOrders||[]).filter(c=>c.projectId===projId).length}</div>
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-faint);margin-top:2px">Change Orders</div>
-        </div>
-      </div>
-
-      <!-- Estimate summary -->
-      ${est ? `<div style="background:rgba(76,175,80,.06);border:1px solid rgba(76,175,80,.15);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700">💰 Estimate ${est.signature?'✅ Signed':'⏳ Not Signed'}</span>
-          <button onclick="document.getElementById('lifecycle-modal').remove();openClientApproval('${projId}')" style="background:none;border:1px solid var(--success);border-radius:6px;color:var(--success);font-size:11px;font-weight:700;padding:3px 10px;cursor:pointer">View</button>
-        </div>
-        <div style="color:var(--text-faint);margin-top:3px">${est.lineItems?.length||0} items · $${(est.total||0).toFixed(2)} · ${est.signedAt||'Not approved'}</div>
-      </div>` : ''}
-
-      <!-- Action buttons -->
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px">
-        ${actions[stage]||''}
-      </div>
-      <button onclick="document.getElementById('lifecycle-modal').remove()" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--divider);background:transparent;color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>
-    </div>`;
-
-  document.body.appendChild(mo);
-}
+/* openProjectLifecycle -> see lifecycle2 */
 
 function advanceStage(projId, newStage) {
   const proj = DB.projects.find(p=>p.id===projId);
@@ -3942,7 +3849,7 @@ function renderProjectsDesktop(){
     const ct=projContract(p.id),paid=projPaid(p.id),bal=ct-paid;
     const tasks=DB.tasks.filter(t=>t.projectId===p.id),done=tasks.filter(t=>t.done);
     const todayRpts=DB.reports.filter(r=>r.projectId===p.id&&r.date===todayISO());
-    return '<div class="card" style="cursor:pointer" onclick="showView(\'eod\');filterEOD(\''+p.id+'\',null)">'
+    return '<div class="card" style="cursor:pointer" onclick="openProjectDetail(\''+p.id+'\')" >'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px"><div style="font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+p.name+'</div><span class="badge '+sClass(p.status)+'">'+p.status+'</span></div>'
       +'<div style="font-size:10px;color:var(--txm);margin-bottom:8px">📍 '+(p.city||'—')+(p.state?', '+p.state:'')+' · 👤 '+(p.client||'—')+'</div>'
       +'<div style="height:130px"><canvas id="projc-'+p.id+'"></canvas></div>'
@@ -4899,6 +4806,7 @@ function openScopeAnalyzer(projId) {
     + '</div>';
 
   document.body.appendChild(mo);
+  if(typeof pbVoiceAttachModal==='function') pbVoiceAttachModal();
   document.getElementById('scope-input')?.focus();
 }
 
@@ -5205,6 +5113,930 @@ function importScopeMaterials(projId) {
   renderInventory?.(); refreshSidebadges?.();
   toast('📦 ' + added + ' materials added to inventory');
   logChange('AI_MATERIALS','project',projId,{added});
+}
+
+</script>
+
+<!-- voice engine removed -->
+
+<!-- voice engine removed -->
+<script>
+
+/* ══ PROJECT DETAIL PANEL ══════════════════════════════════ */
+function openProjectDetail(projId) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) { toast && toast('Project not found'); return; }
+
+  var ex = document.getElementById('pdp');
+  if (ex) ex.remove();
+
+  var tasks    = (DB.tasks||[]).filter(function(t){ return t.projectId===projId; }).sort(function(a,b){ return (a.order||0)-(b.order||0); });
+  var photos   = (DB.photos||[]).filter(function(p){ return p.projectId===projId; });
+  var reports  = (DB.reports||[]).filter(function(r){ return r.projectId===projId; }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  var cos      = (DB.changeOrders||[]).filter(function(o){ return o.projectId===projId; });
+  var vnotes   = (DB.voiceNotes||[]).filter(function(n){ return n.projectId===projId; }).slice().reverse();
+  var estimate = (DB.estimates||[]).find(function(e){ return e.projectId===projId; });
+  var payments = (DB.payments||[]).filter(function(p){ return p.projectId===projId; });
+  var log      = (DB.changelog||[]).filter(function(e){ return e.entityId===projId; }).slice().reverse().slice(0,30);
+
+  var doneTasks  = tasks.filter(function(t){ return t.done && !t.isPhaseHeader; }).length;
+  var totalTasks = tasks.filter(function(t){ return !t.isPhaseHeader; }).length;
+  var pct        = proj.progress || (totalTasks ? Math.round(doneTasks/totalTasks*100) : 0);
+  var contract   = estimate ? (estimate.total||0) : (proj.contract||0);
+  var paid       = payments.reduce(function(s,p){ return s+(+p.amount||0); }, 0);
+  var balance    = contract - paid;
+
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function row(k,v){
+    return '<div style="display:flex;gap:6px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px">'
+      +'<span style="color:#666;width:90px;flex-shrink:0">'+k+'</span>'
+      +'<span style="color:#ddd;flex:1;min-width:0;word-break:break-word">'+v+'</span>'
+      +'</div>';
+  }
+
+  function kpi(label,val,col){
+    return '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:10px;text-align:center">'
+      +'<div style="font-size:17px;font-weight:900;color:'+(col||'#C8935A')+'">'+val+'</div>'
+      +'<div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+label+'</div>'
+      +'</div>';
+  }
+
+  function card(title, content, extra) {
+    return '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:12px;padding:16px;margin-bottom:12px'+(extra?';'+extra:'')+'">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#666;margin-bottom:10px">'+title+'</div>'
+      +content
+      +'</div>';
+  }
+
+  /* Status color */
+  function sc(s){ return {COMPLETED:'#C8935A',Completed:'#C8935A','In Progress':'#C8935A',ESTIMATE:'#FF9800',Estimate:'#FF9800',Pending:'#888','On Hold':'#EF5350',INSPECTION:'#2196F3'}[s]||'#888'; }
+
+  /* Tasks HTML */
+  var tasksHtml = '';
+  if (!tasks.length) {
+    tasksHtml = '<div style="font-size:12px;color:#555;padding:6px 0">No tasks yet</div>';
+  } else {
+    tasks.forEach(function(t){
+      if (t.isPhaseHeader) {
+        tasksHtml += '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#666;padding:8px 0 4px;border-bottom:1px solid #2a1a0d;margin-top:4px">'+esc(t.desc)+'</div>';
+      } else {
+        tasksHtml += '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03)">'
+          +'<span style="font-size:13px;flex-shrink:0;margin-top:0">'+(t.done?'✅':'⬜')+'</span>'
+          +'<div style="flex:1;min-width:0"><div style="font-size:12px;color:'+(t.done?'#555':'#ccc')+';text-decoration:'+(t.done?'line-through':'none')+';line-height:1.35">'+esc(t.desc)+'</div>'
+          +(t.completedBy?'<div style="font-size:9px;color:#444">'+t.completedBy+'</div>':'')
+          +'</div>'
+          +(t.photoRequired&&!t.done?'<span style="font-size:10px">📸</span>':'')
+          +'</div>';
+      }
+    });
+  }
+
+  /* Reports HTML */
+  var reportsHtml = '';
+  if (!reports.length) {
+    reportsHtml = '<div style="font-size:12px;color:#555;padding:6px 0">No reports submitted yet</div>';
+  } else {
+    reports.forEach(function(r){
+      reportsHtml += '<div style="background:#111;border-radius:8px;padding:12px;margin-bottom:8px;border-left:3px solid #C8935A">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<div style="font-size:12px;font-weight:800;color:#ddd">'+(r.dprNumber||'Report')+' <span style="font-weight:400;color:#666">· '+r.date+'</span></div>'
+        +'<span style="font-size:11px;font-weight:800;color:#C8935A">'+r.progress+'%</span>'
+        +'</div>'
+        +(r.completed?'<div style="font-size:12px;color:#bbb;line-height:1.5;margin-bottom:4px">'+esc(r.completed.slice(0,200))+(r.completed.length>200?'…':'')+'</div>':'')
+        +(r.incomplete?'<div style="font-size:11px;color:#FF9800;margin-bottom:4px">⚠️ '+esc(r.incomplete.slice(0,100))+'</div>':'')
+        +(r.tomorrow?'<div style="font-size:11px;color:#2196F3">📅 '+esc(r.tomorrow.slice(0,100))+'</div>':'')
+        +'<div style="font-size:9px;color:#444;margin-top:6px">'+(r.reporter||'')+' · '+(r.workers||1)+' workers · '+(r.weather||'')+(r.geo?' · '+r.geo:'')+'</div>'
+        +(r.photos&&r.photos.length?'<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">'+r.photos.slice(0,6).map(function(ph){ return '<img src="'+(ph.src||ph)+'" style="width:48px;height:48px;object-fit:cover;border-radius:5px;border:1px solid #333"/>';}).join('')+'</div>':'')
+        +'</div>';
+    });
+  }
+
+  /* Photos HTML */
+  var photosHtml = '';
+  if (!photos.length) {
+    photosHtml = '<div style="font-size:12px;color:#555">No photos yet</div>';
+  } else {
+    photosHtml = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px">'
+      + photos.slice(0,25).map(function(ph){
+          return '<div style="aspect-ratio:1;overflow:hidden;border-radius:6px;background:#111;cursor:pointer">'
+            +(ph.src?'<img src="'+ph.src+'" style="width:100%;height:100%;object-fit:cover" loading="lazy"/>':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.2">📷</div>')
+            +'</div>';
+        }).join('')
+      +(photos.length>25?'<div style="grid-column:1/-1;text-align:center;font-size:11px;color:#444;padding:4px">+' +(photos.length-25)+' more photos</div>':'')
+      +'</div>';
+  }
+
+  /* Voice Notes HTML */
+  var voiceHtml = vnotes.length
+    ? vnotes.map(function(n){
+        return '<div style="background:#111;border-radius:8px;padding:10px;margin-bottom:6px;border-left:3px solid #666">'
+          +'<div style="font-size:9px;color:#444;margin-bottom:4px">🎤 '+n.date+' '+n.time+' · '+(n.addedBy||'')+'</div>'
+          +'<div style="font-size:12px;color:#bbb;line-height:1.5">'+esc(n.transcript||'')+'</div>'
+          +'</div>';
+      }).join('')
+    : '<div style="font-size:12px;color:#555">No voice notes</div>';
+
+  /* Change Orders HTML */
+  var coHtml = cos.length
+    ? cos.map(function(o){
+        return '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px;background:#111;border-radius:8px;margin-bottom:6px;border-left:3px solid #FF9800">'
+          +'<div><div style="font-size:12px;font-weight:700;color:#ddd">'+esc((o.desc||o.reason||'Change Order').slice(0,60))+'</div>'
+          +'<div style="font-size:10px;color:#555;margin-top:2px">'+(o.type||'')+' · '+(o.signature?'✅ Signed':'⏳ Pending')+'</div>'
+          +'</div>'
+          +'<div style="font-size:13px;font-weight:800;color:#FF9800;flex-shrink:0;margin-left:8px">$'+((+o.amount||0).toLocaleString())+'</div>'
+          +'</div>';
+      }).join('')
+    : '<div style="font-size:12px;color:#555">No change orders</div>';
+
+  /* Activity Log HTML */
+  var logHtml = log.length
+    ? log.map(function(e){
+        return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03)">'
+          +'<div style="width:6px;height:6px;border-radius:50%;background:#C8935A;flex-shrink:0;margin-top:5px"></div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:11px;color:#ccc">'+esc((e.action||'').replace(/_/g,' ').toLowerCase())+'</div>'
+          +'<div style="font-size:9px;color:#444">'+(e.user||'')+' · '+(e.timestamp||e.when||'')+'</div>'
+          +'</div></div>';
+      }).join('')
+    : '<div style="font-size:12px;color:#555">No activity logged</div>';
+
+  /* Estimate HTML */
+  var estHtml = estimate
+    ? '<div style="font-size:12px;font-weight:700;color:#ddd;margin-bottom:8px">$'+estimate.total.toLocaleString()+' &nbsp;<span style="font-weight:400;color:#555">· '+(estimate.lineItems?.length||0)+' line items · '+(estimate.status||'Draft')+'</span></div>'
+      + (estimate.lineItems||[]).slice(0,8).map(function(li){
+          return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)">'
+            +'<span style="color:#bbb;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(li.desc||li.description||'')+'</span>'
+            +'<span style="color:#777;flex-shrink:0;margin-left:8px">'+li.qty+' × $'+li.rate+'</span>'
+            +'<span style="color:#C8935A;font-weight:700;flex-shrink:0;margin-left:8px">$'+((+li.qty||1)*(+li.rate||+li.unit_cost||0)).toLocaleString()+'</span>'
+            +'</div>';
+        }).join('')
+      + (estimate.lineItems&&estimate.lineItems.length>8?'<div style="font-size:10px;color:#444;margin-top:4px">+'+(estimate.lineItems.length-8)+' more items</div>':'')
+    : '<div style="font-size:12px;color:#555">No estimate yet — use AI Scope to generate one</div>';
+
+  /* ── Build the full panel HTML ── */
+  var html = '<div id="pdp" style="position:fixed;inset:0;z-index:9200;background:#0f0803;overflow-y:auto;font-family:inherit">'
+
+    /* Sticky header */
+    + '<div style="position:sticky;top:0;z-index:10;background:#0f0803;border-bottom:1px solid #3d2410;padding:14px 20px;display:flex;align-items:center;gap:12px">'
+    + '<button onclick="document.getElementById(\'pdp\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:13px;font-weight:700;padding:7px 14px;cursor:pointer;font-family:inherit;white-space:nowrap">← Projects</button>'
+    + '<div style="flex:1;min-width:0">'
+    +   '<div style="font-size:17px;font-weight:900;color:#F5E6D3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(proj.name)+'</div>'
+    +   '<div style="font-size:11px;color:#666;margin-top:2px">'
+    +     esc((proj.address||'')+' '+(proj.city||'')+' '+(proj.state||''))
+    +     (proj.client?' &nbsp;·&nbsp; 👤 '+esc(proj.client):'')
+    +   '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-shrink:0">'
+    +   '<button onclick="openProjectLifecycle&&openProjectLifecycle(\''+projId+'\');document.getElementById(\'pdp\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;font-family:inherit">🚀 Lifecycle</button>'
+    +   '<button onclick="openDailyReport&&openDailyReport(\''+projId+'\')" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;font-family:inherit">📋 Report</button>'
+    +   '<button onclick="openScopeAnalyzer&&openScopeAnalyzer(\''+projId+'\')" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;font-family:inherit">🤖 AI Scope</button>'
+    +   '<button onclick="deleteProject&&deleteProject(\''+projId+'\');document.getElementById(\'pdp\')?.remove()" style="background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.25);border-radius:8px;color:#EF5350;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;font-family:inherit">🗑</button>'
+    + '</div>'
+    + '</div>'
+
+    /* Progress bar under header */
+    + '<div style="height:3px;background:#1a1008"><div style="height:3px;width:'+pct+'%;background:linear-gradient(90deg,#C8935A,#8B6240);transition:width .4s"></div></div>'
+
+    /* 3-column grid */
+    + '<div style="padding:20px;display:grid;grid-template-columns:320px 1fr 1fr;gap:16px;max-width:1400px;margin:0 auto">'
+
+    /* ── COL 1 ── */
+    + '<div>'
+
+    + card('📋 Project Info',
+        row('Status', '<span style="font-weight:700;color:'+sc(proj.status)+'">'+esc(proj.status||'—')+'</span>')
+        +row('Stage', esc(proj.lifecycleStage||'Draft'))
+        +row('Trades', '<span style="word-break:break-word;white-space:normal">'+esc(proj.trade||'—')+'</span>')
+        +row('Property', esc(proj.propertyType||'—'))
+        +row('Category', esc(proj.category||'—'))
+        +row('Room', esc(proj.roomType||'—'))
+        +row('Location', esc(proj.locationType||'—'))
+        +row('Start', esc(proj.start||'—'))
+        +row('Client', esc(proj.client||'—'))
+        +row('Phone', esc(proj.phone||'—'))
+        +row('Email', esc(proj.email||'—'))
+        +row('Address', esc((proj.address||'')+(proj.city?' '+proj.city:'')+(proj.state?' '+proj.state:'')))
+    )
+
+    + card('💰 Financials',
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">'
+        +kpi('Contract','$'+(contract||0).toLocaleString(),'#C8935A')
+        +kpi('Paid','$'+paid.toLocaleString(),'#C8935A')
+        +kpi('Balance','$'+Math.abs(balance).toLocaleString()+(balance<0?' CR':''),balance>0?'#EF5350':'#C8935A')
+        +kpi('Payments',payments.length.toString(),'#888')
+        +'</div>'+estHtml
+    )
+
+    + card('📝 Scope & Notes',
+        (proj.notes?'<div style="font-size:13px;color:#ccc;line-height:1.6;white-space:pre-wrap;margin-bottom:10px">'+esc(proj.notes)+'</div>':'')
+        +(proj.notes&&vnotes.length?'<div style="border-top:1px solid #2a1a0d;margin-bottom:8px;padding-top:8px"></div>':'')
+        +voiceHtml
+        +(!proj.notes&&!vnotes.length?'<div style="font-size:12px;color:#555">No notes or voice records yet</div>':'')
+    )
+
+    + '</div>'  /* end col 1 */
+
+    /* ── COL 2 ── */
+    + '<div>'
+
+    + card('✅ Tasks  <span style="font-weight:400;color:#555;font-size:10px;text-transform:none">'+doneTasks+'/'+totalTasks+'</span>',
+        '<div style="height:5px;background:#111;border-radius:99px;overflow:hidden;margin-bottom:10px"><div style="height:5px;width:'+pct+'%;background:linear-gradient(90deg,#C8935A,#8B6240);border-radius:99px"></div></div>'
+        +'<div style="max-height:380px;overflow-y:auto">'+tasksHtml+'</div>'
+    )
+
+    + card('📋 Daily Progress Reports  <span style="font-weight:400;color:#555;font-size:10px;text-transform:none">'+reports.length+' total</span>',
+        '<div style="max-height:500px;overflow-y:auto">'+reportsHtml+'</div>'
+    )
+
+    + (cos.length ? card('📝 Change Orders', coHtml) : '')
+
+    + '</div>'  /* end col 2 */
+
+    /* ── COL 3 ── */
+    + '<div>'
+
+    + card('📸 Photos  <span style="font-weight:400;color:#555;font-size:10px;text-transform:none">'+photos.length+'</span>',
+        photosHtml
+    )
+
+    + card('🕐 Activity Log', '<div style="max-height:250px;overflow-y:auto">'+logHtml+'</div>')
+
+    + '</div>'  /* end col 3 */
+
+    + '</div>'   /* end grid */
+    + '</div>';  /* end #pdp */
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS — SCHEDULE OF VALUES (G702 / G703 STYLE)
+   Auto-calculated progress + Payment tracking + Line items
+══════════════════════════════════════════════════════════════ */
+
+/* ── Auto-calculate project progress from tasks ─────────── */
+function calcProjectProgress(projId) {
+  var tasks = (DB.tasks||[]).filter(function(t){
+    return t.projectId===projId && !t.isPhaseHeader;
+  });
+  if (!tasks.length) return 0;
+  var done = tasks.filter(function(t){ return t.done; }).length;
+  return Math.round((done / tasks.length) * 100);
+}
+
+/* ── Auto-calculate payment progress ────────────────────── */
+function calcPaymentProgress(projId) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) return 0;
+  var sov = (DB.sov||{})[projId];
+  var contract = sov ? sov.scheduledValue : ((+proj.contract||0) + changeOrderTotal(projId));
+  if (!contract) return 0;
+  var paid = (DB.payments||[]).filter(function(p){ return p.projectId===projId; })
+    .reduce(function(s,p){ return s+(+p.amount||0); }, 0);
+  return Math.min(100, Math.round((paid/contract)*100));
+}
+
+/* ── Auto-update all project progress values ─────────────── */
+function syncAllProgress() {
+  (DB.projects||[]).forEach(function(p) {
+    var tp = calcProjectProgress(p.id);
+    var pp = calcPaymentProgress(p.id);
+    if (tp > 0) p.progress = tp;
+    p.paymentProgress = pp;
+  });
+}
+
+/* ── Mark task done and auto-sync progress ───────────────── */
+var _origToggleTask = typeof toggleTask !== 'undefined' ? toggleTask : null;
+function toggleTask(taskId) {
+  var task = (DB.tasks||[]).find(function(t){ return t.id===taskId; });
+  if (!task) return;
+  task.done = !task.done;
+  if (task.done) {
+    task.completedBy = _currentUser?.name || 'Field User';
+    task.completedAt = new Date().toLocaleString();
+  } else {
+    delete task.completedBy;
+    delete task.completedAt;
+  }
+  // Auto-update project progress
+  if (task.projectId) {
+    var proj = (DB.projects||[]).find(function(p){ return p.id===task.projectId; });
+    if (proj) {
+      proj.progress = calcProjectProgress(task.projectId);
+      // Update progress bar live
+      var bar = document.getElementById('prog-bar-'+task.projectId);
+      var lbl = document.getElementById('prog-lbl-'+task.projectId);
+      if (bar) bar.style.width = proj.progress+'%';
+      if (lbl) lbl.textContent = proj.progress+'%';
+    }
+  }
+  saveToLocal(); broadcastData&&broadcastData();
+  renderTasks&&renderTasks();
+}
+
+/* ══════════════════════════════════════════════════════════
+   SCHEDULE OF VALUES (G703 LINE ITEMS)
+══════════════════════════════════════════════════════════════ */
+
+function openSOV(projId) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) return;
+  if (!DB.sov) DB.sov = {};
+  if (!DB.sov[projId]) {
+    // Initialize from estimate if available, or create blank
+    var est = (DB.estimates||[]).find(function(e){ return e.projectId===projId; });
+    var items = [];
+    if (est && est.lineItems && est.lineItems.length) {
+      items = est.lineItems.map(function(li, idx) {
+        return {
+          id:       'SOV-'+(idx+1),
+          desc:     li.desc||li.description||'Item '+(idx+1),
+          schValue: Math.round((+li.qty||1)*(+li.rate||+li.unit_cost||0)),
+          prevWork: 0,
+          thisWork: 0,
+          stored:   0,
+          retPct:   10,
+        };
+      });
+    } else {
+      // Default line items for construction
+      items = [
+        {id:'SOV-1', desc:'General Conditions / Mobilization', schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-2', desc:'Demolition & Site Preparation',     schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-3', desc:'Rough Framing & Structural',        schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-4', desc:'Rough Plumbing',                    schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-5', desc:'Rough Electrical',                  schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-6', desc:'HVAC Rough-In',                     schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-7', desc:'Insulation',                        schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-8', desc:'Drywall / Plaster / Backer Board',  schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-9', desc:'Waterproofing & Membrane',          schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-10',desc:'Tile & Flooring',                   schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-11',desc:'Plumbing Trim & Fixtures',          schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-12',desc:'Electrical Trim & Fixtures',        schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-13',desc:'Cabinetry & Millwork',              schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-14',desc:'Paint & Finish',                    schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+        {id:'SOV-15',desc:'Final Clean & Punch List',          schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10},
+      ];
+    }
+    DB.sov[projId] = { items: items, applicationNo: 1, periodTo: todayISO() };
+  }
+
+  var sovData = DB.sov[projId];
+  var paid = (DB.payments||[]).filter(function(p){ return p.projectId===projId; })
+    .reduce(function(s,p){ return s+(+p.amount||0); }, 0);
+
+  var mo = document.createElement('div');
+  mo.id  = 'sov-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9400;background:#0f0803;overflow-y:auto;font-family:inherit';
+
+  mo.innerHTML = buildSOVHtml(projId, proj, sovData, paid);
+  document.body.appendChild(mo);
+}
+
+function buildSOVHtml(projId, proj, sovData, paid) {
+  var items = sovData.items;
+  var totalSch  = items.reduce(function(s,i){ return s+(+i.schValue||0); }, 0);
+
+  var rows = '';
+  items.forEach(function(item, idx) {
+    var total    = (+item.prevWork||0)+(+item.thisWork||0)+(+item.stored||0);
+    var pct      = totalSch > 0 ? Math.round((total/Math.max(item.schValue,1))*100) : 0;
+    var balance  = (+item.schValue||0) - total;
+    var retAmt   = Math.round(total*(+item.retPct||0)/100);
+    var netDue   = total - retAmt;
+    rows += '<tr data-sov-row="'+idx+'">'
+      +'<td style="color:#666;font-size:11px;text-align:center">'+item.id+'</td>'
+      +'<td><div contenteditable="true" class="sov-cell" data-field="desc" data-idx="'+idx+'" style="min-width:160px;white-space:normal;word-break:break-word">'+escSOV(item.desc)+'</div></td>'
+      +'<td class="sov-num"><div contenteditable="true" class="sov-cell" data-field="schValue" data-idx="'+idx+'">'+fmtMoney(item.schValue)+'</div></td>'
+      +'<td class="sov-num"><div contenteditable="true" class="sov-cell" data-field="prevWork" data-idx="'+idx+'">'+fmtMoney(item.prevWork)+'</div></td>'
+      +'<td class="sov-num"><div contenteditable="true" class="sov-cell" data-field="thisWork" data-idx="'+idx+'">'+fmtMoney(item.thisWork)+'</div></td>'
+      +'<td class="sov-num"><div contenteditable="true" class="sov-cell" data-field="stored" data-idx="'+idx+'">'+fmtMoney(item.stored)+'</div></td>'
+      +'<td class="sov-num sov-auto">'+fmtMoney(total)+'</td>'
+      +'<td class="sov-num sov-auto">'+pct+'%</td>'
+      +'<td class="sov-num sov-auto">'+fmtMoney(balance)+'</td>'
+      +'<td class="sov-num"><div contenteditable="true" class="sov-cell" data-field="retPct" data-idx="'+idx+'">'+item.retPct+'%</div></td>'
+      +'<td class="sov-num sov-auto">'+fmtMoney(retAmt)+'</td>'
+      +'<td class="sov-num sov-auto" style="color:#C8935A;font-weight:700">'+fmtMoney(netDue)+'</td>'
+      +'</tr>';
+  });
+
+  // Totals row
+  var totPrev  = items.reduce(function(s,i){ return s+(+i.prevWork||0); }, 0);
+  var totThis  = items.reduce(function(s,i){ return s+(+i.thisWork||0); }, 0);
+  var totStore = items.reduce(function(s,i){ return s+(+i.stored||0); }, 0);
+  var totComp  = totPrev+totThis+totStore;
+  var totPct   = totalSch ? Math.round(totComp/totalSch*100) : 0;
+  var totBal   = totalSch - totComp;
+  var totRet   = items.reduce(function(s,i){ return s+Math.round(((+i.prevWork||0)+(+i.thisWork||0)+(+i.stored||0))*(+i.retPct||0)/100); }, 0);
+  var totNet   = totComp - totRet;
+
+  return '<div style="min-height:100%;display:flex;flex-direction:column">'
+
+    /* Header */
+    +'<div style="position:sticky;top:0;z-index:10;background:#0f0803;border-bottom:1px solid #3d2410;padding:12px 20px;display:flex;align-items:center;gap:12px">'
+    +'<button onclick="document.getElementById(\'sov-modal\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:13px;font-weight:700;padding:7px 14px;cursor:pointer;font-family:inherit;white-space:nowrap">← Back</button>'
+    +'<div style="flex:1">'
+    +'<div style="font-size:16px;font-weight:900;color:#F5E6D3">'+escSOV(proj.name)+'</div>'
+    +'<div style="font-size:11px;color:#666">Application for Payment — G702 / G703 &nbsp;·&nbsp; Application No. '+sovData.applicationNo+'</div>'
+    +'</div>'
+    +'<button onclick="saveSov(\''+projId+'\')" style="background:#C8935A;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:800;padding:8px 16px;cursor:pointer;font-family:inherit">💾 Save</button>'
+    +'<button onclick="addSOVItem(\''+projId+'\')" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:12px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:inherit">+ Add Line</button>'
+    +'</div>'
+
+    /* G702 Summary Bar */
+    +'<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 20px;border-bottom:1px solid #3d2410;background:#111">'
+    +sovKpi('Contract Value', fmtMoney(totalSch))
+    +sovKpi('Work Completed', fmtMoney(totComp), '#C8935A')
+    +sovKpi('% Complete', totPct+'%', totPct>=100?'#C8935A':totPct>=50?'#FF9800':'#888')
+    +sovKpi('Retainage', fmtMoney(totRet), '#666')
+    +sovKpi('Net Due This App.', fmtMoney(totNet-paid>0?totNet-paid:0), '#C8935A')
+    +'</div>'
+
+    /* G703 Table */
+    +'<div style="overflow-x:auto;padding:16px 20px;flex:1">'
+    +'<table id="sov-table-'+projId+'" style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">'
+    +'<thead>'
+    +'<tr style="background:#1a1008;border-bottom:2px solid #3d2410">'
+    +'<th class="sov-th" style="width:60px">Item</th>'
+    +'<th class="sov-th" style="text-align:left">Description of Work</th>'
+    +'<th class="sov-th">A: Scheduled<br>Value</th>'
+    +'<th class="sov-th">D: Work Comp.<br>From Prev. App.</th>'
+    +'<th class="sov-th">E: Work Comp.<br>This Period</th>'
+    +'<th class="sov-th">F: Materials<br>Stored</th>'
+    +'<th class="sov-th">G: Total (D+E+F)</th>'
+    +'<th class="sov-th">% (G/C)</th>'
+    +'<th class="sov-th">H: Balance<br>to Finish</th>'
+    +'<th class="sov-th">Retainage<br>%</th>'
+    +'<th class="sov-th">Retainage<br>Amt</th>'
+    +'<th class="sov-th">Net Due</th>'
+    +'</tr>'
+    +'</thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'<tfoot>'
+    +'<tr style="background:#1a1008;border-top:2px solid #3d2410;font-weight:800">'
+    +'<td colspan="2" style="padding:8px;color:#A08060">TOTALS</td>'
+    +'<td class="sov-num">'+fmtMoney(totalSch)+'</td>'
+    +'<td class="sov-num">'+fmtMoney(totPrev)+'</td>'
+    +'<td class="sov-num">'+fmtMoney(totThis)+'</td>'
+    +'<td class="sov-num">'+fmtMoney(totStore)+'</td>'
+    +'<td class="sov-num" style="color:#C8935A">'+fmtMoney(totComp)+'</td>'
+    +'<td class="sov-num" style="color:#C8935A">'+totPct+'%</td>'
+    +'<td class="sov-num">'+fmtMoney(totBal)+'</td>'
+    +'<td></td>'
+    +'<td class="sov-num">'+fmtMoney(totRet)+'</td>'
+    +'<td class="sov-num" style="color:#C8935A;font-size:13px">'+fmtMoney(totNet)+'</td>'
+    +'</tr>'
+    +'</tfoot>'
+    +'</table>'
+    +'</div>'
+
+    /* SOV CSS + Event wiring */
+    +'<style>'
+    +'.sov-th{padding:8px 10px;color:#888;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;text-align:right;white-space:nowrap}'
+    +'.sov-th:first-child,.sov-th:nth-child(2){text-align:left}'
+    +'#sov-table-'+projId+' td{padding:6px 10px;border-bottom:1px solid #1a1008;vertical-align:middle}'
+    +'.sov-num{text-align:right;font-family:monospace;color:#ccc}'
+    +'.sov-auto{color:#888!important}'
+    +'.sov-cell{outline:none;border-radius:4px;padding:2px 4px;min-width:60px}'
+    +'.sov-cell:focus{background:#2a1a0d;color:#fff;border:1px solid #C8935A}'
+    +'tr[data-sov-row]:hover{background:#150c07}'
+    +'</style>'
+
+    +'</div>';
+}
+
+function sovKpi(label, val, color) {
+  return '<div style="background:#1a1008;border:1px solid #2a1a0d;border-radius:8px;padding:10px;text-align:center">'
+    +'<div style="font-size:16px;font-weight:900;color:'+(color||'#F5E6D3')+'">'+val+'</div>'
+    +'<div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+label+'</div>'
+    +'</div>';
+}
+
+function escSOV(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Wire cell edits via event delegation ── */
+document.addEventListener('blur', function(e) {
+  if (!e.target.classList.contains('sov-cell')) return;
+  var idx   = +e.target.getAttribute('data-idx');
+  var field = e.target.getAttribute('data-field');
+  var val   = e.target.textContent.replace(/[$,% ]/g,'').trim();
+  // Find active SOV
+  var modal = document.getElementById('sov-modal');
+  if (!modal) return;
+  var projId = modal.getAttribute('data-proj');
+  if (!projId || !DB.sov||!DB.sov[projId]) return;
+  var item = DB.sov[projId].items[idx];
+  if (!item) return;
+  if (field === 'desc') {
+    item.desc = e.target.textContent.trim();
+  } else if (field === 'retPct') {
+    item.retPct = parseFloat(val)||0;
+    e.target.textContent = item.retPct+'%';
+  } else {
+    item[field] = parseFloat(val)||0;
+    e.target.textContent = fmtMoney(item[field]);
+  }
+  // Recalc row
+  sovRecalcRow(projId, idx);
+}, true);
+
+function sovRecalcRow(projId, idx) {
+  var item  = DB.sov[projId].items[idx];
+  var total = (+item.prevWork||0)+(+item.thisWork||0)+(+item.stored||0);
+  var pct   = Math.round((total/Math.max(+item.schValue||1,1))*100);
+  var bal   = (+item.schValue||0)-total;
+  var ret   = Math.round(total*(+item.retPct||0)/100);
+  var net   = total-ret;
+  var row = document.querySelector('[data-sov-row="'+idx+'"]');
+  if (!row) return;
+  var cells = row.querySelectorAll('.sov-auto');
+  var vals  = [fmtMoney(total), pct+'%', fmtMoney(bal), fmtMoney(ret), fmtMoney(net)];
+  cells.forEach(function(c,i){ if(vals[i]!==undefined) c.textContent=vals[i]; });
+  // Update project progress
+  syncAllProgress();
+  var proj = DB.projects.find(function(p){return p.id===projId;});
+  if (proj) {
+    proj.contract = DB.sov[projId].items.reduce(function(s,i){return s+(+i.schValue||0);},0);
+  }
+}
+
+function saveSov(projId) {
+  saveToLocal();
+  broadcastData&&broadcastData();
+  syncAllProgress();
+  renderProjects&&renderProjects();
+  renderProjectsDesktop&&renderProjectsDesktop();
+  toast&&toast('💾 Schedule of Values saved');
+}
+
+function addSOVItem(projId) {
+  if (!DB.sov||!DB.sov[projId]) return;
+  var items = DB.sov[projId].items;
+  var n = items.length+1;
+  items.push({id:'SOV-'+n, desc:'New Line Item '+n, schValue:0, prevWork:0, thisWork:0, stored:0, retPct:10});
+  var modal = document.getElementById('sov-modal');
+  if (modal) {
+    var proj = DB.projects.find(function(p){return p.id===projId;});
+    var paid = (DB.payments||[]).filter(function(p){return p.projectId===projId;}).reduce(function(s,p){return s+(+p.amount||0);},0);
+    modal.innerHTML = buildSOVHtml(projId, proj, DB.sov[projId], paid);
+    modal.setAttribute('data-proj', projId);
+  }
+}
+
+/* Store projId on modal open */
+var _origOpenSOV = openSOV;
+openSOV = function(projId) {
+  _origOpenSOV(projId);
+  setTimeout(function(){
+    var mo = document.getElementById('sov-modal');
+    if (mo) mo.setAttribute('data-proj', projId);
+  }, 50);
+};
+
+/* Expose fmtMoney fallback */
+if (typeof fmtMoney === 'undefined') {
+  window.fmtMoney = function(v){ return '$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+}
+
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS LIFECYCLE v2 — Useful stage-by-stage info
+   Replaces the modal with a full-screen panel
+══════════════════════════════════════════════════════════════ */
+
+function openProjectLifecycle(projId) {
+  var proj  = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) return;
+  var ex = document.getElementById('lifecycle-panel');
+  if (ex) ex.remove();
+
+  var stage   = proj.lifecycleStage || 'DRAFT';
+  var tasks   = (DB.tasks||[]).filter(function(t){ return t.projectId===projId && !t.isPhaseHeader; });
+  var done    = tasks.filter(function(t){ return t.done; }).length;
+  var pct     = tasks.length ? Math.round(done/tasks.length*100) : (proj.progress||0);
+  var est     = (DB.estimates||[]).find(function(e){ return e.projectId===projId; });
+  var payments= (DB.payments||[]).filter(function(p){ return p.projectId===projId; });
+  var cos     = (DB.changeOrders||[]).filter(function(c){ return c.projectId===projId; });
+  var reports = (DB.reports||[]).filter(function(r){ return r.projectId===projId; }).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+  var coTotal = cos.reduce(function(s,c){ return s+(+c.amount||0); }, 0);
+  var contract= (est?.total||+proj.contract||0) + coTotal;
+  var paid    = payments.reduce(function(s,p){ return s+(+p.amount||0); }, 0);
+  var balance = contract - paid;
+  var payPct  = contract ? Math.min(100,Math.round(paid/contract*100)) : 0;
+
+  var STAGES = {
+    DRAFT:             { icon:'📝', label:'Draft',              color:'#888',     need:'Create the project and define scope.' },
+    ESTIMATE:          { icon:'💰', label:'Estimate',           color:'#FF9800',  need:'Prepare and send a detailed estimate to the client.' },
+    PENDING_APPROVAL:  { icon:'⏳', label:'Pending Approval',   color:'#9C27B0',  need:'Waiting for client signature on the estimate.' },
+    APPROVED:          { icon:'✅', label:'Approved',           color:'#C8935A',  need:'Contract signed. Schedule start date and order materials.' },
+    MATERIALS_TAKEOFF: { icon:'📋', label:'Takeoff',            color:'#FF5722',  need:'Complete the materials takeoff list.' },
+    MATERIALS_ORDERED: { icon:'🚛', label:'Materials Ordered',  color:'#FF9800',  need:'All materials ordered and delivery confirmed.' },
+    IN_PROGRESS:       { icon:'🔨', label:'In Progress',        color:'#C8935A',  need:'Work underway. File daily reports and track tasks.' },
+    INSPECTION:        { icon:'🔍', label:'Inspection',         color:'#2196F3',  need:'Schedule and pass final inspection.' },
+    COMPLETED:         { icon:'🏁', label:'Completed',          color:'#C8935A',  need:'Final walkthrough, collect retainage, close out.' },
+  };
+  var STAGE_ORDER = Object.keys(STAGES);
+  var stageIdx = STAGE_ORDER.indexOf(stage);
+
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* Stage pipeline */
+  var pipeline = STAGE_ORDER.map(function(s, idx) {
+    var st = STAGES[s];
+    var isCurrent = s === stage;
+    var isPast    = idx < stageIdx;
+    return '<div onclick="setLifecycleStage(\''+projId+'\',\''+s+'\')" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:80px;padding:8px;border-radius:10px;background:'+(isCurrent?'rgba(200,147,90,.15)':'transparent')+';border:1px solid '+(isCurrent?'rgba(200,147,90,.4)':'transparent')+'">'
+      +'<div style="font-size:18px">'+st.icon+'</div>'
+      +'<div style="font-size:8px;font-weight:700;text-align:center;color:'+(isCurrent?st.color:isPast?'#555':'#3d2410')+';line-height:1.2">'+st.label+'</div>'
+      +(isCurrent?'<div style="width:6px;height:6px;border-radius:50%;background:'+st.color+'"></div>':'')
+      +'</div>'
+      +(idx < STAGE_ORDER.length-1 ? '<div style="width:20px;height:2px;background:'+(isPast?'#C8935A':'#2a1a0d')+';margin-top:16px;flex-shrink:0"></div>' : '');
+  }).join('');
+
+  /* Checklist for current stage */
+  var stageChecklists = {
+    DRAFT:             ['Define scope of work','Set project address and client info','Assign trades','Set estimated start date'],
+    ESTIMATE:          ['Complete materials takeoff','Price all labor hours','Add profit margin','Include permit costs','Send to client'],
+    PENDING_APPROVAL:  ['Follow up with client','Answer questions / revise if needed','Collect signed contract','Collect deposit'],
+    APPROVED:          ['Order all materials','Confirm delivery dates','Schedule crew','Pull permits','Notify client of start date'],
+    MATERIALS_TAKEOFF: ['List every material item','Verify quantities','Get supplier quotes','Check lead times'],
+    MATERIALS_ORDERED: ['Confirm all order confirmations received','Schedule delivery','Arrange staging area','Verify all quantities'],
+    IN_PROGRESS:       ['Submit daily progress reports','Photo document all phases','Check off tasks as completed','Log any change orders','Verify inspections scheduled'],
+    INSPECTION:        ['Schedule rough inspection','Schedule final inspection','Have plans on site','Walk inspector through work','Resolve any deficiencies'],
+    COMPLETED:         ['Final walkthrough with client','Collect final payment / retainage','Close out permits','File all documents','Request referral / review'],
+  };
+  var checkItems = stageChecklists[stage] || [];
+  var checkHtml  = checkItems.map(function(item) {
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,.02)">'
+      +'<input type="checkbox" style="width:16px;height:16px;accent-color:#C8935A" onchange="this.parentElement.style.opacity=this.checked?\'0.4\':\'1\'">'
+      +'<span style="font-size:13px;color:#ccc">'+esc(item)+'</span>'
+      +'</label>';
+  }).join('');
+
+  /* KPI row */
+  function kpi(label, val, sub, col) {
+    return '<div style="background:#1a1008;border:1px solid #2a1a0d;border-radius:10px;padding:14px;text-align:center">'
+      +'<div style="font-size:22px;font-weight:900;color:'+(col||'#F5E6D3')+'">'+val+'</div>'
+      +'<div style="font-size:9px;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-top:2px">'+label+'</div>'
+      +(sub?'<div style="font-size:10px;color:#3d2410;margin-top:2px">'+sub+'</div>':'')
+      +'</div>';
+  }
+
+  /* Last 3 reports */
+  var recentReports = reports.slice(0,3).map(function(r){
+    return '<div style="background:#1a1008;border-radius:8px;padding:10px;margin-bottom:6px;border-left:3px solid #C8935A">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
+      +'<span style="font-size:12px;font-weight:700;color:#ddd">'+(r.dprNumber||'Report')+' <span style="font-weight:400;color:#555">'+r.date+'</span></span>'
+      +'<span style="font-size:11px;color:#C8935A;font-weight:700">'+r.progress+'%</span>'
+      +'</div>'
+      +(r.completed?'<div style="font-size:12px;color:#bbb;line-height:1.5">'+esc(r.completed.slice(0,150))+(r.completed.length>150?'…':'')+'</div>':'')
+      +'</div>';
+  }).join('') || '<div style="font-size:12px;color:#555;padding:8px 0">No reports yet — tap 📋 DPR to file one</div>';
+
+  /* Build panel */
+  var html = '<div id="lifecycle-panel" style="position:fixed;inset:0;z-index:9300;background:#0f0803;overflow-y:auto;font-family:inherit">'
+
+    /* Header */
+    +'<div style="position:sticky;top:0;z-index:10;background:#0f0803;border-bottom:1px solid #3d2410;padding:12px 20px;display:flex;align-items:center;gap:12px">'
+    +'<button onclick="document.getElementById(\'lifecycle-panel\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:13px;font-weight:700;padding:7px 14px;cursor:pointer;font-family:inherit">← Back</button>'
+    +'<div style="flex:1"><div style="font-size:16px;font-weight:900;color:#F5E6D3">'+esc(proj.name)+'</div>'
+    +'<div style="font-size:11px;color:#555;margin-top:2px">Project Lifecycle &amp; Status</div></div>'
+    +'<button onclick="openDailyReport&&openDailyReport(\''+projId+'\')" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:12px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:inherit">📋 DPR</button>'
+    +'<button onclick="openSOV&&openSOV(\''+projId+'\')" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:12px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:inherit">📊 G702</button>'
+    +'</div>'
+
+    /* Stage pipeline — scrollable */
+    +'<div style="overflow-x:auto;padding:16px 20px;border-bottom:1px solid #2a1a0d">'
+    +'<div style="display:flex;align-items:flex-start;gap:0;min-width:max-content">'+pipeline+'</div>'
+    +'<div style="margin-top:10px;font-size:12px;color:#604030">Current: <strong style="color:'+(STAGES[stage]?.color||'#888')+'">'+(STAGES[stage]?.icon||'')+' '+(STAGES[stage]?.label||stage)+'</strong> &nbsp;·&nbsp; '+esc(STAGES[stage]?.need||'')+'</div>'
+    +'</div>'
+
+    /* KPI grid */
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 20px;border-bottom:1px solid #2a1a0d">'
+    +kpi('WORK COMPLETE', pct+'%', done+'/'+tasks.length+' tasks', pct>=90?'#C8935A':pct>=50?'#FF9800':'#888')
+    +kpi('CONTRACT', '$'+contract.toLocaleString(), cosL='+'+(coTotal?'$'+coTotal.toLocaleString()+' CO':'no COs'), '#C8935A')
+    +kpi('COLLECTED', '$'+paid.toLocaleString(), payPct+'% paid', payPct>=100?'#C8935A':'#FF9800')
+    +kpi('BALANCE DUE', '$'+Math.abs(balance).toLocaleString(), balance>0?'OUTSTANDING':'PAID', balance>0?'#EF5350':'#C8935A')
+    +'</div>'
+
+    /* 2 columns: checklist + recent reports */
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 20px">'
+
+    +'<div>'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:10px">✅ Stage Checklist — '+esc(STAGES[stage]?.label||stage)+'</div>'
+    +checkHtml
+    +'<div style="margin-top:12px;padding:10px;background:#1a1008;border-radius:8px;border:1px solid #2a1a0d">'
+    +'<div style="font-size:10px;color:#555;margin-bottom:6px;font-weight:700">ADVANCE STAGE</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + STAGE_ORDER.map(function(s){
+        var st = STAGES[s];
+        return '<button onclick="setLifecycleStage(\''+projId+'\',\''+s+'\')" style="padding:5px 10px;border-radius:6px;border:1px solid '+(s===stage?'rgba(200,147,90,.6)':'#2a1a0d')+';background:'+(s===stage?'rgba(200,147,90,.15)':'#111')+';color:'+(s===stage?'#C8935A':'#555')+';font-size:10px;font-weight:700;cursor:pointer;font-family:inherit">'
+          +st.icon+' '+st.label+'</button>';
+      }).join('')
+    +'</div></div>'
+    +'</div>'
+
+    +'<div>'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:10px">📋 Recent Daily Reports</div>'
+    +recentReports
+    +(cos.length?'<div style="margin-top:12px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:8px">📝 Change Orders</div>'
+      +cos.map(function(co){ return '<div style="display:flex;justify-content:space-between;padding:8px;background:#1a1008;border-radius:8px;margin-bottom:4px;border-left:3px solid #FF9800">'
+        +'<span style="font-size:12px;color:#ddd">'+esc((co.desc||co.reason||'CO').slice(0,50))+'</span>'
+        +'<span style="font-size:12px;font-weight:700;color:#FF9800">$'+((+co.amount||0).toLocaleString())+'</span>'
+        +'</div>';}).join('')+'</div>':'')
+    +'</div>'
+
+    +'</div>'
+    +'</div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function setLifecycleStage(projId, newStage) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) return;
+  proj.lifecycleStage = newStage;
+  // Map to status
+  var statusMap = { DRAFT:'Pending', ESTIMATE:'Estimate', PENDING_APPROVAL:'Pending',
+    APPROVED:'Pending', MATERIALS_TAKEOFF:'Pending', MATERIALS_ORDERED:'Pending',
+    IN_PROGRESS:'In Progress', INSPECTION:'In Progress', COMPLETED:'Completed' };
+  proj.status = statusMap[newStage] || proj.status;
+  if(typeof logChange==='function') logChange('STAGE_CHANGE','project',projId,{stage:newStage});
+  saveToLocal&&saveToLocal();
+  broadcastData&&broadcastData();
+  // Refresh panel
+  openProjectLifecycle(projId);
+  if(typeof toast==='function') toast('Stage → '+newStage.replace(/_/g,' '));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS ROSTER — Staff, Suppliers, Contractors, Workers
+══════════════════════════════════════════════════════════════ */
+
+var ROSTER_TYPES = {
+  employee:    { label:'Employee',    icon:'👷', color:'#C8935A' },
+  contractor:  { label:'Contractor',  icon:'🔧', color:'#2196F3' },
+  supplier:    { label:'Supplier',    icon:'🚛', color:'#FF9800' },
+  subcontractor:{ label:'Sub',        icon:'⚙️', color:'#9C27B0' },
+  inspector:   { label:'Inspector',   icon:'🔍', color:'#00BCD4' },
+  client:      { label:'Client',      icon:'👤', color:'#EF5350' },
+};
+
+function openRoster() {
+  var ex = document.getElementById('roster-panel');
+  if (ex) ex.remove();
+  if (!DB.roster) DB.roster = [];
+  renderRosterPanel();
+}
+
+function renderRosterPanel() {
+  var ex = document.getElementById('roster-panel');
+  if (ex) ex.remove();
+
+  var filter   = window._rosterFilter || 'all';
+  var search   = (window._rosterSearch||'').toLowerCase();
+  var roster   = (DB.roster||[]).filter(function(r) {
+    if (filter !== 'all' && r.type !== filter) return false;
+    if (search && !(r.name||'').toLowerCase().includes(search)
+               && !(r.company||'').toLowerCase().includes(search)
+               && !(r.trade||'').toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  var cards = roster.length
+    ? roster.map(function(r) {
+        var rt = ROSTER_TYPES[r.type] || {icon:'👤',label:r.type,color:'#888'};
+        return '<div style="background:#1a1008;border:1px solid #2a1a0d;border-radius:12px;padding:14px;cursor:pointer" onclick="openRosterMember(\''+r.id+'\')">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">'
+          +'<div style="display:flex;align-items:center;gap:10px">'
+          +'<div style="width:44px;height:44px;border-radius:50%;background:'+rt.color+'22;border:1px solid '+rt.color+'44;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+rt.icon+'</div>'
+          +'<div><div style="font-size:14px;font-weight:800;color:#F5E6D3">'+esc(r.name||'—')+'</div>'
+          +'<div style="font-size:11px;color:#604030">'+esc(r.company||r.trade||'')+'</div></div>'
+          +'</div>'
+          +'<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:99px;background:'+rt.color+'22;color:'+rt.color+'">'+rt.label+'</span>'
+          +'</div>'
+          +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:#604030">'
+          +(r.phone?'<div>📞 '+esc(r.phone)+'</div>':'')
+          +(r.email?'<div>✉️ '+esc(r.email)+'</div>':'')
+          +(r.trade?'<div>🔧 '+esc(r.trade)+'</div>':'')
+          +(r.license?'<div>📄 '+esc(r.license)+'</div>':'')
+          +(r.rate?'<div>💰 $'+esc(r.rate)+'/hr</div>':'')
+          +(r.insurance?'<div>🛡️ Insured</div>':'')
+          +'</div>'
+          +(r.notes?'<div style="font-size:11px;color:#555;margin-top:6px;padding-top:6px;border-top:1px solid #2a1a0d">'+esc(r.notes.slice(0,100))+'</div>':'')
+          +'</div>';
+      }).join('')
+    : '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#555;font-size:14px">No records yet — tap + Add to get started</div>';
+
+  var filterBtns = ['all'].concat(Object.keys(ROSTER_TYPES)).map(function(t) {
+    var rt = t === 'all' ? {icon:'👥',label:'All',color:'#C8935A'} : ROSTER_TYPES[t];
+    var active = filter === t;
+    return '<button onclick="window._rosterFilter=\''+t+'\';renderRosterPanel()" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid '+(active?rt.color+' ':'#2a1a0d')+';background:'+(active?rt.color+'22':'transparent')+';color:'+(active?rt.color:'#604030')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'
+      +rt.icon+' '+rt.label+'</button>';
+  }).join('');
+
+  var html = '<div id="roster-panel" style="position:fixed;inset:0;z-index:9100;background:#0f0803;overflow-y:auto;font-family:inherit">'
+
+    +'<div style="position:sticky;top:0;z-index:10;background:#0f0803;border-bottom:1px solid #3d2410;padding:12px 20px">'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
+    +'<button onclick="document.getElementById(\'roster-panel\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:13px;font-weight:700;padding:7px 14px;cursor:pointer;font-family:inherit">← Back</button>'
+    +'<div style="flex:1"><div style="font-size:17px;font-weight:900;color:#F5E6D3">👥 Roster</div>'
+    +'<div style="font-size:11px;color:#555">Staff · Employees · Contractors · Suppliers</div></div>'
+    +'<button onclick="openAddRosterMember()" style="background:#C8935A;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:800;padding:7px 16px;cursor:pointer;font-family:inherit">+ Add</button>'
+    +'</div>'
+    +'<input id="roster-search" value="'+(window._rosterSearch||'')+'" placeholder="Search name, company, trade..." oninput="window._rosterSearch=this.value;renderRosterPanel()" style="width:100%;box-sizing:border-box;padding:9px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:13px;font-family:inherit;margin-bottom:8px">'
+    +'<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">'+filterBtns+'</div>'
+    +'</div>'
+
+    +'<div style="padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">'
+    +cards
+    +'</div></div>';
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function openRosterMember(id) {
+  var r = (DB.roster||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  var rt = ROSTER_TYPES[r.type]||{icon:'👤',label:'',color:'#888'};
+  function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  var mo = document.createElement('div');
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  mo.id = 'roster-member-modal';
+
+  var fields = [
+    ['Name','name','text'], ['Type','type','select-type'], ['Company','company','text'],
+    ['Trade / Role','trade','text'], ['Phone','phone','tel'], ['Email','email','email'],
+    ['License #','license','text'], ['Hourly Rate','rate','number'],
+    ['Insurance Exp.','insurance_exp','text'], ['Address','address','text'],
+    ['Notes','notes','textarea']
+  ];
+
+  var form = fields.map(function(f){
+    var k=f[0], key=f[1], type=f[2];
+    var val = r[key]||'';
+    var input = type==='textarea'
+      ? '<textarea id="rm-'+key+'" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid #2a1a0d;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit;resize:vertical;min-height:60px">'+esc(val)+'</textarea>'
+      : type==='select-type'
+      ? '<select id="rm-'+key+'" style="width:100%;padding:8px;border-radius:8px;border:1px solid #2a1a0d;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit">'
+        + Object.keys(ROSTER_TYPES).map(function(t){ return '<option value="'+t+'"'+(val===t?' selected':'')+'>'+ROSTER_TYPES[t].icon+' '+ROSTER_TYPES[t].label+'</option>'; }).join('')
+        +'</select>'
+      : '<input type="'+type+'" id="rm-'+key+'" value="'+esc(val)+'" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid #2a1a0d;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit"/>';
+    return '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;color:#604030;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">'+k+'</div>'+input+'</div>';
+  }).join('');
+
+  mo.innerHTML = '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:22px;max-width:500px;width:100%;max-height:90vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:16px;font-weight:800;color:#F5E6D3">'+rt.icon+' '+esc(r.name)+'</div>'
+    +'<button onclick="document.getElementById(\'roster-member-modal\').remove()" style="background:none;border:none;color:#555;font-size:20px;cursor:pointer">✕</button>'
+    +'</div>'
+    +form
+    +'<div style="display:flex;gap:8px;margin-top:16px">'
+    +'<button onclick="saveRosterMember(\''+id+'\')" style="flex:2;padding:12px;border-radius:10px;border:none;background:#C8935A;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save</button>'
+    +'<button onclick="deleteRosterMember(\''+id+'\')" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(239,83,80,.4);background:transparent;color:#EF5350;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Delete</button>'
+    +'</div></div>';
+  document.body.appendChild(mo);
+}
+
+function openAddRosterMember() {
+  // Create blank entry and open editor
+  if (!DB.roster) DB.roster = [];
+  var newMember = { id: typeof uid==='function'?uid():'R'+Date.now(), type:'employee', name:'', company:'', trade:'', phone:'', email:'', license:'', rate:'', insurance_exp:'', address:'', notes:'' };
+  DB.roster.push(newMember);
+  openRosterMember(newMember.id);
+}
+
+function saveRosterMember(id) {
+  var r = (DB.roster||[]).find(function(x){ return x.id===id; });
+  if (!r) return;
+  var fields = ['name','type','company','trade','phone','email','license','rate','insurance_exp','address','notes'];
+  fields.forEach(function(k) {
+    var el = document.getElementById('rm-'+k);
+    if (el) r[k] = el.value.trim();
+  });
+  document.getElementById('roster-member-modal')?.remove();
+  saveToLocal&&saveToLocal();
+  broadcastData&&broadcastData();
+  renderRosterPanel();
+  toast&&toast('👤 '+(r.name||'Member')+' saved');
+}
+
+function deleteRosterMember(id) {
+  DB.roster = (DB.roster||[]).filter(function(r){ return r.id!==id; });
+  document.getElementById('roster-member-modal')?.remove();
+  saveToLocal&&saveToLocal();
+  broadcastData&&broadcastData();
+  renderRosterPanel();
+  toast&&toast('Roster entry deleted');
 }
 
 </script>
@@ -5567,11 +6399,12 @@ function openNewProjectDesktop() {
     +'<div class="fl"><div class="flbl">Email</div><input class="fc" type="email" id="np2-email" placeholder="client@email.com"/></div>'
     +'<div class="fl"><div class="flbl">Phone</div><input class="fc" type="tel" id="np2-phone" placeholder="(201) 555-0100"/></div>'
     +'<div class="fl"><div class="flbl">Contract Value ($)</div><input class="fc" type="number" id="np2-contract" placeholder="0.00" min="0" step="0.01"/></div>'
-    +'<div class="fl fl-full"><div class="flbl">Project Notes</div><textarea class="fc" id="np2-notes" placeholder="Scope summary, special instructions..."></textarea></div>'
+    +'<div class="fl fl-full"><div class="flbl">Project Notes <button type="button" onclick="pbVToggle(this)" data-vfield="np-notes" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:6px;border:1px solid rgba(239,83,80,.3);background:rgba(239,83,80,.08);color:#EF9090;font-size:9px;font-weight:700;cursor:pointer;vertical-align:middle;font-family:inherit">🎤</button></div><textarea class="fc" id="np2-notes" placeholder="Scope summary, special instructions..."></textarea></div>'
     +'</div>'
     +'<div class="mf"><button class="btn btn-o" onclick="document.getElementById(\'new-proj-modal\').remove()">Cancel</button><button class="btn btn-g" onclick="saveNewProjectDesktop()">🏗️ Create Project</button></div>'
     +'</div>';
   document.body.appendChild(mo);
+  if(typeof pbVoiceAttachModal==='function') pbVoiceAttachModal();
   initTradesGrid('np2-trades-grid','np2-trade');
 }
 
