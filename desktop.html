@@ -212,7 +212,7 @@ function showAuthScreen() {
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#C8935A,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
         <div style="font-size:13px;color:#A08060;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v9.4</div>
+        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v9.5</div>
       </div>
 
       <!-- App switcher -->
@@ -1181,6 +1181,7 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
+
 <!-- auth-dup -->
 
 
@@ -1503,7 +1504,7 @@ textarea.fc{resize:vertical;min-height:80px}
       <span id="t-weather-ico" style="font-size:18px;line-height:1">🌤</span>
       <span id="t-weather-txt">Loading...</span>
     </div>
-    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v9.4</div>
+    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v9.5</div>
   </div>
   <div class="t-actions">
     <div class="alert-pill" id="alerts-pill" onclick="showView('safety')" style="display:none">⚠️ <span id="alerts-count">0</span></div>
@@ -6291,6 +6292,348 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 1000);
 });
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS CRITICAL FIX — Voice, API Key, DPR, Annotation
+   Injected as final script — overwrites/fills all missing pieces
+══════════════════════════════════════════════════════════════ */
+
+/* ══ 1. VOICE ENGINE — Complete, self-contained ══════════════ */
+(function() {
+  var _R = null, _active = false, _targetId = null, _finalTxt = '', _onFinal = null;
+
+  function getEl(id) { return id ? document.getElementById(id) : null; }
+
+  window.pbVoiceSupported = function() {
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  };
+
+  window.pbVoiceStart = function(targetId, onFinal) {
+    if (_active) { pbVoiceStop(); return; }
+    if (!pbVoiceSupported()) {
+      if (typeof toast !== 'undefined') toast('🎤 Voice needs Chrome or Safari 14.5+');
+      return;
+    }
+    _targetId = targetId; _finalTxt = ''; _onFinal = onFinal || null; _active = true;
+    window._pbvActive = true; window._pbvTargetId = targetId;
+
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    _R = new SR();
+    _R.lang = 'en-US'; _R.continuous = true; _R.interimResults = true;
+
+    _R.onresult = function(e) {
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) _finalTxt += e.results[i][0].transcript + ' ';
+        else interim += e.results[i][0].transcript;
+      }
+      var el = getEl(_targetId);
+      if (el) el.value = _finalTxt + interim;
+      // Update live display spans
+      document.querySelectorAll('[data-voice-live="' + _targetId + '"]').forEach(function(s) {
+        s.textContent = (_finalTxt + interim).trim();
+      });
+      pbVoiceUpdateBtns(true, _targetId);
+    };
+
+    _R.onerror = function(e) {
+      if (e.error === 'no-speech') return;
+      if (e.error === 'not-allowed') {
+        toast && toast('🎤 Mic permission denied — allow microphone in browser settings');
+        pbVoiceStop();
+      }
+    };
+
+    _R.onend = function() {
+      if (_active) try { _R.start(); } catch(e2) {}
+    };
+
+    try {
+      _R.start();
+      pbVoiceUpdateBtns(true, _targetId);
+    } catch(e) {
+      _active = false; window._pbvActive = false;
+      toast && toast('🎤 Error: ' + e.message);
+    }
+  };
+
+  window.pbVoiceStop = function() {
+    _active = false; window._pbvActive = false;
+    if (_R) { try { _R.stop(); } catch(e) {} _R = null; }
+    pbVoiceUpdateBtns(false, '');
+    if (_onFinal && _finalTxt.trim()) _onFinal(_finalTxt.trim());
+    _finalTxt = '';
+  };
+
+  window.pbVoiceUpdateBtns = function(on, tid) {
+    document.querySelectorAll('[data-pbv-btn],[data-voice-btn]').forEach(function(b) {
+      var t = b.getAttribute('data-pbv-target') || b.getAttribute('data-vfield') || b.getAttribute('data-voice-for');
+      if (on && t === tid) {
+        b.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:#EF5350;animation:pbvPulse .8s infinite"></span>Stop</span>';
+        b.style.color = '#EF5350'; b.style.borderColor = '#EF5350';
+      } else {
+        b.textContent = '🎤';
+        b.style.color = '#C8935A'; b.style.borderColor = 'rgba(200,147,90,.4)';
+      }
+    });
+  };
+
+  /* pbVToggle — called by onclick="pbVToggle(this)" */
+  window.pbVToggle = function(btn) {
+    var fid = btn.getAttribute('data-vfield') || btn.getAttribute('data-pbv-target') || btn.getAttribute('data-voice-for');
+    if (!fid) return;
+    btn.setAttribute('data-pbv-btn', '1');
+    btn.setAttribute('data-pbv-target', fid);
+    if (_active && _targetId === fid) {
+      pbVoiceStop();
+    } else {
+      if (_active) pbVoiceStop();
+      pbVoiceStart(fid, function(t) {
+        var el = getEl(fid);
+        if (el) el.value = el.value ? el.value + ' ' + t : t;
+      });
+    }
+  };
+
+  /* pbVoiceAttach — wraps a field with a mic button */
+  window.pbVoiceAttach = function(targetId) {
+    var el = getEl(targetId);
+    if (!el || el.parentElement.querySelector('[data-pbv-btn]')) return;
+    var btn = document.createElement('button');
+    btn.type = 'button'; btn.textContent = '🎤';
+    btn.setAttribute('data-pbv-btn', '1');
+    btn.setAttribute('data-pbv-target', targetId);
+    btn.style.cssText = 'background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.4);border-radius:6px;color:#C8935A;font-size:13px;padding:3px 10px;cursor:pointer;flex-shrink:0;font-family:inherit';
+    btn.onclick = function() { pbVToggle(this); };
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;gap:6px;align-items:flex-start;width:100%';
+    el.parentNode.insertBefore(wrap, el);
+    wrap.appendChild(el); wrap.appendChild(btn);
+  };
+
+  window.pbVoiceAutoAttach = function() {
+    var IDS = ['np-notes','rpt-completed','rpt-incomplete','rpt-tomorrow',
+               'ph-caption','est-scope','est-notes','co-desc','co-reason',
+               'scope-input','ep-notes','aw-notes','task-notes'];
+    IDS.forEach(function(id) { window.pbVoiceAttach(id); });
+  };
+
+  window.pbVoiceAttachModal = function() {
+    setTimeout(window.pbVoiceAutoAttach, 150);
+  };
+
+  /* Pulse animation */
+  if (!document.getElementById('pbv-style')) {
+    var s = document.createElement('style');
+    s.id = 'pbv-style';
+    s.textContent = '@keyframes pbvPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}}';
+    document.head.appendChild(s);
+  }
+
+  /* Auto-run on page load */
+  if (document.readyState !== 'loading') {
+    setTimeout(window.pbVoiceAutoAttach, 1000);
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(window.pbVoiceAutoAttach, 1000);
+    });
+  }
+})();
+
+/* ══ 2. DPR VOICE + PHOTOS ═══════════════════════════════════ */
+window._dprPhotos = window._dprPhotos || [];
+
+window.pbDPRVoiceToggle = function() {
+  var btn    = document.getElementById('dpr-voice-btn');
+  var status = document.getElementById('dpr-voice-status');
+  var trans  = document.getElementById('dpr-voice-transcript');
+
+  if (!pbVoiceSupported()) {
+    toast && toast('🎤 Use Chrome or Safari');
+    return;
+  }
+
+  if (window._pbvActive) {
+    pbVoiceStop();
+    if (btn) { btn.textContent = 'Record'; btn.style.color = '#EF9090'; btn.style.borderColor = 'rgba(239,83,80,.25)'; }
+    if (status) status.textContent = 'Recording stopped';
+  } else {
+    if (btn) { btn.textContent = '⏹ Stop'; btn.style.color = '#EF5350'; btn.style.borderColor = '#EF5350'; }
+    if (status) status.textContent = '🔴 Recording — tap Stop when done';
+    pbVoiceStart(null, function(finalText) {
+      if (trans) { trans.textContent = finalText; trans.style.fontStyle = 'normal'; trans.style.color = 'var(--text, #ccc)'; }
+      // Append to rpt-completed field
+      var completedEl = document.getElementById('rpt-completed');
+      if (completedEl && finalText) {
+        completedEl.value = completedEl.value
+          ? completedEl.value + '\n[Voice] ' + finalText
+          : '[Voice] ' + finalText;
+      }
+      if (btn) { btn.textContent = 'Record'; btn.style.color = '#EF9090'; }
+      if (status) { var wc = finalText.trim().split(/\s+/).length; status.textContent = '✅ ' + wc + ' words added to report'; }
+    });
+    // Redirect onresult to transcript display
+    if (window._R) {
+      var origResult = window._R.onresult;
+      window._R.onresult = function(e) {
+        origResult && origResult(e);
+        var text = (window._finalTxt || '') + '';
+        if (trans) trans.textContent = text;
+        var words = text.trim().split(/\s+/).filter(Boolean).length;
+        if (status) status.textContent = '🔴 ' + words + ' words';
+      };
+    }
+  }
+};
+
+window.pbDPRAddPhotos = function(input) {
+  if (!window._dprPhotos) window._dprPhotos = [];
+  var grid  = document.getElementById('dpr-photos-grid');
+  var count = document.getElementById('dpr-photo-count');
+  if (!input || !input.files) return;
+
+  Array.from(input.files).forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    var r = new FileReader();
+    r.onload = function(e) {
+      var src = e.target.result;
+      if (!src || src.length < 200) return;
+      window._dprPhotos.push({
+        src:     src,
+        time:    typeof now !== 'undefined' ? now() : new Date().toISOString(),
+        caption: file.name,
+        geo:     (typeof currentGeo !== 'undefined' && currentGeo) ? currentGeo.display || '' : ''
+      });
+      // Add thumbnail to grid
+      if (grid) {
+        var img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--divider,#333)';
+        grid.appendChild(img);
+      }
+      if (count) count.textContent = '(' + window._dprPhotos.length + ')';
+    };
+    r.readAsDataURL(file);
+  });
+};
+
+/* Reset DPR photos on modal open */
+var _origOpenDR = typeof openDailyReport !== 'undefined' ? openDailyReport : null;
+window.openDailyReport = function(projId, prefill) {
+  window._dprPhotos = [];
+  if (_origOpenDR) _origOpenDR(projId, prefill);
+  setTimeout(function() {
+    var grid = document.getElementById('dpr-photos-grid');
+    if (grid) grid.innerHTML = '';
+    var count = document.getElementById('dpr-photo-count');
+    if (count) count.textContent = '(0)';
+    pbVoiceAttachModal && pbVoiceAttachModal();
+  }, 200);
+};
+
+/* ══ 3. API KEY HELPERS ══════════════════════════════════════ */
+window.pbGetApiKey = function() {
+  return localStorage.getItem('pb_anthropic_key') || '';
+};
+window.pbSetApiKey = function(key) {
+  if (key) localStorage.setItem('pb_anthropic_key', key.trim());
+  else localStorage.removeItem('pb_anthropic_key');
+};
+window.pbSaveApiKey = function() {
+  var key = document.getElementById('api-key-input') ? document.getElementById('api-key-input').value.trim() : '';
+  if (!key || !key.startsWith('sk-')) {
+    alert('Please enter a valid Anthropic API key starting with sk-');
+    return;
+  }
+  pbSetApiKey(key);
+  document.getElementById('api-key-modal') && document.getElementById('api-key-modal').remove();
+  toast && toast('✅ API key saved — running analysis...');
+  if (typeof window._pbApiKeyCallback === 'function') window._pbApiKeyCallback();
+};
+window.pbPromptApiKey = function(onSuccess) {
+  document.getElementById('api-key-modal') && document.getElementById('api-key-modal').remove();
+  var mo = document.createElement('div');
+  mo.id = 'api-key-modal';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  mo.innerHTML =
+    '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:24px;max-width:420px;width:100%">'
+    + '<div style="font-size:18px;font-weight:800;color:#F5E6D3;margin-bottom:6px">🤖 Anthropic API Key Required</div>'
+    + '<div style="font-size:13px;color:#A08060;line-height:1.6;margin-bottom:16px">'
+    + 'The AI Scope Analyzer needs your Anthropic API key.<br><br>'
+    + '1. Go to <strong style="color:#C8935A">console.anthropic.com</strong><br>'
+    + '2. Sign up → API Keys → Create Key<br>'
+    + '3. Paste below (stored only on this device)</div>'
+    + '<input id="api-key-input" type="password" placeholder="sk-ant-api03-..." value="' + (pbGetApiKey()||'') + '" '
+    + 'style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:monospace;margin-bottom:14px"/>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button onclick="document.getElementById(\'api-key-modal\').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #3d2410;background:transparent;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    + '<a href="https://console.anthropic.com" target="_blank" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(200,147,90,.4);background:rgba(200,147,90,.1);color:#C8935A;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center">Get Key →</a>'
+    + '<button onclick="pbSaveApiKey()" style="flex:1;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">Save & Run</button>'
+    + '</div></div>';
+  document.body.appendChild(mo);
+  window._pbApiKeyCallback = onSuccess;
+  setTimeout(function() { document.getElementById('api-key-input') && document.getElementById('api-key-input').focus(); }, 100);
+};
+
+/* ══ 4. ANNOTATION / MARKUP FIX ═════════════════════════════ */
+/* Re-wire canvas events after the viewer opens */
+var _origOpenPhotoViewer = typeof openPhotoViewer !== 'undefined' ? openPhotoViewer : null;
+function pbRewireAnnotation() {
+  setTimeout(function() {
+    var canvas = document.getElementById('anno-canvas');
+    if (!canvas || canvas._pbWired) return;
+    canvas._pbWired = true;
+    // Force pointer events on canvas
+    canvas.style.pointerEvents = 'all';
+    canvas.style.touchAction   = 'none';
+    // Trigger resize
+    if (typeof annoResize === 'function') annoResize();
+    console.log('[PB] Annotation canvas rewired');
+  }, 300);
+}
+
+/* Watch for annotation modal opening */
+var _moObs = new MutationObserver(function(muts) {
+  muts.forEach(function(m) {
+    m.addedNodes.forEach(function(n) {
+      if (n.id === 'photo-viewer-modal' || (n.querySelector && n.querySelector('#anno-canvas'))) {
+        pbRewireAnnotation();
+      }
+    });
+  });
+});
+_moObs.observe(document.body, { childList: true });
+
+/* Also fix drawing viewer canvas */
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  // If someone clicks on a drawing card, try to open fullscreen
+  if (t.closest && t.closest('[data-drawing-id]')) {
+    var card = t.closest('[data-drawing-id]');
+    var id = card.getAttribute('data-drawing-id');
+    if (typeof openDrawingFullscreen === 'function' && id) {
+      e.stopPropagation();
+      openDrawingFullscreen(id);
+    }
+  }
+}, true);
+
+/* ══ 5. SCOPE ANALYZER — ensure pbGetApiKey available ════════ */
+/* patch runScopeAnalysis to use window.pbGetApiKey */
+if (typeof runScopeAnalysis !== 'undefined') {
+  var _origRSA = runScopeAnalysis;
+  window.runScopeAnalysis = function(projId) {
+    if (!window.pbGetApiKey || !window.pbGetApiKey()) {
+      window.pbPromptApiKey(function() { window.runScopeAnalysis(projId); });
+      return;
+    }
+    _origRSA(projId);
+  };
+}
+
+console.log('[PB] Critical fix v9.5 loaded — voice, DPR, API key, annotation');
+
 </script>
 </body>
 </html>
