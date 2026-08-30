@@ -212,7 +212,7 @@ function showAuthScreen() {
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#C8935A,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
         <div style="font-size:13px;color:#A08060;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v10.4</div>
+        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v10.5</div>
       </div>
 
       <!-- App switcher -->
@@ -1520,7 +1520,7 @@ textarea.fc{resize:vertical;min-height:80px}
       <span id="t-weather-ico" style="font-size:18px;line-height:1">🌤</span>
       <span id="t-weather-txt">Loading...</span>
     </div>
-    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v10.4</div>
+    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v10.5</div>
   </div>
   <div class="t-actions">
     <div class="alert-pill" id="alerts-pill" onclick="showView('safety')" style="display:none">⚠️ <span id="alerts-count">0</span></div>
@@ -6872,6 +6872,459 @@ function pbSetFontSize(size) {
     if (sl) sl.value = saved;
   });
 })();
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS — PROJECT SECTIONS + CHECKLIST + PHOTOS
+   Works in both Field App and Desktop Command Center
+
+   Data structure:
+   DB.sections = [{
+     id, projectId, name, order,
+     items: [{ id, desc, done, photos:[{src,caption,ts}],
+               notes, completedBy, completedAt, photoRequired }]
+   }]
+══════════════════════════════════════════════════════════════ */
+
+/* ── Helpers ── */
+function secEsc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function secUid(){ return 'sc'+Math.random().toString(36).slice(2,9)+Date.now().toString(36); }
+function secNow(){ return new Date().toISOString(); }
+function secSave(){ if(typeof saveToLocal==='function')saveToLocal(); if(typeof broadcastData==='function')broadcastData(); }
+
+/* ── Init sections for a project ── */
+function secGetSections(projId){
+  if(!DB.sections) DB.sections=[];
+  return DB.sections.filter(function(s){return s.projectId===projId;}).sort(function(a,b){return (a.order||0)-(b.order||0);});
+}
+
+/* ══ MAIN PANEL — opens full-screen sections manager ════════ */
+function openProjectSections(projId) {
+  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+  if (!proj) return;
+  var ex = document.getElementById('sections-panel');
+  if (ex) ex.remove();
+
+  var panel = document.createElement('div');
+  panel.id  = 'sections-panel';
+  panel.style.cssText = 'position:fixed;inset:0;z-index:9300;background:#0f0803;overflow-y:auto;font-family:inherit';
+  panel.innerHTML = secBuildPanel(projId, proj);
+  document.body.appendChild(panel);
+}
+
+function secBuildPanel(projId, proj){
+  var sections = secGetSections(projId);
+  var totalItems = 0, doneItems = 0;
+  sections.forEach(function(s){
+    (s.items||[]).forEach(function(it){
+      totalItems++;
+      if(it.done) doneItems++;
+    });
+  });
+  var pct = totalItems ? Math.round(doneItems/totalItems*100) : 0;
+
+  var sectionsHtml = sections.length
+    ? sections.map(function(sec){ return secBuildSection(sec, projId); }).join('')
+    : '<div style="text-align:center;padding:40px 20px;color:#604030;font-size:14px">No sections yet — tap <strong>+ Add Section</strong> to get started</div>';
+
+  return '<div>'
+    /* ── Header ── */
+    +'<div style="position:sticky;top:0;z-index:10;background:#0f0803;border-bottom:1px solid #3d2410;padding:12px 16px;display:flex;align-items:center;gap:10px">'
+    +'<button onclick="document.getElementById(\'sections-panel\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:13px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">← Back</button>'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="font-size:16px;font-weight:900;color:#F5E6D3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+secEsc(proj.name)+'</div>'
+    +'<div style="font-size:10px;color:#604030">Work Sections & Checklists</div>'
+    +'</div>'
+    +'<button onclick="secAddSection(\''+projId+'\')" style="background:#C8935A;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;font-family:inherit;white-space:nowrap">+ Add Section</button>'
+    +'</div>'
+    /* ── Progress bar ── */
+    +'<div style="padding:12px 16px;border-bottom:1px solid #2a1a0d;background:#111">'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#604030;margin-bottom:5px">'
+    +'<span>Overall Completion</span><span style="font-weight:800;color:#C8935A">'+pct+'% &nbsp;('+doneItems+'/'+totalItems+' items)</span>'
+    +'</div>'
+    +'<div style="height:6px;background:#1a1008;border-radius:99px;overflow:hidden">'
+    +'<div style="height:6px;width:'+pct+'%;background:linear-gradient(90deg,#C8935A,#8B6240);border-radius:99px;transition:width .4s"></div>'
+    +'</div>'
+    +'</div>'
+    /* ── Sections ── */
+    +'<div id="sec-list-'+projId+'" style="padding:12px 16px">'
+    +sectionsHtml
+    +'</div></div>';
+}
+
+function secBuildSection(sec, projId){
+  var items   = sec.items || [];
+  var done    = items.filter(function(it){return it.done;}).length;
+  var pct     = items.length ? Math.round(done/items.length*100) : 0;
+  var allDone = items.length > 0 && done === items.length;
+
+  var itemsHtml = items.map(function(it){ return secBuildItem(it, sec.id, projId); }).join('');
+
+  return '<div id="sec-'+sec.id+'" style="background:#1a1008;border:1px solid #3d2410;border-radius:12px;margin-bottom:14px;overflow:hidden">'
+    /* Section header */
+    +'<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:'+(allDone?'rgba(200,147,90,.12)':'#1a1008')+';border-bottom:1px solid #2a1a0d">'
+    +'<div style="width:36px;height:36px;border-radius:8px;background:'+(allDone?'rgba(200,147,90,.2)':'rgba(255,255,255,.04)')+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(allDone?'✅':'📋')+'</div>'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="font-size:14px;font-weight:800;color:#F5E6D3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+secEsc(sec.name)+'</div>'
+    +'<div style="font-size:10px;color:#604030;margin-top:1px">'+done+'/'+items.length+' completed &nbsp;·&nbsp; '+pct+'%</div>'
+    +'</div>'
+    /* Section progress mini-bar */
+    +'<div style="width:60px;height:4px;background:#2a1a0d;border-radius:99px;overflow:hidden;flex-shrink:0">'
+    +'<div style="height:4px;width:'+pct+'%;background:#C8935A;border-radius:99px"></div>'
+    +'</div>'
+    /* Section actions */
+    +'<button onclick="secAddItem(\''+sec.id+'\',\''+projId+'\')" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:7px;color:#C8935A;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;font-family:inherit;flex-shrink:0">+ Item</button>'
+    +'<button onclick="secEditSection(\''+sec.id+'\',\''+projId+'\')" style="background:none;border:1px solid #2a1a0d;border-radius:7px;color:#604030;font-size:11px;padding:5px 8px;cursor:pointer;font-family:inherit;flex-shrink:0">✏️</button>'
+    +'<button onclick="secDeleteSection(\''+sec.id+'\',\''+projId+'\')" style="background:none;border:1px solid rgba(239,83,80,.2);border-radius:7px;color:#EF5350;font-size:11px;padding:5px 8px;cursor:pointer;font-family:inherit;flex-shrink:0">🗑</button>'
+    +'</div>'
+    /* Items list */
+    +'<div id="sec-items-'+sec.id+'" style="padding:0 14px">'
+    +(itemsHtml||'<div style="padding:12px 0;font-size:12px;color:#604030">No items yet — tap + Item to add checklist tasks</div>')
+    +'</div>'
+    +'</div>';
+}
+
+function secBuildItem(it, secId, projId){
+  var photos = it.photos || [];
+  return '<div id="sit-'+it.id+'" style="padding:10px 0;border-bottom:1px solid #111;display:flex;flex-direction:column;gap:6px">'
+    /* Row 1: checkbox + desc + actions */
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div onclick="secToggleItem(\''+it.id+'\',\''+secId+'\',\''+projId+'\')" '
+    +'style="width:22px;height:22px;border-radius:6px;border:2px solid '+(it.done?'#C8935A':'#3d2410')+';background:'+(it.done?'#C8935A':'transparent')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s">'
+    +(it.done?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg>':'')
+    +'</div>'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="font-size:13px;color:'+(it.done?'#604030':'#F5E6D3')+';text-decoration:'+(it.done?'line-through':'none')+';line-height:1.35;word-break:break-word">'+secEsc(it.desc)+'</div>'
+    +(it.completedBy?'<div style="font-size:9px;color:#3d2410;margin-top:2px">✅ '+secEsc(it.completedBy)+' · '+secEsc(it.completedAt||'')+'</div>':'')
+    +(it.notes?'<div style="font-size:11px;color:#604030;margin-top:2px;font-style:italic">'+secEsc(it.notes)+'</div>':'')
+    +'</div>'
+    /* Photo count badge */
+    +(photos.length?'<div style="font-size:10px;font-weight:700;color:#C8935A;flex-shrink:0">📸 '+photos.length+'</div>':'')
+    /* Actions */
+    +'<label style="cursor:pointer;flex-shrink:0" title="Add photo">'
+    +'<span style="background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.2);border-radius:6px;color:#C8935A;font-size:12px;padding:4px 8px">📷</span>'
+    +'<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="secAddPhoto(this,\''+it.id+'\',\''+secId+'\',\''+projId+'\')">'
+    +'</label>'
+    +'<button onclick="secEditItem(\''+it.id+'\',\''+secId+'\',\''+projId+'\')" style="background:none;border:1px solid #2a1a0d;border-radius:6px;color:#604030;font-size:11px;padding:4px 7px;cursor:pointer;flex-shrink:0">✏️</button>'
+    +'<button onclick="secDeleteItem(\''+it.id+'\',\''+secId+'\',\''+projId+'\')" style="background:none;border:1px solid rgba(239,83,80,.15);border-radius:6px;color:#EF5350;font-size:11px;padding:4px 7px;cursor:pointer;flex-shrink:0">✕</button>'
+    +'</div>'
+    /* Row 2: photo thumbnails */
+    +(photos.length?'<div style="display:flex;gap:5px;flex-wrap:wrap;padding-left:32px">'
+      +photos.map(function(ph,pi){
+        return '<div style="position:relative">'
+          +'<img src="'+ph.src+'" onclick="secViewPhoto(\''+it.id+'\','+pi+',\''+secId+'\',\''+projId+'\')" '
+          +'style="width:56px;height:56px;object-fit:cover;border-radius:7px;border:1px solid #3d2410;cursor:pointer"/>'
+          +'<button onclick="secDeletePhoto(\''+it.id+'\','+pi+',\''+secId+'\',\''+projId+'\')" '
+          +'style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:#EF5350;border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>'
+          +'</div>';
+      }).join('')
+      +'</div>':'')
+    +'</div>';
+}
+
+/* ══ ACTIONS ════════════════════════════════════════════════ */
+
+window.secAddSection = function(projId) {
+  var name = prompt('Section name (e.g. "Demo & Rough-In", "Waterproofing", "Tile"):');
+  if (!name || !name.trim()) return;
+  if (!DB.sections) DB.sections = [];
+  var maxOrder = Math.max(0, ...secGetSections(projId).map(function(s){return s.order||0;}));
+  DB.sections.push({ id:secUid(), projectId:projId, name:name.trim(), order:maxOrder+1, items:[] });
+  secSave();
+  secRefresh(projId);
+  toast && toast('📋 Section "'+name.trim()+'" added');
+};
+
+window.secEditSection = function(secId, projId) {
+  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
+  if (!sec) return;
+  var name = prompt('Rename section:', sec.name);
+  if (name === null) return;
+  if (name.trim()) sec.name = name.trim();
+  secSave(); secRefresh(projId);
+};
+
+window.secDeleteSection = function(secId, projId) {
+  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
+  if (!sec) return;
+  if (!confirm('Delete section "'+sec.name+'" and all its items?')) return;
+  DB.sections = (DB.sections||[]).filter(function(s){return s.id!==secId;});
+  secSave(); secRefresh(projId);
+  toast && toast('Section deleted');
+};
+
+window.secAddItem = function(secId, projId) {
+  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
+  if (!sec) return;
+
+  var mo = document.createElement('div');
+  mo.id  = 'sec-add-item-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9400;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
+  mo.innerHTML = '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:600px;max-height:70vh;overflow-y:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    +'<div style="font-size:15px;font-weight:800;color:#F5E6D3">+ Add Checklist Item</div>'
+    +'<button onclick="document.getElementById(\'sec-add-item-modal\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">Task Description *'
+    +'<button type="button" data-pbv-btn="1" data-pbv-target="sai-desc" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" style="background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.4);border-radius:5px;color:#C8935A;font-size:10px;padding:1px 7px;cursor:pointer;font-family:inherit;margin-left:8px;vertical-align:middle">🎤</button>'
+    +'</div>'
+    +'<input id="sai-desc" type="text" placeholder="Describe the work item..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit"/>'
+    +'</div>'
+    +'<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">Notes (optional)</div>'
+    +'<textarea id="sai-notes" rows="2" placeholder="Additional details..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit;resize:vertical"></textarea>'
+    +'</div>'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:12px;color:#A08060;cursor:pointer">'
+    +'<input type="checkbox" id="sai-photo-req" style="accent-color:#C8935A;width:16px;height:16px"> Require photo to mark complete'
+    +'</label>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById(\'sec-add-item-modal\').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #3d2410;background:transparent;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<button onclick="secSaveNewItem(\''+secId+'\',\''+projId+'\')" style="flex:2;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">+ Add Item</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+  setTimeout(function(){ document.getElementById('sai-desc')&&document.getElementById('sai-desc').focus(); }, 100);
+};
+
+window.secSaveNewItem = function(secId, projId) {
+  var desc = document.getElementById('sai-desc')?.value?.trim();
+  if (!desc) { toast&&toast('Description required'); return; }
+  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
+  if (!sec) return;
+  if (!sec.items) sec.items = [];
+  sec.items.push({
+    id:            secUid(),
+    desc:          desc,
+    notes:         document.getElementById('sai-notes')?.value?.trim() || '',
+    photoRequired: !!(document.getElementById('sai-photo-req')?.checked),
+    done:          false,
+    photos:        [],
+    createdAt:     secNow(),
+  });
+  document.getElementById('sec-add-item-modal')?.remove();
+  secSave(); secRefresh(projId);
+  toast && toast('✅ Item added');
+};
+
+window.secEditItem = function(itemId, secId, projId) {
+  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
+  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
+  if (!item) return;
+  var newDesc = prompt('Edit item:', item.desc);
+  if (newDesc===null) return;
+  if (newDesc.trim()) item.desc = newDesc.trim();
+  var newNotes = prompt('Notes (optional):', item.notes||'');
+  if (newNotes!==null) item.notes = newNotes.trim();
+  secSave(); secRefresh(projId);
+};
+
+window.secDeleteItem = function(itemId, secId, projId) {
+  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
+  if (!sec) return;
+  sec.items = (sec.items||[]).filter(function(it){return it.id!==itemId;});
+  secSave(); secRefresh(projId);
+};
+
+window.secToggleItem = function(itemId, secId, projId) {
+  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
+  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
+  if (!item) return;
+
+  // Require photo before marking done if set
+  if (!item.done && item.photoRequired && (!item.photos || !item.photos.length)) {
+    if (typeof toast !== 'undefined') toast('📸 This item requires a photo before marking complete');
+    // Trigger the file input
+    var el = document.getElementById('sit-'+itemId);
+    var inp = el && el.querySelector('input[type="file"]');
+    if (inp) inp.click();
+    return;
+  }
+
+  item.done = !item.done;
+  if (item.done) {
+    item.completedBy  = (typeof _currentUser!=='undefined'&&_currentUser) ? _currentUser.name : 'User';
+    item.completedAt  = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  } else {
+    delete item.completedBy; delete item.completedAt;
+  }
+  secSave();
+  // Fast update without full refresh
+  var el = document.getElementById('sit-'+itemId);
+  if (el) {
+    var sec2 = (DB.sections||[]).find(function(s){return s.id===secId;});
+    var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+    el.outerHTML = secBuildItem(item, secId, projId);
+  }
+  // Update section progress bar
+  secRefreshProgress(secId, projId);
+};
+
+window.secAddPhoto = function(input, itemId, secId, projId) {
+  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
+  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
+  if (!item) return;
+  if (!item.photos) item.photos = [];
+
+  Array.from(input.files).forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    var r = new FileReader();
+    r.onload = function(e) {
+      var src = e.target.result;
+      if (!src || src.length < 200) return;
+      item.photos.push({
+        src:     src,
+        caption: file.name,
+        ts:      secNow(),
+        addedBy: (typeof _currentUser!=='undefined'&&_currentUser)?_currentUser.name:'User',
+        geo:     (typeof currentGeo!=='undefined'&&currentGeo)?currentGeo.display||'':'',
+      });
+      // If photoRequired and not done, mark done now
+      if (item.photoRequired && !item.done) {
+        item.done = true;
+        item.completedBy = (typeof _currentUser!=='undefined'&&_currentUser)?_currentUser.name:'User';
+        item.completedAt = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        toast && toast('📸 Photo saved — item marked complete');
+      } else {
+        toast && toast('📸 Photo added');
+      }
+      secSave(); secRefresh(projId);
+    };
+    r.readAsDataURL(file);
+  });
+};
+
+window.secDeletePhoto = function(itemId, photoIdx, secId, projId) {
+  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
+  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
+  if (!item || !item.photos) return;
+  item.photos.splice(photoIdx, 1);
+  secSave(); secRefresh(projId);
+};
+
+window.secViewPhoto = function(itemId, photoIdx, secId, projId) {
+  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
+  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
+  if (!item || !item.photos[photoIdx]) return;
+  var ph = item.photos[photoIdx];
+
+  var mo = document.createElement('div');
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.95);display:flex;flex-direction:column;font-family:inherit';
+  mo.innerHTML = '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;background:#0f0803;border-bottom:1px solid #3d2410;flex-shrink:0">'
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:7px;color:#A08060;font-size:13px;font-weight:700;padding:6px 12px;cursor:pointer;font-family:inherit">← Close</button>'
+    +'<div style="flex:1;min-width:0;overflow:hidden">'
+    +'<div style="font-size:12px;color:#A08060;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+secEsc(item.desc)+'</div>'
+    +'<div style="font-size:10px;color:#604030">Photo '+(photoIdx+1)+' of '+item.photos.length+' &nbsp;·&nbsp; '+secEsc(ph.ts?ph.ts.slice(0,10):'')+(ph.addedBy?' · '+ph.addedBy:'')+'</div>'
+    +'</div>'
+    +'<a href="'+ph.src+'" download="photo-'+itemId+'-'+photoIdx+'.jpg" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:7px;color:#C8935A;font-size:11px;font-weight:700;padding:6px 12px;text-decoration:none">⬇ Save</a>'
+    +'</div>'
+    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px">'
+    +'<img src="'+ph.src+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px"/>'
+    +'</div>'
+    +(ph.caption&&ph.caption!=='photo'?'<div style="padding:10px 14px;font-size:12px;color:#604030;text-align:center;flex-shrink:0">'+secEsc(ph.caption)+'</div>':'');
+  document.body.appendChild(mo);
+};
+
+/* ── Refresh the sections panel in place ── */
+function secRefresh(projId) {
+  var panel = document.getElementById('sections-panel');
+  if (!panel) return;
+  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+  if (!proj) return;
+  panel.innerHTML = secBuildPanel(projId, proj);
+}
+
+function secRefreshProgress(secId, projId) {
+  // Update just the progress indicators without full rebuild
+  var sec     = (DB.sections||[]).find(function(s){return s.id===secId;});
+  var secEl   = document.getElementById('sec-'+secId);
+  if (!sec || !secEl) { secRefresh(projId); return; }
+  var items   = sec.items||[];
+  var done    = items.filter(function(it){return it.done;}).length;
+  var pct     = items.length ? Math.round(done/items.length*100) : 0;
+  var bar     = secEl.querySelector('[style*="background:#C8935A;border-radius:99px"]');
+  if (bar) bar.style.width = pct+'%';
+}
+
+/* ══ WIRE INTO BOTH APPS ════════════════════════════════════ */
+
+/* Field app: add Sections button to project card actions */
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    // Add Sections button to field project cards
+    document.querySelectorAll('.project-card').forEach(function(card) {
+      if (card.querySelector('.sec-btn')) return;
+      var oc = card.getAttribute('onclick')||'';
+      var m  = oc.match(/openFieldProjectDetail\('([^']+)'\)/);
+      var pid = m ? m[1] : null;
+      if (!pid) return;
+      var actDiv = card.querySelector('[onclick*="stopPropagation"]')?.parentElement
+                || card.querySelector('[style*="flex-wrap"]');
+      if (!actDiv) return;
+      var btn = document.createElement('button');
+      btn.className = 'sec-btn';
+      btn.textContent = '📋 Sections';
+      btn.style.cssText = 'padding:6px 12px;border-radius:7px;border:1px solid rgba(200,147,90,.3);background:rgba(200,147,90,.1);color:#C8935A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+      btn.onclick = function(e){ e.stopPropagation(); openProjectSections(pid); };
+      actDiv.appendChild(btn);
+    });
+
+    // Desktop: add Sections button to project cards
+    document.querySelectorAll('#proj-cards-grid .card').forEach(function(card) {
+      if (card.querySelector('.sec-btn')) return;
+      var oc = card.getAttribute('onclick')||'';
+      var m  = oc.match(/openProjectDetail\('([^']+)'\)/);
+      var pid = m ? m[1] : null;
+      if (!pid) return;
+      var lastBtn = card.querySelectorAll('button');
+      var lastEl  = lastBtn[lastBtn.length-1];
+      var btn = document.createElement('button');
+      btn.className = 'sec-btn';
+      btn.textContent = '📋 Sections';
+      btn.style.cssText = 'padding:5px 11px;border-radius:7px;border:1px solid rgba(200,147,90,.3);background:rgba(200,147,90,.1);color:#C8935A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;margin-right:4px';
+      btn.onclick = function(e){ e.stopPropagation(); openProjectSections(pid); };
+      if (lastEl && lastEl.parentElement) lastEl.parentElement.appendChild(btn);
+      else card.appendChild(btn);
+    });
+  }, 1200);
+});
+
+/* Also add to project detail panel when it opens */
+var _origOPD = typeof openProjectDetail!=='undefined' ? openProjectDetail : null;
+window.openProjectDetail = function(projId) {
+  if (_origOPD) _origOPD(projId);
+  setTimeout(function(){
+    var panel = document.getElementById('pdp');
+    if (!panel || panel.querySelector('.sec-detail-btn')) return;
+    var hdr = panel.querySelector('[style*="sticky"]');
+    if (!hdr) return;
+    var btn = document.createElement('button');
+    btn.className = 'sec-detail-btn';
+    btn.textContent = '📋 Sections';
+    btn.style.cssText = 'background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;font-family:inherit;white-space:nowrap';
+    btn.onclick = function(){ openProjectSections(projId); };
+    hdr.insertBefore(btn, hdr.querySelector('button:last-child'));
+  }, 100);
+};
+
+/* Also wire into openFieldProjectDetail */
+var _origOFPD = typeof openFieldProjectDetail!=='undefined' ? openFieldProjectDetail : null;
+window.openFieldProjectDetail = function(projId) {
+  if (_origOFPD) _origOFPD(projId);
+  setTimeout(function(){
+    var panel = document.getElementById('fpdp');
+    if (!panel || panel.querySelector('.sec-field-btn')) return;
+    var hdr = panel.querySelector('[style*="sticky"]');
+    if (!hdr) return;
+    var btn = document.createElement('button');
+    btn.className = 'sec-field-btn';
+    btn.textContent = '📋 Sections';
+    btn.style.cssText = 'background:#1a1008;border:1px solid #3d2410;border-radius:7px;color:#A08060;font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer;font-family:inherit;flex-shrink:0';
+    btn.onclick = function(){ openProjectSections(projId); };
+    hdr.appendChild(btn);
+  }, 100);
+};
+
+console.log('[PB] Sections v1.0 loaded');
+
 </script>
 </body>
 </html>
