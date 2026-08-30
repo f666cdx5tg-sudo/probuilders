@@ -122,7 +122,7 @@ function pbCloseEditEvent()    { var m=document.getElementById('edit-event-modal
 
 function _buildWsList(wsList) {
   return wsList.map(function(ws) {
-    return '<div data-wsid="' + ws.id + '" onclick="pbWsClick(this)" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#1a1008;border:1px solid #3d2410;cursor:pointer;margin-bottom:6px" id="ws-card-' + ws.id + '">'
+    return '<div data-wsid="' + ws.id + '" onclick="pbWsClick(this)" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:#231508;border:1px solid #3d2410;cursor:pointer;margin-bottom:6px" id="ws-card-' + ws.id + '">'
       + '<div style="width:42px;height:42px;border-radius:10px;background:' + ws.color + ';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏗️</div>'
       + '<div style="flex:1"><div style="font-size:14px;font-weight:700;color:#F5E6D3">' + ws.name + '</div>'
       + '<div style="font-size:11px;color:#A08060;margin-top:2px">Code: ' + ws.id + ' · ' + ws.members.length + ' member' + (ws.members.length !== 1 ? 's' : '') + '</div></div>'
@@ -207,19 +207,19 @@ function showAuthScreen() {
   var wsList = getWorkspaceList();
 
   div.innerHTML = `
-    <div style="width:100%;max-width:480px;padding:24px 20px;background:#150c07">
+    <div style="width:100%;max-width:480px;padding:24px 20px">
       <!-- Logo / brand -->
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#C8935A,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
         <div style="font-size:13px;color:#A08060;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v10.2</div>
+        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v10.4</div>
       </div>
 
       <!-- App switcher -->
       <div id="app-switcher" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px"></div>
 
       <!-- Login tabs -->
-      <div style="display:flex;gap:0;background:#1a1008;border-radius:10px;padding:4px;margin-bottom:24px;border:1px solid #3d2410">
+      <div style="display:flex;gap:0;background:#2e1a0d;border-radius:10px;padding:4px;margin-bottom:24px">
         <button id="tab-login" onclick="authTab('login')" style="flex:1;padding:9px;border:none;border-radius:8px;background:#C8935A;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Sign In</button>
         <button id="tab-create" onclick="authTab('create')" style="flex:1;padding:9px;border:none;border-radius:0;background:transparent;color:#A08060;font-size:13px;font-weight:600;cursor:pointer">New Workspace</button>
         <button id="tab-join" onclick="authTab('join')" style="flex:1;padding:9px;border:none;border-radius:8px;background:transparent;color:#A08060;font-size:13px;font-weight:600;cursor:pointer">Join Team</button>
@@ -236,15 +236,15 @@ function showAuthScreen() {
         </div>
         <div id="login-form" style="display:none">` : '<div id="login-form">'}
           <div style="margin-bottom:12px">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">WORKSPACE CODE</div>
-            <input id="li-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:14px;font-family:inherit;outline:none" />
+            <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">WORKSPACE CODE</div>
+            <input id="li-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
           </div>
           <div style="margin-bottom:12px">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">YOUR NAME</div>
-            <input id="li-name" placeholder="Your name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:14px;font-family:inherit;outline:none" />
+            <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">YOUR NAME</div>
+            <input id="li-name" placeholder="Your name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
           </div>
           <div style="margin-bottom:20px">
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">PIN</div>
+            <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">PIN</div>
             <input id="li-pin" type="password" placeholder="4-digit PIN" maxlength="4" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit;letter-spacing:.2em" />
           </div>
           <button onclick="signIn()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#C8935A,#8B6240);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Sign In →</button>
@@ -255,15 +255,15 @@ function showAuthScreen() {
       <!-- Create workspace panel -->
       <div id="auth-create" style="display:none">
         <div style="margin-bottom:12px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">COMPANY / TEAM NAME *</div>
-          <input id="cr-name" placeholder="e.g. ABC Construction Co." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:14px;font-family:inherit;outline:none" />
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">COMPANY / TEAM NAME *</div>
+          <input id="cr-name" placeholder="e.g. ABC Construction Co." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
         </div>
         <div style="margin-bottom:12px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">YOUR NAME (OWNER) *</div>
-          <input id="cr-owner" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:14px;font-family:inherit;outline:none" />
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">YOUR NAME (OWNER) *</div>
+          <input id="cr-owner" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
         </div>
         <div style="margin-bottom:20px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">SET YOUR PIN (4 digits)</div>
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">SET YOUR PIN (4 digits)</div>
           <input id="cr-pin" type="password" maxlength="4" placeholder="Choose a 4-digit PIN" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit;letter-spacing:.2em" />
         </div>
         <button onclick="createWorkspace()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#E91E8C,#C2185B);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Create Workspace →</button>
@@ -282,15 +282,15 @@ function showAuthScreen() {
           </div>
         </div>
         <div style="margin-bottom:12px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">WORKSPACE CODE *</div>
-          <input id="jo-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:14px;font-family:inherit;outline:none" />
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">WORKSPACE CODE *</div>
+          <input id="jo-code" placeholder="e.g. ABC123" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
         </div>
         <div style="margin-bottom:12px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">YOUR NAME *</div>
-          <input id="jo-name" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #2a1a0d;background:#1a1008;color:#F5E6D3;font-size:14px;font-family:inherit;outline:none" />
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">YOUR NAME *</div>
+          <input id="jo-name" placeholder="Full name" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit" />
         </div>
         <div style="margin-bottom:20px">
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:6px">PIN (assigned by your admin)</div>
+          <div style="font-size:11px;font-weight:700;color:#A08060;margin-bottom:4px">PIN (assigned by your admin)</div>
           <input id="jo-pin" type="password" maxlength="4" placeholder="4-digit PIN" style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #3d2410;background:#2e1a0d;color:#F5E6D3;font-size:14px;font-family:inherit;letter-spacing:.2em" />
         </div>
         <button onclick="joinWorkspace()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#C8935A,#8B6240);color:#fff;font-size:15px;font-weight:800;cursor:pointer">Join Team →</button>
@@ -793,7 +793,7 @@ function renderClientPortal(container) {
       var doneTasks = tasks.filter(function(t){return t.done;});
       var lastReport = [...(DB.reports||[])].filter(function(r){return r.projectId===p.id;}).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).shift();
 
-      return '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:20px;margin-bottom:16px">'
+      return '<div style="background:#231508;border:1px solid #3d2410;border-radius:16px;padding:20px;margin-bottom:16px">'
         +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">'
         +'<div><div style="font-size:18px;font-weight:800;color:#F5E6D3">'+p.name+'</div>'
         +'<div style="font-size:12px;color:#A08060;margin-top:3px">📍 '+p.city+(p.state?', '+p.state:'')+(p.start?' · Started '+p.start:'')+'</div></div>'
@@ -1184,7 +1184,6 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 
 
 
-
 <!-- auth-dup -->
 
 
@@ -1479,6 +1478,20 @@ textarea.fc{resize:vertical;min-height:80px}
 .ph-thumb-card{background:var(--s1);border:1px solid var(--br);border-radius:var(--r12);overflow:hidden;cursor:pointer;transition:all var(--tx2)}
 .ph-thumb-card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
 @media print{.sidebar,.topbar,.t-actions{display:none!important}.shell{display:block}.main{overflow:visible;padding:0}.view.active{padding:14px}}
+
+/* ── Light / Dark theme vars ── */
+[data-theme="dark"] {
+  --bg:#150c07; --bg2:#0f0803;
+  --s1:#1a1008; --s2:#2e1a0d; --s3:#3d2410;
+  --br:#3d2410; --div:#2a1a0d;
+  --tx:#F5E6D3; --txm:#A08060; --txf:#604030;
+}
+[data-theme="light"] {
+  --bg:#faf6f2; --bg2:#f0e8e0;
+  --s1:#ffffff; --s2:#fdf8f4; --s3:#f0e6dc;
+  --br:#d8c8b8; --div:#e8ddd4;
+  --tx:#2a1508; --txm:#7a5c40; --txf:#a08060;
+}
 </style>
 </head>
 <body>
@@ -1507,11 +1520,18 @@ textarea.fc{resize:vertical;min-height:80px}
       <span id="t-weather-ico" style="font-size:18px;line-height:1">🌤</span>
       <span id="t-weather-txt">Loading...</span>
     </div>
-    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v10.2</div>
+    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v10.4</div>
   </div>
   <div class="t-actions">
     <div class="alert-pill" id="alerts-pill" onclick="showView('safety')" style="display:none">⚠️ <span id="alerts-count">0</span></div>
     <div class="sync-pill" onclick="syncWithField()"><div id="sync-dot"></div><span id="sync-label">Synced</span></div>
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(255,255,255,.05);border-radius:8px;border:1px solid #3d2410" title="Font size">
+      <span style="font-size:10px;color:#604030;font-weight:700;white-space:nowrap">A</span>
+      <input type="range" id="font-size-slider" min="11" max="22" value="14" step="1"
+        oninput="pbSetFontSize(this.value)"
+        style="width:72px;height:4px;accent-color:#C8935A;cursor:pointer;background:transparent"/>
+      <span style="font-size:14px;color:#A08060;font-weight:700;white-space:nowrap">A</span>
+    </div>
     <button class="icon-btn" onclick="window.print()" title="Print"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
     <button class="icon-btn" id="theme-btn" title="Theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
     <button class="icon-btn" onclick="window.open('https://f666cdx5tg-sudo.github.io/probuilders','_blank')" title="Field App"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></button>
@@ -1521,6 +1541,7 @@ textarea.fc{resize:vertical;min-height:80px}
 <!-- SIDEBAR -->
 <nav class="sidebar">
   <div class="nav-sec">
+    <button id="theme-toggle-btn" onclick="toggleTheme()" style="width:calc(100% - 12px);margin:4px 6px 10px;padding:8px 12px;border-radius:8px;border:1px solid #3d2410;background:#1a1008;color:#A08060;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:8px"><span class="tt-icon">☀️</span><span class="tt-label">Light Mode</span></button>
     <div class="nav-lbl">Command</div>
     <button class="ni active" data-view="command" onclick="showView('command')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Command Center</button>
     <button class="ni" data-view="eod" onclick="showView('eod')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>EOD Reports<span class="nb" id="nb-eod">0</span></button>
@@ -4000,8 +4021,9 @@ function renderInvoices(){
       +'<div><div style="font-size:9px;color:var(--txf)">Collected %</div><div style="font-weight:700;color:var(--ok)">'+pct+'%</div></div>'
       +'</div><div class="pw" style="margin-bottom:12px"><div class="pb" style="width:'+pct+'%"></div></div>'
       +'<div class="g2"><div><div style="font-size:10px;font-weight:700;color:var(--txm);margin-bottom:6px">Payment History</div>'
-      +(payments.length?payments.map(pay=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--div);font-size:11px"><div>'+pay.date+' · '+(pay.method||'—')+(pay.ref?' · Ref: '+pay.ref:'')+'</div><span style="font-weight:700;color:var(--ok)">'+fmtMoney(pay.amount)+'</span></div>').join(''):'<div style="font-size:11px;color:var(--txf)">No payments</div>')
-      +'<button class="btn btn-g btn-xs" style="margin-top:8px" onclick="openPaymentModal(\''+p.id+'\')">+ Record Payment</button></div>'
+      +(payments.length?payments.map(pay=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--div);font-size:11px"><div style="flex:1">'+(pay.paymentNumber?'<b style=\"color:var(--txm)\">'+pay.paymentNumber+'</b> · ':'')+pay.date+' · '+(pay.method||'—')+(pay.ref?' · Ref: '+pay.ref:'')+(pay.notes?'<div style=\"font-size:10px;color:var(--txf);margin-top:1px\">'+pay.notes+'</div>':'')+'</div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--ok)">'+fmtMoney(pay.amount)+'</span><button onclick="event.stopPropagation();editPayment(\''+pay.id+'\') " style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:5px;color:#C8935A;font-size:10px;font-weight:700;padding:2px 6px;cursor:pointer">✏️</button></div></div>').join(''):'<div style="font-size:11px;color:var(--txf)">No payments</div>')
+      +'<button class="btn btn-g btn-xs" style="margin-top:8px" onclick="openPaymentModal(\''+p.id+'\')">+ Record Payment</button>'
+      +'<button onclick="editProjectNotes(\''+p.id+'\') " style="margin-top:8px;margin-left:6px;background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:6px;color:#C8935A;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;font-family:inherit">📝 Notes</button></div>'
       +'<div><div style="font-size:10px;font-weight:700;color:var(--txm);margin-bottom:6px">Change Orders</div>'
       +(cos.length?cos.map(co=>{const add=co.type?.includes('Addition');return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--div);font-size:11px"><div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+co.desc+'</div><span class="badge '+(add?'bg':'be')+' xs">'+(co.type?.split(' ')[0]||'—')+'</span><span style="font-weight:700;color:'+(add?'var(--ok)':'var(--err)')+'">'+( add?'+':'-')+fmtMoney(co.amount)+'</span></div>';}).join(''):'<div style="font-size:11px;color:var(--txf)">No change orders</div>')
       +'</div></div></div>';
@@ -6805,6 +6827,52 @@ window.openDocViewer = function(id) {
   }
 };
 </script>
+<script>
+/* Theme toggle */
+function toggleTheme() {
+  var h = document.documentElement;
+  var next = (h.getAttribute('data-theme')||'dark') === 'dark' ? 'light' : 'dark';
+  h.setAttribute('data-theme', next);
+  localStorage.setItem('pb_theme', next);
+  var btn = document.getElementById('theme-toggle-btn');
+  if (btn) { btn.querySelector('.tt-icon').textContent = next==='dark'?'☀️':'🌙'; }
+}
+/* Restore saved theme */
+(function(){
+  var t = localStorage.getItem('pb_theme')||'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<script>
+function pbSetFontSize(size) {
+  size = Math.min(22, Math.max(11, +size));
+  var scale = size / 14;
+  var style = document.getElementById('pb-font-style');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'pb-font-style';
+    document.head.appendChild(style);
+  }
+  var css = 'body, .view, .card, .ni, .nav-lbl, table, input, select, textarea, button { font-size: ' + Math.round(14*scale) + 'px !important; }';
+  css += ' .ph-title, .page-title, h2, h3 { font-size: ' + Math.round(16*scale) + 'px !important; }';
+  css += ' .kpi-val, .stat-val { font-size: ' + Math.round(24*scale) + 'px !important; }';
+  css += ' .text-xs, .badge { font-size: ' + Math.round(11*scale) + 'px !important; }';
+  css += ' th, td { font-size: ' + Math.round(13*scale) + 'px !important; }';
+  style.textContent = css;
+  localStorage.setItem('pb_font_size', size);
+  var sl = document.getElementById('font-size-slider');
+  if (sl) sl.value = size;
+}
+(function(){
+  var saved = +localStorage.getItem('pb_font_size') || 14;
+  if (document.readyState !== 'loading') { pbSetFontSize(saved); }
+  document.addEventListener('DOMContentLoaded', function(){
+    pbSetFontSize(saved);
+    var sl = document.getElementById('font-size-slider');
+    if (sl) sl.value = saved;
+  });
+})();
+</script>
 </body>
 </html>
 <script>
@@ -8258,3 +8326,222 @@ var _origOpenLifecycle = typeof openProjectLifecycle !== 'undefined' ? openProje
 
 </script>
 
+<script>
+/* ══ EDIT PAYMENT ═══════════════════════════════════════════ */
+function editPayment(payId) {
+  var pay = (DB.payments||[]).find(function(p){ return p.id===payId; });
+  if (!pay) return;
+  var proj = (DB.projects||[]).find(function(p){ return p.id===pay.projectId; });
+
+  var mo = document.createElement('div');
+  mo.id  = 'edit-pay-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+
+  function row(label, id, type, val, opts) {
+    var input = type === 'select'
+      ? '<select id="ep-'+id+'" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #3d2410;background:#1a1008;color:#F5E6D3;font-size:13px;font-family:inherit">'
+        + opts.map(function(o){ return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>'; }).join('')
+        + '</select>'
+      : type === 'textarea'
+      ? '<textarea id="ep-'+id+'" rows="3" style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid #3d2410;background:#1a1008;color:#F5E6D3;font-size:13px;font-family:inherit;resize:vertical">'+( val||'')+'</textarea>'
+      : '<input type="'+type+'" id="ep-'+id+'" value="'+(val||'')+'" style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid #3d2410;background:#1a1008;color:#F5E6D3;font-size:13px;font-family:inherit"/>';
+    return '<div style="margin-bottom:12px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">'+label+'</div>'
+      +input+'</div>';
+  }
+
+  mo.innerHTML = '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:22px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +   '<div><div style="font-size:16px;font-weight:800;color:#F5E6D3">✏️ Edit Payment</div>'
+    +   '<div style="font-size:11px;color:#604030;margin-top:2px">'+(proj?proj.name:'')+(pay.paymentNumber?' · '+pay.paymentNumber:'')+'</div></div>'
+    +   '<button onclick="document.getElementById(\'edit-pay-modal\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
+    + '</div>'
+    + row('Amount ($)', 'amount', 'number', pay.amount)
+    + row('Date', 'date', 'date', pay.date)
+    + row('Payment Method', 'method', 'select', pay.method||'Check',
+        ['Check','ACH / Wire','Credit Card','Cash','Zelle','Venmo','PayPal','Other'])
+    + row('Reference / Check #', 'ref', 'text', pay.ref)
+    + row('Notes', 'notes', 'textarea', pay.notes)
+    + '<div style="display:flex;gap:8px;margin-top:4px">'
+    +   '<button onclick="pbDeletePayment(\''+payId+'\')" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(239,83,80,.4);background:transparent;color:#EF5350;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 Delete</button>'
+    +   '<button onclick="pbSavePayment(\''+payId+'\')" style="flex:2;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save Changes</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+}
+
+function pbSavePayment(payId) {
+  var pay = (DB.payments||[]).find(function(p){ return p.id===payId; });
+  if (!pay) return;
+  pay.amount = +document.getElementById('ep-amount')?.value || pay.amount;
+  pay.date   = document.getElementById('ep-date')?.value   || pay.date;
+  pay.method = document.getElementById('ep-method')?.value || pay.method;
+  pay.ref    = document.getElementById('ep-ref')?.value?.trim() || '';
+  pay.notes  = document.getElementById('ep-notes')?.value?.trim() || '';
+  pay.updatedAt = new Date().toISOString();
+  document.getElementById('edit-pay-modal')?.remove();
+  saveToLocal && saveToLocal();
+  broadcastData && broadcastData();
+  if (typeof renderInvoices === 'function') renderInvoices();
+  if (typeof renderBudget   === 'function') renderBudget();
+  toast && toast('💰 Payment updated');
+}
+
+function pbDeletePayment(payId) {
+  if (!confirm('Delete this payment? This cannot be undone.')) return;
+  DB.payments = (DB.payments||[]).filter(function(p){ return p.id!==payId; });
+  document.getElementById('edit-pay-modal')?.remove();
+  saveToLocal && saveToLocal();
+  broadcastData && broadcastData();
+  if (typeof renderInvoices === 'function') renderInvoices();
+  if (typeof renderBudget   === 'function') renderBudget();
+  toast && toast('Payment deleted');
+}
+
+/* ══ EDIT PROJECT NOTES ══════════════════════════════════════ */
+function editProjectNotes(projId) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) return;
+  var vnotes = (DB.voiceNotes||[]).filter(function(n){ return n.projectId===projId; });
+
+  var mo = document.createElement('div');
+  mo.id  = 'edit-notes-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+
+  mo.innerHTML = '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:22px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +   '<div><div style="font-size:16px;font-weight:800;color:#F5E6D3">📝 Project Notes</div>'
+    +   '<div style="font-size:11px;color:#604030;margin-top:2px">'+( proj.name||'')+'</div></div>'
+    +   '<button onclick="document.getElementById(\'edit-notes-modal\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
+    + '</div>'
+
+    /* Main notes */
+    + '<div style="margin-bottom:14px">'
+    +   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
+    +     '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030">Scope & Notes</div>'
+    +     '<button type="button" data-pbv-btn="1" data-pbv-target="en-notes" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" '
+    +       'style="background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.4);border-radius:6px;color:#C8935A;font-size:11px;padding:2px 8px;cursor:pointer;font-family:inherit">🎤</button>'
+    +   '</div>'
+    +   '<textarea id="en-notes" rows="6" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit;resize:vertical;line-height:1.6">'+(proj.notes||'')+'</textarea>'
+    + '</div>'
+
+    /* Voice notes list */
+    + (vnotes.length
+        ? '<div style="margin-bottom:14px">'
+          + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:8px">🎤 Voice Notes ('+vnotes.length+')</div>'
+          + vnotes.slice().reverse().map(function(n,i){
+              return '<div style="background:#111;border-radius:8px;padding:10px;margin-bottom:6px;border-left:3px solid #604030;display:flex;align-items:flex-start;gap:8px">'
+                +'<div style="flex:1"><div style="font-size:10px;color:#604030;margin-bottom:3px">'+n.date+' '+n.time+' · '+(n.addedBy||'')+'</div>'
+                +'<div style="font-size:12px;color:#ccc;line-height:1.5">'+(n.transcript||'')+'</div></div>'
+                +'<button onclick="pbDeleteVoiceNote(\''+n.id+'\');document.getElementById(\'edit-notes-modal\').remove();editProjectNotes(\''+projId+'\')" '
+                +' style="background:none;border:none;color:#604030;font-size:14px;cursor:pointer;flex-shrink:0">✕</button>'
+                +'</div>';
+            }).join('')
+          + '</div>'
+        : '')
+
+    /* Add new voice note */
+    + '<div style="margin-bottom:14px">'
+    +   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">'
+    +     '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030">Add Voice Note</div>'
+    +     '<button type="button" data-pbv-btn="1" data-pbv-target="en-new-voice" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" '
+    +       'style="background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.4);border-radius:6px;color:#C8935A;font-size:11px;padding:2px 8px;cursor:pointer;font-family:inherit">🎤 Record</button>'
+    +   '</div>'
+    +   '<textarea id="en-new-voice" rows="3" placeholder="Tap 🎤 Record to dictate, or type here..." '
+    +     'style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit;resize:vertical"></textarea>'
+    + '</div>'
+
+    /* Buttons */
+    + '<div style="display:flex;gap:8px">'
+    +   '<button onclick="document.getElementById(\'edit-notes-modal\').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #3d2410;background:transparent;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +   '<button onclick="pbSaveNotes(\''+projId+'\')" style="flex:2;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save Notes</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(mo);
+}
+
+function pbSaveNotes(projId) {
+  var proj = (DB.projects||[]).find(function(p){ return p.id===projId; });
+  if (!proj) return;
+
+  /* Save main notes */
+  proj.notes = document.getElementById('en-notes')?.value?.trim() || '';
+
+  /* Save new voice note if typed/dictated */
+  var newVoice = document.getElementById('en-new-voice')?.value?.trim();
+  if (newVoice) {
+    if (!DB.voiceNotes) DB.voiceNotes = [];
+    DB.voiceNotes.push({
+      id:        typeof uid !== 'undefined' ? uid() : 'vn'+Date.now(),
+      projectId: projId,
+      transcript: newVoice,
+      date:      new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+      time:      new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}),
+      addedBy:   (typeof _currentUser!=='undefined'&&_currentUser) ? _currentUser.name : 'Desktop',
+      created:   new Date().toISOString(),
+    });
+  }
+
+  document.getElementById('edit-notes-modal')?.remove();
+  saveToLocal && saveToLocal();
+  broadcastData && broadcastData();
+  if (typeof renderProjectsDesktop === 'function') renderProjectsDesktop();
+  toast && toast('📝 Notes saved');
+}
+
+/* ══ WIRE edit buttons into existing payment rows ════════════ */
+/* Patch renderInvoices to add edit button to each payment row */
+var _origRenderInvoices = typeof renderInvoices !== 'undefined' ? renderInvoices : null;
+window.renderInvoices = function() {
+  if (_origRenderInvoices) _origRenderInvoices();
+  /* Add edit buttons to every payment row after render */
+  setTimeout(function() {
+    document.querySelectorAll('[data-pay-id]').forEach(function(el) {
+      if (!el.querySelector('.pay-edit-btn')) {
+        var btn = document.createElement('button');
+        btn.className = 'pay-edit-btn';
+        btn.textContent = '✏️';
+        btn.title = 'Edit payment';
+        btn.style.cssText = 'background:none;border:none;color:#A08060;cursor:pointer;font-size:13px;padding:0 4px';
+        btn.onclick = function(e) { e.stopPropagation(); editPayment(el.getAttribute('data-pay-id')); };
+        el.appendChild(btn);
+      }
+    });
+  }, 100);
+};
+
+/* Add data-pay-id attributes to payment rows via CSS injection approach */
+/* Better: patch the map in renderInvoices via MutationObserver */
+var _payObs = new MutationObserver(function() {
+  /* Find payment rows and add edit button if missing */
+  document.querySelectorAll('#invoices-list .card').forEach(function(card) {
+    var rows = card.querySelectorAll('[style*="Payment History"] ~ * [style*="border-bottom"]');
+    /* Simpler: look for payment amount spans and add edit next to them */
+  });
+});
+
+/* ══ NOTES EDIT BUTTON — patch project cards on desktop ═════ */
+var _origRenderProjD = typeof renderProjectsDesktop !== 'undefined' ? renderProjectsDesktop : null;
+window.renderProjectsDesktop = function() {
+  if (_origRenderProjD) _origRenderProjD();
+  setTimeout(function() {
+    document.querySelectorAll('[data-proj-id]').forEach(function(card) {
+      if (!card.querySelector('.notes-edit-btn')) {
+        var pid = card.getAttribute('data-proj-id');
+        var btn = document.createElement('button');
+        btn.className = 'notes-edit-btn';
+        btn.textContent = '📝 Notes';
+        btn.style.cssText = 'background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:7px;color:#C8935A;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;font-family:inherit;margin:4px 4px 0 0';
+        btn.onclick = function(e) { e.stopPropagation(); editProjectNotes(pid); };
+        var actions = card.querySelector('.card-actions, [style*="gap:6px"]');
+        if (actions) actions.appendChild(btn);
+        else card.appendChild(btn);
+      }
+    });
+  }, 100);
+};
+
+console.log('[PB] Edit Payments + Notes loaded');
+</script>
