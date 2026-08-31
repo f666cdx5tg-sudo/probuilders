@@ -174,7 +174,7 @@ function showAuthScreen() {
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#C8935A,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
         <div style="font-size:13px;color:#A08060;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v10.5</div>
+        <div style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;color:#C8935A;background:rgba(200,147,90,.15);border:1.5px solid rgba(200,147,90,.5);border-radius:99px;padding:3px 12px;margin-top:4px">v10.6</div>
       </div>
 
       <!-- App switcher -->
@@ -1186,12 +1186,12 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
   --font-body:   'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono:   'DM Mono', 'Courier New', monospace;
 
-  /* Scale */
-  --text-xs:     clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-  --text-sm:     clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
-  --text-base:   clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
-  --text-lg:     clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
-  --text-xl:     clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+  /* Scale — bumped for mobile readability */
+  --text-xs:     clamp(0.8rem,  1.8vw, 0.95rem);
+  --text-sm:     clamp(0.95rem, 2.2vw, 1.1rem);
+  --text-base:   clamp(1.05rem, 2.5vw, 1.2rem);
+  --text-lg:     clamp(1.2rem,  3vw,   1.5rem);
+  --text-xl:     clamp(1.6rem,  4.5vw, 2.25rem);
 
   /* Space */
   --s1: 0.25rem; --s2: 0.5rem; --s3: 0.75rem; --s4: 1rem;
@@ -1250,7 +1250,7 @@ function pbClosePostLogin(){ var m=document.getElementById('post-login-modal'); 
 html { -webkit-text-size-adjust: none; text-size-adjust: none; -webkit-font-smoothing: antialiased; }
 body { overflow-x:hidden; 
   font-family: var(--font-body);
-  font-size: var(--text-sm);
+  font-size: 16px;
   color: var(--text);
   background: var(--bg);
   min-height: 100dvh;
@@ -2613,6 +2613,92 @@ textarea.form-control { resize: vertical; min-height: 80px; }
     .main-content { padding: 15px !important; }
 }
 
+
+/* Version badge always visible */
+#field-version-badge {
+  color: #C8935A !important;
+  background: rgba(200,147,90,.12) !important;
+  border: 1px solid rgba(200,147,90,.35) !important;
+}
+[data-theme="light"] #field-version-badge {
+  color: #8B6240 !important;
+  background: rgba(139,98,64,.1) !important;
+  border-color: rgba(139,98,64,.3) !important;
+}
+
+/* ── Mobile font readability boost ── */
+.project-card-title, .project-card .page-title {
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+.page-title {
+  font-size: clamp(1.4rem, 4vw, 2rem) !important;
+  font-weight: 900 !important;
+}
+.page-subtitle {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+.task-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+.task-meta {
+  font-size: 13px !important;
+}
+.bottom-nav-item {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+.btn {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+.badge {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+.card, .project-card {
+  font-size: 15px !important;
+}
+.text-xs { font-size: 13px !important; }
+.text-muted { font-size: 14px !important; }
+
+/* Project card specific */
+.project-card-meta { font-size: 14px !important; font-weight: 500 !important; }
+.project-card-progress-label { font-size: 13px !important; font-weight: 600 !important; }
+
+/* Forms */
+input, textarea, select {
+  font-size: 16px !important; /* Prevents iOS zoom on focus */
+}
+label, .form-label {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+/* Home screen */
+#home-greeting { font-size: 22px !important; font-weight: 900 !important; }
+#home-date     { font-size: 15px !important; font-weight: 500 !important; }
+
+/* Version badge — always visible */
+[id$="version-badge"],
+[id*="version"],
+.version-badge {
+  color: #C8935A !important;
+  background: rgba(200,147,90,.15) !important;
+  border: 1.5px solid rgba(200,147,90,.45) !important;
+  border-radius: 99px !important;
+  padding: 3px 12px !important;
+}
+[data-theme="light"] [id$="version-badge"],
+[data-theme="light"] [id*="version"],
+[data-theme="light"] .version-badge {
+  color: #7a4f24 !important;
+  background: rgba(139,98,64,.12) !important;
+  border-color: rgba(139,98,64,.4) !important;
+}
 </style>
 </head>
 <body>
@@ -2660,7 +2746,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
         <span id="weather-text" onclick="fetchWeather(currentGeo.lat||40.9474, currentGeo.lon||-73.9935)" style="cursor:pointer" title="Tap to retry weather">Loading...</span>
       </div>
       <!-- Version -->
-      <div class="hi-line" style="font-size:11px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.08em;margin-top:2px">v10.5</div>
+      <div class="hi-line" style="font-size:11px;font-weight:800;letter-spacing:.06em;margin-top:3px;color:#C8935A;background:rgba(200,147,90,.12);border:1px solid rgba(200,147,90,.35);border-radius:99px;padding:2px 10px;display:inline-block" id="field-version-badge">v10.6</div>
     </div>
 
     <div class="topbar-actions">
@@ -2822,6 +2908,9 @@ textarea.form-control { resize: vertical; min-height: 80px; }
       <div class="page-subtitle" id="home-date">Loading...</div>
     </div>
     <div class="page-actions">
+      <button onclick="openSyncSettings()" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:8px;color:#C8935A;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:5px">
+        <span id="home-sync-dot" style="width:7px;height:7px;border-radius:50%;background:#C8935A"></span>☁️ Sync
+      </button>
       <button class="btn btn-outline btn-sm" onclick="showView('reports')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16"/><polyline points="14 2 14 8 20 8"/></svg>
         Daily Report
@@ -2862,7 +2951,17 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   </div>
 
   <!-- Quick Access Grid -->
-  <div class="section-grid">
+  <div id="home-sync-card" style="margin:0 0 16px;padding:16px;background:rgba(200,147,90,.12);border:2px solid rgba(200,147,90,.4);border-radius:14px;cursor:pointer" onclick="openSyncSettings()">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:44px;height:44px;border-radius:10px;background:#C8935A;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">☁️</div>
+    <div style="flex:1">
+      <div style="font-size:16px;font-weight:800;color:#F5E6D3">Sync with Desktop</div>
+      <div style="font-size:13px;color:#A08060;margin-top:2px">Tap to push/pull data</div>
+    </div>
+    <div style="font-size:22px;color:#C8935A">›</div>
+  </div>
+</div>
+<div class="section-grid">
     <!-- Recent Projects -->
     <div class="card">
       <div class="card-header">
@@ -3523,6 +3622,11 @@ textarea.form-control { resize: vertical; min-height: 80px; }
   <button class="bottom-nav-item" data-view="safety" onclick="showView('safety')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     Safety
+  </button>
+  <button class="bottom-nav-item" id="sync-nav-btn" onclick="openSyncSettings()" style="position:relative">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    <span id="sync-nav-dot" style="display:none;position:absolute;top:4px;right:12px;width:8px;height:8px;border-radius:50%;background:#C8935A;border:2px solid var(--bg)"></span>
+    Sync
   </button>
 </nav>
 
@@ -4607,334 +4711,7 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 
 
 
-<script>
-
-/* ══════════════════════════════════════════════════════════════
-   PROBUILDERS CROSS-DEVICE SYNC ENGINE v2
-   
-   Method 1: GitHub Gist (free, automatic, reliable)
-   Method 2: Copy/Paste JSON (zero setup, works everywhere)
-   Method 3: Google Drive (existing)
-══════════════════════════════════════════════════════════════ */
-
-var _syncGistId    = null;   // stored per workspace
-var _syncGithubToken = null; // stored per workspace
-var _lastSyncTime  = null;
-
-/* ── Gist storage helpers ── */
-function pbSyncGetSettings() {
-  var ws = _currentWorkspace;
-  if (!ws) return {};
-  try {
-    var raw = localStorage.getItem('pb_sync_' + ws.id);
-    return raw ? JSON.parse(raw) : {};
-  } catch(e) { return {}; }
-}
-function pbSyncSaveSettings(obj) {
-  var ws = _currentWorkspace;
-  if (!ws) return;
-  try {
-    var cur = pbSyncGetSettings();
-    localStorage.setItem('pb_sync_' + ws.id, JSON.stringify(Object.assign(cur, obj)));
-  } catch(e) {}
-}
-
-/* ══ METHOD 1: GITHUB GIST SYNC ══════════════════════════════ */
-async function pbGistPush() {
-  var settings = pbSyncGetSettings();
-  var token    = settings.githubToken;
-  if (!token) { openGithubTokenSetup('push'); return; }
-
-  var ws = _currentWorkspace;
-  var gistDesc = 'ProBuilders-Sync-' + (ws ? ws.id : 'default');
-  var payload  = {
-    description: gistDesc,
-    public: false,
-    files: {
-      'probuilders_data.json': {
-        content: JSON.stringify({
-          db:        (typeof DB !== 'undefined' ? DB : {}),
-          workspace: ws ? ws.id : '',
-          pushedAt:  new Date().toISOString(),
-          pushedBy:  _currentUser ? _currentUser.name : 'Unknown',
-        })
-      }
-    }
-  };
-
-  var gistId = settings.gistId;
-
-  try {
-    var method  = gistId ? 'PATCH' : 'POST';
-    var url     = gistId
-      ? 'https://api.github.com/gists/' + gistId
-      : 'https://api.github.com/gists';
-
-    var res  = await fetch(url, {
-      method,
-      headers: {
-        'Authorization': 'token ' + token,
-        'Content-Type':  'application/json',
-        'Accept':        'application/vnd.github.v3+json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        pbSyncSaveSettings({ githubToken: null, gistId: null });
-        if(typeof toast==='function') toast('❌ GitHub token invalid — please re-enter it');
-        openGithubTokenSetup('push');
-        return;
-      }
-      throw new Error('HTTP ' + res.status);
-    }
-
-    var data = await res.json();
-    pbSyncSaveSettings({ gistId: data.id });
-    _lastSyncTime = new Date().toLocaleTimeString();
-    if(typeof toast==='function') toast('✅ Synced to GitHub — ' + _lastSyncTime);
-    pbUpdateSyncStatus('pushed');
-  } catch(e) {
-    if(typeof toast==='function') toast('❌ Gist sync failed: ' + e.message);
-    console.error('Gist push error:', e);
-  }
-}
-
-async function pbGistPull() {
-  var settings = pbSyncGetSettings();
-  var token    = settings.githubToken;
-  if (!token) { openGithubTokenSetup('pull'); return; }
-
-  var gistId = settings.gistId;
-  if (!gistId) {
-    if(typeof toast==='function') toast('⚠️ No gist found — push data from the field app first');
-    return;
-  }
-
-  try {
-    var res = await fetch('https://api.github.com/gists/' + gistId, {
-      headers: {
-        'Authorization': 'token ' + token,
-        'Accept':        'application/vnd.github.v3+json',
-      }
-    });
-    if (!res.ok) {
-      if (res.status === 401) { pbSyncSaveSettings({githubToken:null}); if(typeof toast==='function') toast('❌ Token invalid'); openGithubTokenSetup('pull'); return; }
-      throw new Error('HTTP ' + res.status);
-    }
-    var gist   = await res.json();
-    var content = gist.files['probuilders_data.json']?.content;
-    if (!content) throw new Error('No data in gist');
-
-    var parsed  = JSON.parse(content);
-    var incoming = parsed.db || parsed;
-
-    // Merge — never delete existing records
-    if (typeof DB !== 'undefined') {
-      ['projects','tasks','photos','reports','workers','timesheets',
-       'inventory','suppliers','receipts','materialOrders','hazards',
-       'changeOrders','payments','documents','changelog','budgetItems'].forEach(function(k) {
-        if (!incoming[k]) return;
-        if (!DB[k]) { DB[k] = incoming[k]; return; }
-        // Merge by ID — add new items, keep existing
-        var existingIds = new Set(DB[k].map(function(x){ return x.id; }));
-        incoming[k].forEach(function(item) {
-          if (!existingIds.has(item.id)) {
-            DB[k].push(item);
-          }
-        });
-        if (incoming.nextId > DB.nextId) DB.nextId = incoming.nextId;
-      });
-
-      if(typeof saveToLocal === 'function') saveToLocal();
-      if(typeof refreshAll === 'function') refreshAll();
-      else if(typeof refreshHome === 'function') refreshHome();
-    }
-
-    _lastSyncTime = new Date().toLocaleTimeString();
-    if(typeof toast==='function') toast('✅ Pulled from GitHub — ' + _lastSyncTime + ' · by ' + (parsed.pushedBy||'field'));
-    pbUpdateSyncStatus('pulled');
-  } catch(e) {
-    if(typeof toast==='function') toast('❌ Pull failed: ' + e.message);
-    console.error('Gist pull error:', e);
-  }
-}
-
-function openGithubTokenSetup(action) {
-  var existing = document.getElementById('pb-gist-setup');
-  if (existing) existing.remove();
-
-  window._pbGistAction = action;
-  var mo = document.createElement('div');
-  mo.id  = 'pb-gist-setup';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-
-  mo.innerHTML =
-    '<div style="background:#1B261B;border-radius:18px;padding:26px 24px;max-width:500px;width:100%;border:1px solid #243024">'
-    + '<div style="font-size:20px;font-weight:800;color:#4CAF50;margin-bottom:4px">🔗 GitHub Gist Sync Setup</div>'
-    + '<div style="font-size:13px;color:#7A9E7A;margin-bottom:20px;line-height:1.5">One-time setup. Your data syncs automatically between iPhone and Mac — for free, using your existing GitHub account.</div>'
-    + '<div style="background:#162016;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.8;color:#7A9E7A">'
-    + '<strong style="color:#D4E8D4">Step 1:</strong> Go to <a href="https://github.com/settings/tokens/new" target="_blank" style="color:#4CAF50">github.com/settings/tokens/new</a><br>'
-    + '<strong style="color:#D4E8D4">Step 2:</strong> Set name: <code style="background:#243024;padding:1px 6px;border-radius:4px">ProBuilders Sync</code><br>'
-    + '<strong style="color:#D4E8D4">Step 3:</strong> Set expiration: <code style="background:#243024;padding:1px 6px;border-radius:4px">No expiration</code><br>'
-    + '<strong style="color:#D4E8D4">Step 4:</strong> Check only: <code style="background:#243024;padding:1px 6px;border-radius:4px">✅ gist</code><br>'
-    + '<strong style="color:#D4E8D4">Step 5:</strong> Click Generate token → copy it → paste below'
-    + '</div>'
-    + '<div style="margin-bottom:14px">'
-    + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7A9E7A;margin-bottom:6px">Paste your GitHub Token</div>'
-    + '<input id="pb-gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx..." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#0D1B0D;color:#D4E8D4;font-size:14px;font-family:monospace;box-sizing:border-box"/>'
-    + '</div>'
-    + '<div style="display:flex;gap:10px">'
-    + '<button onclick="pbCloseGistSetup()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
-    + '<button id="pb-gist-save-btn" onclick="pbSaveGithubTokenBtn()" style="flex:2;padding:11px;border-radius:10px;border:none;background:#4CAF50;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Save & Sync Now</button>'
-    + '</div>'
-    + '<div style="font-size:11px;color:#3A5A3A;margin-top:12px;text-align:center">Token is stored only on this device. Never shared with anyone.</div>'
-    + '</div>';
-
-  document.body.appendChild(mo);
-  setTimeout(function(){ var inp=document.getElementById('pb-gh-token-input'); if(inp)inp.focus(); }, 100);
-}
-
-function pbSaveGithubToken(action) {
-  var token = document.getElementById('pb-gh-token-input')?.value?.trim();
-  if (!token || !token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
-    if(typeof toast==='function') toast('❌ Paste a valid GitHub token (starts with ghp_ or github_pat_)');
-    return;
-  }
-  pbSyncSaveSettings({ githubToken: token });
-  document.getElementById('pb-gist-setup')?.remove();
-  if(typeof toast==='function') toast('✅ Token saved — syncing now...');
-  if (action === 'push') pbGistPush();
-  else pbGistPull();
-}
-
-/* ══ METHOD 2: CLIPBOARD SYNC ═════════════════════════════════ */
-async function pbCopySync() {
-  try {
-    var payload = JSON.stringify({
-      db:       (typeof DB !== 'undefined' ? DB : {}),
-      syncedAt: new Date().toISOString(),
-      by:       _currentUser ? _currentUser.name : 'Field',
-      ws:       _currentWorkspace ? _currentWorkspace.id : '',
-    });
-    await navigator.clipboard.writeText(payload);
-    if(typeof toast==='function') toast('📋 Data copied to clipboard — paste it in the other app');
-  } catch(e) {
-    // Fallback: show in a textarea
-    pbShowCopyFallback();
-  }
-}
-
-function pbShowCopyFallback() {
-  var mo = document.createElement('div');
-  mo.id = 'pb-copy-modal';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-  var data = JSON.stringify({db:typeof DB!=='undefined'?DB:{},syncedAt:new Date().toISOString()});
-  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:22px;max-width:480px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;color:#4CAF50;margin-bottom:10px">📋 Copy Sync Data</div>'
-    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:10px">Select all text below and copy (⌘A then ⌘C on Mac, tap & hold on iPhone):</div>'
-    +'<textarea readonly style="width:100%;height:120px;background:#0D1B0D;border:1px solid #243024;border-radius:8px;color:#4CAF50;font-family:monospace;font-size:10px;padding:10px;box-sizing:border-box;resize:none" onclick="this.select()">'+data+'</textarea>'
-    +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button onclick="pbCloseCopyModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>'
-    +'</div></div>';
-  document.body.appendChild(mo);
-  setTimeout(function(){ var ta=mo.querySelector('textarea'); if(ta)ta.select(); }, 100);
-}
-
-async function pbPasteSync() {
-  try {
-    var text = await navigator.clipboard.readText();
-    pbImportSyncData(text);
-  } catch(e) {
-    // Fallback: show paste dialog
-    pbShowPasteDialog();
-  }
-}
-
-function pbShowPasteDialog() {
-  var mo = document.createElement('div');
-  mo.id = 'pb-paste-modal';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:22px;max-width:480px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;color:#E91E8C;margin-bottom:10px">📥 Paste Sync Data</div>'
-    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:10px">Paste the data you copied from the other device:</div>'
-    +'<textarea id="pb-paste-input" style="width:100%;height:120px;background:#0D1B0D;border:1px solid #243024;border-radius:8px;color:#4CAF50;font-family:monospace;font-size:10px;padding:10px;box-sizing:border-box;resize:none" placeholder="Paste sync data here..."></textarea>'
-    +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button onclick="pbClosePasteModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
-    +'<button onclick="pbPasteAndClose()" style="flex:2;padding:10px;border-radius:8px;border:none;background:#E91E8C;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Import Data</button>'
-    +'</div></div>';
-  document.body.appendChild(mo);
-  setTimeout(function(){ var inp=document.getElementById('pb-paste-input'); if(inp)inp.focus(); }, 100);
-}
-
-function pbImportSyncData(text) {
-  try {
-    var parsed   = JSON.parse(text);
-    var incoming = parsed.db || parsed;
-    if (!incoming || typeof incoming !== 'object') throw new Error('Invalid data format');
-
-    var keys = ['projects','tasks','photos','reports','workers','timesheets',
-                 'inventory','suppliers','receipts','materialOrders','hazards',
-                 'changeOrders','payments','documents','changelog','budgetItems'];
-
-    if (typeof DB !== 'undefined') {
-      keys.forEach(function(k) {
-        if (!incoming[k]) return;
-        if (!DB[k]) { DB[k] = incoming[k]; return; }
-        var existingIds = new Set(DB[k].map(function(x){ return x.id; }));
-        incoming[k].forEach(function(item) {
-          if (!existingIds.has(item.id)) DB[k].push(item);
-        });
-      });
-      if (incoming.nextId > DB.nextId) DB.nextId = incoming.nextId;
-
-      if (typeof saveToLocal === 'function') saveToLocal();
-      if (typeof refreshAll === 'function') refreshAll();
-      else if (typeof refreshHome === 'function') refreshHome();
-      if(typeof toast==='function') toast('✅ Data merged — ' + (incoming.projects||[]).length + ' projects, ' + (incoming.photos||[]).length + ' photos imported');
-    }
-  } catch(e) {
-    if(typeof toast==='function') toast('❌ Import failed: ' + e.message);
-    console.error('Import error:', e);
-  }
-}
-
-/* ── Sync status indicator ── */
-function pbUpdateSyncStatus(action) {
-  var els = document.querySelectorAll('.pb-sync-status');
-  els.forEach(function(el) {
-    el.textContent = action === 'pushed' ? '✅ Pushed ' + _lastSyncTime : '✅ Pulled ' + _lastSyncTime;
-    el.style.color = '#4CAF50';
-    setTimeout(function(){ el.textContent = 'Last sync: ' + _lastSyncTime; }, 5000);
-  });
-}
-
-/* ── Auto sync every 2 minutes if token is set ── */
-function pbAutoSyncStart() {
-  var settings = pbSyncGetSettings();
-  if (!settings.githubToken) return;
-  setInterval(function() {
-    var settings2 = pbSyncGetSettings();
-    if (settings2.githubToken && settings2.gistId) {
-      pbGistPull();
-    }
-  }, 120000); // every 2 minutes
-}
-
-function pbCloseGistSetup()  { var m=document.getElementById('pb-gist-setup');  if(m)m.remove(); }
-function pbCloseCopyModal()  { var m=document.getElementById('pb-copy-modal');   if(m)m.remove(); }
-function pbClosePasteModal() { var m=document.getElementById('pb-paste-modal');  if(m)m.remove(); }
-
-function pbPasteAndClose(){
-  var inp=document.getElementById('pb-paste-input');
-  if(inp) pbImportSyncData(inp.value);
-  pbClosePasteModal();
-}
-
-function pbSaveGithubTokenBtn(){ pbSaveGithubToken(window._pbGistAction || 'push'); }
-
-</script>
+<!-- sync replaced -->
 
 
 
@@ -11703,6 +11480,588 @@ window.openFieldProjectDetail = function(projId) {
 console.log('[PB] Sections v1.0 loaded');
 
 </script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   PROBUILDERS SYNC ENGINE v2
+   GitHub Gist sync between Field App (iPhone) and Command Center
+   - Token stored per workspace in localStorage
+   - Push: uploads full DB as JSON gist
+   - Pull: merges remote DB into local (never deletes)
+   - Auto-pull every 2 mins if token is set
+   - Works on both Field and Desktop
+══════════════════════════════════════════════════════════════ */
+
+/* ── Settings helpers ── */
+window.pbSyncGetSettings = function() {
+  var ws = _currentWorkspace;
+  if (!ws) return {};
+  try { return JSON.parse(localStorage.getItem('pb_sync_' + ws.id) || '{}'); }
+  catch(e) { return {}; }
+};
+
+window.pbSyncSaveSettings = function(obj) {
+  var ws = _currentWorkspace;
+  if (!ws) return;
+  try {
+    var cur = pbSyncGetSettings();
+    localStorage.setItem('pb_sync_' + ws.id, JSON.stringify(Object.assign(cur, obj)));
+  } catch(e) {}
+};
+
+/* ── Status indicator ── */
+window.pbUpdateSyncStatus = function(state) {
+  // Also update bottom nav sync dot
+  var navDot = document.getElementById('sync-nav-dot');
+  var navBtn  = document.getElementById('sync-nav-btn');
+  if (navDot) {
+    navDot.style.display = (state === 'pushing' || state === 'pulling') ? 'block' : 'none';
+    navDot.style.background = state === 'error' ? '#EF5350' : '#C8935A';
+  }
+  if (navBtn && state === 'pushed') {
+    navBtn.style.color = '#C8935A';
+    setTimeout(function(){ if(navBtn) navBtn.style.color = ''; }, 3000);
+  }
+  var dot   = document.getElementById('sync-dot');
+  var label = document.getElementById('sync-label');
+  var states = {
+    synced:  { color:'#C8935A', text:'Synced' },
+    pulling: { color:'#2196F3', text:'Pulling...' },
+    pushing: { color:'#FF9800', text:'Pushing...' },
+    pulled:  { color:'#C8935A', text:'Synced ✓' },
+    pushed:  { color:'#C8935A', text:'Pushed ✓' },
+    error:   { color:'#EF5350', text:'Sync Error' },
+    notoken: { color:'#888',    text:'Not synced' },
+  };
+  var s = states[state] || states.notoken;
+  if (dot)   dot.style.background   = s.color;
+  if (label) label.textContent       = s.text;
+};
+
+/* ── PUSH (Field → Cloud) ── */
+window.pbGistPush = async function() {
+  var settings = pbSyncGetSettings();
+  var token    = settings.githubToken;
+  if (!token) { openGithubTokenSetup('push'); return; }
+
+  pbUpdateSyncStatus('pushing');
+  var ws = _currentWorkspace;
+
+  var payload = {
+    description: 'ProBuilders-Sync-' + (ws ? ws.id : 'default'),
+    public:      false,
+    files: {
+      'probuilders_data.json': {
+        content: JSON.stringify({
+          db:       DB,
+          wsId:     ws ? ws.id : '',
+          wsName:   ws ? ws.name : '',
+          pushedBy: (_currentUser && _currentUser.name) || 'Field User',
+          pushedAt: new Date().toISOString(),
+          appVersion: '10.5',
+        }, null, 2)
+      }
+    }
+  };
+
+  try {
+    var gistId  = settings.gistId;
+    var method  = gistId ? 'PATCH' : 'POST';
+    var url     = gistId
+      ? 'https://api.github.com/gists/' + gistId
+      : 'https://api.github.com/gists';
+
+    var res = await fetch(url, {
+      method:  method,
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept':        'application/vnd.github.v3+json',
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 401) {
+      pbSyncSaveSettings({ githubToken: null });
+      pbUpdateSyncStatus('error');
+      toast && toast('❌ GitHub token invalid — re-enter it');
+      openGithubTokenSetup('push');
+      return;
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    var gist = await res.json();
+    pbSyncSaveSettings({ gistId: gist.id });
+    pbUpdateSyncStatus('pushed');
+    toast && toast('☁️ Pushed to GitHub · ' + new Date().toLocaleTimeString());
+    console.log('[PB Sync] Pushed gist:', gist.id);
+  } catch(e) {
+    pbUpdateSyncStatus('error');
+    toast && toast('❌ Push failed: ' + e.message);
+    console.error('[PB Sync] Push error:', e);
+  }
+};
+
+/* ── PULL (Cloud → Field/Desktop) ── */
+window.pbGistPull = async function() {
+  var settings = pbSyncGetSettings();
+  var token    = settings.githubToken;
+  if (!token) { openGithubTokenSetup('pull'); return; }
+
+  var gistId = settings.gistId;
+  if (!gistId) {
+    toast && toast('⚠️ No cloud data yet — push from field app first');
+    return;
+  }
+
+  pbUpdateSyncStatus('pulling');
+
+  try {
+    var res = await fetch('https://api.github.com/gists/' + gistId, {
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept':        'application/vnd.github.v3+json',
+      }
+    });
+
+    if (res.status === 401) {
+      pbSyncSaveSettings({ githubToken: null });
+      pbUpdateSyncStatus('error');
+      openGithubTokenSetup('pull');
+      return;
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    var gist    = await res.json();
+    var file    = gist.files['probuilders_data.json'];
+    if (!file)  throw new Error('No data file in gist');
+
+    // Handle truncated gists (large files)
+    var content = file.truncated
+      ? await (await fetch(file.raw_url)).text()
+      : file.content;
+
+    var parsed   = JSON.parse(content);
+    var incoming = parsed.db || parsed;
+
+    /* ── Smart merge: add new, update existing, never delete ── */
+    var ARRAY_KEYS = ['projects','tasks','photos','reports','workers',
+      'timesheets','inventory','suppliers','receipts','materialOrders',
+      'hazards','changeOrders','payments','documents','changelog',
+      'budgetItems','estimates','materialsTakeoff','calEvents',
+      'voiceNotes','roster','sov'];
+
+    ARRAY_KEYS.forEach(function(k) {
+      if (!incoming[k]) return;
+      if (k === 'sov' || k === 'materialsTakeoff') {
+        // Object merge
+        DB[k] = Object.assign(DB[k] || {}, incoming[k]);
+        return;
+      }
+      if (!Array.isArray(incoming[k])) return;
+      if (!DB[k]) { DB[k] = incoming[k]; return; }
+      var existingIds = {};
+      DB[k].forEach(function(x){ existingIds[x.id] = true; });
+      incoming[k].forEach(function(item) {
+        if (!existingIds[item.id]) {
+          DB[k].push(item);
+        }
+        // Optionally update existing (take newer)
+      });
+    });
+
+    // Merge sections
+    if (incoming.sections) {
+      if (!DB.sections) DB.sections = [];
+      var existingSecs = {};
+      DB.sections.forEach(function(s){ existingSecs[s.id] = s; });
+      (incoming.sections||[]).forEach(function(sec) {
+        if (!existingSecs[sec.id]) {
+          DB.sections.push(sec);
+        } else {
+          // Merge items within section
+          var local = existingSecs[sec.id];
+          if (!local.items) local.items = [];
+          var localItemIds = {};
+          local.items.forEach(function(it){ localItemIds[it.id] = true; });
+          (sec.items||[]).forEach(function(it) {
+            if (!localItemIds[it.id]) local.items.push(it);
+          });
+        }
+      });
+    }
+
+    // Sync counters
+    if (incoming.nextId        > (DB.nextId||0))        DB.nextId        = incoming.nextId;
+    if (incoming.dprCounter    > (DB.dprCounter||0))    DB.dprCounter    = incoming.dprCounter;
+    if (incoming.paymentCounter> (DB.paymentCounter||0)) DB.paymentCounter= incoming.paymentCounter;
+
+    saveToLocal && saveToLocal();
+
+    // Refresh all views
+    if (typeof renderProjectsDesktop === 'function') renderProjectsDesktop();
+    if (typeof renderProjects        === 'function') renderProjects();
+    if (typeof refreshHome           === 'function') refreshHome();
+    if (typeof refreshCommand        === 'function') refreshCommand();
+    if (typeof renderInvoices        === 'function') renderInvoices();
+    if (typeof renderTasks           === 'function') renderTasks();
+
+    pbUpdateSyncStatus('pulled');
+    var by = parsed.pushedBy ? ' by ' + parsed.pushedBy : '';
+    var at = parsed.pushedAt ? ' · ' + new Date(parsed.pushedAt).toLocaleTimeString() : '';
+    toast && toast('✅ Pulled from GitHub' + by + at);
+    console.log('[PB Sync] Pulled gist:', gistId, parsed.pushedAt);
+  } catch(e) {
+    pbUpdateSyncStatus('error');
+    toast && toast('❌ Pull failed: ' + e.message);
+    console.error('[PB Sync] Pull error:', e);
+  }
+};
+
+/* ── Auto-pull every 2 minutes if token configured ── */
+window._pbAutoSyncInterval = null;
+window.pbStartAutoSync = function() {
+  if (window._pbAutoSyncInterval) clearInterval(window._pbAutoSyncInterval);
+  window._pbAutoSyncInterval = setInterval(async function() {
+    var settings = pbSyncGetSettings();
+    if (settings.githubToken && settings.gistId) {
+      console.log('[PB Sync] Auto-pulling...');
+      await pbGistPull();
+    }
+  }, 120000); // every 2 minutes
+};
+
+/* ── Token setup modal ── */
+window.openGithubTokenSetup = function(action) {
+  document.getElementById('pb-gist-setup') && document.getElementById('pb-gist-setup').remove();
+
+  window._pbGistAction = action || 'push';
+  var settings  = pbSyncGetSettings();
+  var hasToken  = !!(settings.githubToken);
+  var hasGist   = !!(settings.gistId);
+
+  var mo = document.createElement('div');
+  mo.id  = 'pb-gist-setup';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9900;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+
+  mo.innerHTML =
+    '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:24px;max-width:460px;width:100%">'
+
+    // Header
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:18px;font-weight:800;color:#F5E6D3">☁️ GitHub Sync Setup</div>'
+    +'<button onclick="document.getElementById(\'pb-gist-setup\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
+    +'</div>'
+
+    // Status
+    +(hasToken
+      ? '<div style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#C8935A">✅ Token configured · '+(hasGist?'Gist linked':'No gist yet — push to create one')+'</div>'
+      : '<div style="background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#EF5350">⚠️ No GitHub token — enter one below to enable sync</div>'
+    )
+
+    // Instructions
+    +'<div style="font-size:12px;color:#A08060;line-height:1.7;margin-bottom:16px">'
+    +'<strong style="color:#F5E6D3">One-time setup (5 min):</strong><br>'
+    +'1. Go to <strong style="color:#C8935A">github.com</strong> → Settings<br>'
+    +'2. Developer settings → Personal access tokens → Tokens (classic)<br>'
+    +'3. Generate new token → check <strong>gist</strong> scope only<br>'
+    +'4. Paste the token below — saved on this device only<br><br>'
+    +'<strong style="color:#F5E6D3">Then:</strong> Tap <em>Push to Cloud</em> on iPhone → <em>Pull from Cloud</em> on Mac'
+    +'</div>'
+
+    // Token input
+    +'<div style="margin-bottom:12px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">GitHub Token</div>'
+    +'<input id="pb-gist-token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="'+(settings.githubToken||'')+'" '
+    +'style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:monospace"/>'
+    +'</div>'
+
+    // Gist ID (optional)
+    +(hasGist
+      ? '<div style="margin-bottom:14px;font-size:11px;color:#604030">Gist ID: <code style="color:#A08060">'+settings.gistId+'</code>'
+        +'<button onclick="pbSyncSaveSettings({gistId:null});document.getElementById(\'pb-gist-setup\').remove();openGithubTokenSetup()" '
+        +'style="background:none;border:none;color:#EF5350;font-size:10px;cursor:pointer;margin-left:8px;text-decoration:underline">Reset</button></div>'
+      : ''
+    )
+
+    // Buttons
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById(\'pb-gist-setup\').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #3d2410;background:transparent;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<a href="https://github.com/settings/tokens/new?scopes=gist&description=ProBuilders" target="_blank" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(200,147,90,.3);background:rgba(200,147,90,.08);color:#C8935A;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center">Get Token →</a>'
+    +'<button onclick="pbSaveGistToken()" style="flex:1;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Save & '+(action==='pull'?'Pull':'Push')+'</button>'
+    +'</div>'
+    +'</div>';
+
+  document.body.appendChild(mo);
+  setTimeout(function(){ document.getElementById('pb-gist-token-input')&&document.getElementById('pb-gist-token-input').focus(); }, 100);
+};
+
+window.pbSaveGistToken = async function() {
+  var token = document.getElementById('pb-gist-token-input')?.value?.trim();
+  if (!token || token.length < 10) {
+    toast && toast('Please enter a valid GitHub token');
+    return;
+  }
+  pbSyncSaveSettings({ githubToken: token });
+  document.getElementById('pb-gist-setup')?.remove();
+  toast && toast('✅ Token saved');
+
+  // Run the action that triggered setup
+  var action = window._pbGistAction || 'push';
+  if (action === 'pull') await pbGistPull();
+  else await pbGistPush();
+
+  pbStartAutoSync();
+};
+
+/* ── Sync settings panel ── */
+window.openSyncSettings = function() {
+  document.getElementById('sync-settings-panel')?.remove();
+
+  var settings = pbSyncGetSettings();
+  var hasToken = !!(settings.githubToken);
+  var hasGist  = !!(settings.gistId);
+  var tokenPreview = hasToken
+    ? settings.githubToken.slice(0,8) + '••••••••' + settings.githubToken.slice(-4)
+    : '';
+
+  var mo = document.createElement('div');
+  mo.id  = 'sync-settings-panel';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.92);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
+
+  mo.innerHTML =
+    '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto">'
+
+    /* Handle bar */
+    +'<div style="width:40px;height:4px;background:#3d2410;border-radius:99px;margin:0 auto 18px"></div>'
+
+    /* Title */
+    +'<div style="font-size:18px;font-weight:900;color:#F5E6D3;margin-bottom:4px">☁️ Sync</div>'
+    +'<div style="font-size:13px;color:#604030;margin-bottom:18px">Keep iPhone & Desktop in sync via GitHub</div>'
+
+    /* Status box */
+    +'<div style="background:#111;border-radius:12px;padding:14px;margin-bottom:16px">'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:8px">Status</div>'
+    +'<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#A08060">'
+    +'<span style="width:10px;height:10px;border-radius:50%;background:'+(hasToken?'#C8935A':'#EF5350')+';flex-shrink:0"></span>'
+    +(hasToken
+      ? 'Token: <code style="color:#C8935A;font-size:12px">'+tokenPreview+'</code>'
+      : '<span style="color:#EF5350">No token — tap Set Token below</span>')
+    +'</div>'
+    +(hasGist
+      ? '<div style="font-size:11px;color:#604030;margin-top:6px">Gist linked: <code style="color:#A08060">'+settings.gistId.slice(0,12)+'...</code></div>'
+      : '<div style="font-size:11px;color:#604030;margin-top:6px">No gist yet — Push to create one</div>')
+    +'</div>'
+
+    /* Action buttons */
+    +'<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">'
+
+    /* PUSH */
+    +'<button id="sync-push-btn" onclick="syncDoPush()" '
+    +'style="padding:16px 18px;border-radius:12px;border:1px solid rgba(200,147,90,.4);background:rgba(200,147,90,.12);color:#F5E6D3;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;text-align:left">'
+    +'<span style="font-size:22px">⬆️</span>'
+    +'<div><div>Push to Cloud</div><div style="font-size:12px;font-weight:400;color:#604030;margin-top:2px">Upload iPhone data to GitHub</div></div>'
+    +'</button>'
+
+    /* PULL */
+    +'<button id="sync-pull-btn" onclick="syncDoPull()" '
+    +'style="padding:16px 18px;border-radius:12px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:12px;text-align:left">'
+    +'<span style="font-size:22px">⬇️</span>'
+    +'<div><div>Pull from Cloud</div><div style="font-size:12px;font-weight:400;color:#604030;margin-top:2px">Download latest data from Desktop</div></div>'
+    +'</button>'
+
+    /* SET TOKEN */
+    +'<button onclick="syncShowTokenInput()" '
+    +'style="padding:14px 18px;border-radius:12px;border:1px solid #2a1a0d;background:transparent;color:#A08060;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:10px;text-align:left">'
+    +'<span style="font-size:18px">🔑</span>'
+    +(hasToken ? 'Change GitHub Token' : '<span style="color:#C8935A">Set GitHub Token (required)</span>')
+    +'</button>'
+
+    +'</div>'
+
+    /* Token input (hidden by default) */
+    +'<div id="sync-token-section" style="display:none;background:#111;border-radius:12px;padding:14px;margin-bottom:16px">'
+    +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:8px">GitHub Personal Access Token</div>'
+    +'<div style="font-size:12px;color:#604030;line-height:1.6;margin-bottom:10px">'
+    +'Go to <strong style="color:#C8935A">github.com/settings/tokens</strong> → Generate new token (classic) → check <strong style="color:#C8935A">gist</strong> → copy</div>'
+    +'<input id="sync-token-input" type="text" inputmode="text" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="'+(settings.githubToken||'')+'" '
+    +'style="width:100%;box-sizing:border-box;padding:12px;border-radius:8px;border:1px solid #3d2410;background:#1a1008;color:#F5E6D3;font-size:15px;font-family:monospace;margin-bottom:10px"/>'
+    +'<button onclick="syncSaveToken()" style="width:100%;padding:13px;border-radius:10px;border:none;background:#C8935A;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save Token</button>'
+    +'</div>'
+
+    /* Result message */
+    +'<div id="sync-result" style="display:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;text-align:center;margin-bottom:12px"></div>'
+
+    /* Close */
+    +'<button onclick="document.getElementById(\'sync-settings-panel\').remove()" '
+    +'style="width:100%;padding:14px;border-radius:12px;border:1px solid #2a1a0d;background:transparent;color:#604030;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>'
+
+    +'</div>';
+
+  document.body.appendChild(mo);
+  /* If no token, auto-show token input */
+  if (!hasToken) {
+    document.getElementById('sync-token-section').style.display = 'block';
+  }
+}
+
+window.syncShowTokenInput = function() {
+  var sec = document.getElementById('sync-token-section');
+  if (sec) { sec.style.display = sec.style.display === 'none' ? 'block' : 'none'; }
+};
+
+window.syncSaveToken = function() {
+  var input = document.getElementById('sync-token-input');
+  var token = input ? input.value.trim() : '';
+  if (!token || token.length < 10) {
+    syncShowResult('⚠️ Enter a valid token (starts with ghp_)', '#EF5350');
+    return;
+  }
+  pbSyncSaveSettings({ githubToken: token });
+  var sec = document.getElementById('sync-token-section');
+  if (sec) sec.style.display = 'none';
+  syncShowResult('✅ Token saved! Now tap Push to Cloud.', '#C8935A');
+};
+
+window.syncShowResult = function(msg, color) {
+  var el = document.getElementById('sync-result');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = color + '22';
+  el.style.color = color;
+  el.style.border = '1px solid ' + color + '44';
+};
+
+window.syncDoPush = async function() {
+  var btn = document.getElementById('sync-push-btn');
+  if (btn) { btn.textContent = '⏳ Pushing...'; btn.disabled = true; }
+  try {
+    await pbGistPush();
+    syncShowResult('✅ Pushed successfully!', '#C8935A');
+  } catch(e) {
+    syncShowResult('❌ Push failed: ' + e.message, '#EF5350');
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span style="font-size:22px">⬆️</span><div><div>Push to Cloud</div><div style="font-size:12px;font-weight:400;color:#604030;margin-top:2px">Upload iPhone data to GitHub</div></div>'; }
+};
+
+window.syncDoPull = async function() {
+  var btn = document.getElementById('sync-pull-btn');
+  if (btn) { btn.textContent = '⏳ Pulling...'; btn.disabled = true; }
+  try {
+    await pbGistPull();
+    syncShowResult('✅ Pulled successfully!', '#C8935A');
+  } catch(e) {
+    syncShowResult('❌ Pull failed: ' + e.message, '#EF5350');
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span style="font-size:22px">⬇️</span><div><div>Pull from Cloud</div><div style="font-size:12px;font-weight:400;color:#604030;margin-top:2px">Download latest data from Desktop</div></div>'; }
+};;
+
+/* ── Wire the sync pill to open settings ── */
+document.addEventListener('DOMContentLoaded', function() {
+  var pill = document.querySelector('.sync-pill');
+  if (pill) {
+    pill.onclick = openSyncSettings;
+    pill.style.cursor = 'pointer';
+    pill.title = 'Click to sync settings';
+  }
+
+  // Check token and start auto-sync
+  var settings = pbSyncGetSettings();
+  if (settings.githubToken && settings.gistId) {
+    pbUpdateSyncStatus('synced');
+    pbStartAutoSync();
+  } else {
+    pbUpdateSyncStatus('notoken');
+  }
+});
+
+if (document.readyState !== 'loading') {
+  var _s = pbSyncGetSettings();
+  if (_s.githubToken && _s.gistId) {
+    pbUpdateSyncStatus('synced');
+    pbStartAutoSync();
+  } else {
+    pbUpdateSyncStatus('notoken');
+  }
+}
+
+console.log('[PB] Sync Engine v2 loaded');
+
+</script>
+<script>
+
+/* ── Sync Engine Patch: global token storage + better errors ── */
+window.pbSyncGetSettings = function() {
+  /* First try workspace-scoped, then fall back to global */
+  var ws = _currentWorkspace;
+  var wsKey = ws ? 'pb_sync_' + ws.id : null;
+  try {
+    var wsData  = wsKey ? JSON.parse(localStorage.getItem(wsKey)||'{}') : {};
+    var global  = JSON.parse(localStorage.getItem('pb_sync_global')||'{}');
+    /* Merge: workspace-specific overrides global */
+    return Object.assign({}, global, wsData);
+  } catch(e) { return {}; }
+};
+
+window.pbSyncSaveSettings = function(obj) {
+  /* Save to both global AND workspace-scoped storage */
+  try {
+    var global = JSON.parse(localStorage.getItem('pb_sync_global')||'{}');
+    Object.assign(global, obj);
+    localStorage.setItem('pb_sync_global', JSON.stringify(global));
+
+    var ws = _currentWorkspace;
+    if (ws) {
+      var wsKey = 'pb_sync_' + ws.id;
+      var wsData = JSON.parse(localStorage.getItem(wsKey)||'{}');
+      Object.assign(wsData, obj);
+      localStorage.setItem(wsKey, JSON.stringify(wsData));
+    }
+  } catch(e) { console.error('pbSyncSaveSettings error', e); }
+};
+
+window.pbSaveGistToken = async function() {
+  var input = document.getElementById('pb-gist-token-input');
+  var token = input ? input.value.trim() : '';
+  if (!token || token.length < 10) {
+    if(input) { input.style.borderColor='#EF5350'; }
+    toast && toast('⚠️ Please paste a valid GitHub token (starts with ghp_)');
+    return;
+  }
+  pbSyncSaveSettings({ githubToken: token });
+  document.getElementById('pb-gist-setup')?.remove();
+  toast && toast('✅ Token saved!');
+  pbStartAutoSync();
+
+  var action = window._pbGistAction || 'push';
+  if (action === 'pull') { await pbGistPull(); }
+  else { await pbGistPush(); }
+};
+
+/* Re-init auto-sync status check on load */
+(function checkSyncOnLoad() {
+  var tryInit = function() {
+    var settings = pbSyncGetSettings();
+    if (settings.githubToken) {
+      pbUpdateSyncStatus('synced');
+      pbStartAutoSync && pbStartAutoSync();
+    } else {
+      pbUpdateSyncStatus('notoken');
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(tryInit, 1500); });
+  } else {
+    setTimeout(tryInit, 1500);
+  }
+})();
+
+</script>
+<button id="floating-sync-btn" onclick="openSyncSettings()" title="Sync"
+  style="position:fixed;bottom:80px;right:16px;z-index:500;width:52px;height:52px;
+  border-radius:50%;background:#C8935A;border:none;color:#fff;font-size:22px;
+  cursor:pointer;box-shadow:0 4px 16px rgba(200,147,90,.5);
+  display:flex;align-items:center;justify-content:center">☁️</button>
 </body>
 </html>
 <script>

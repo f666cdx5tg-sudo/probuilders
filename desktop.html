@@ -212,7 +212,7 @@ function showAuthScreen() {
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:36px;font-weight:900;background:linear-gradient(135deg,#C8935A,#E91E8C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ProBuilders</div>
         <div style="font-size:13px;color:#A08060;margin-top:4px">Field & Command Center</div>
-        <div style="display:inline-block;margin-top:8px;background:rgba(200,147,90,.15);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:3px 14px;font-size:12px;font-weight:800;color:#C8935A;letter-spacing:.05em">v10.5</div>
+        <div style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:.06em;color:#C8935A;background:rgba(200,147,90,.15);border:1.5px solid rgba(200,147,90,.5);border-radius:99px;padding:3px 12px;margin-top:4px">v10.6</div>
       </div>
 
       <!-- App switcher -->
@@ -1246,12 +1246,177 @@ window.addEventListener('keydown', e => {
   --r4:4px;--r8:8px;--r12:12px;--r16:16px;--r99:9999px;
   --tx2:180ms cubic-bezier(.16,1,.3,1);
 }
-[data-theme="light"]{
-  --bg:#F0F4F0;--s1:#FFFFFF;--s2:#F5F7F5;--s3:#EDF1ED;
-  --br:#D0DDD0;--div:#E4EDE4;
-  --tx:#1A2E1A;--txm:#4A7A4A;--txf:#8AAA8A;
-  --purple:#7B1FA2;--pl2:#CE93D8;
+
+/* ── Dark theme (default) ── */
+:root,[data-theme="dark"]{
+  --bg:#150c07;--bg2:#0f0803;
+  --s1:#1a1008;--s2:#2e1a0d;--s3:#3d2410;
+  --br:#3d2410;--div:#2a1a0d;
+  --tx:#F5E6D3;--txm:#A08060;--txf:#604030;
+  --g:#C8935A;--g2:#8B6240;--ok:#C8935A;
+  --err:#EF5350;--warn:#FF9800;
 }
+
+/* ── Light theme ── */
+[data-theme="light"]{
+  --bg:#faf6f2;--bg2:#f0e8e0;
+  --s1:#ffffff;--s2:#fdf8f4;--s3:#f0e6dc;
+  --br:#d8c8b8;--div:#e8ddd4;
+  --tx:#2a1508;--txm:#7a5c40;--txf:#a08060;
+  --g:#8B6240;--g2:#604030;--ok:#8B6240;
+  --err:#c0392b;--warn:#e67e22;
+}
+
+/* ── Light mode: override hardcoded dark colors in EVERY element ── */
+[data-theme="light"] *:not(img):not(canvas):not(svg):not(input[type=range]) {
+  scrollbar-color: #d8c8b8 #fdf8f4;
+}
+
+/* Override inline style backgrounds set by JS */
+[data-theme="light"] .view,
+[data-theme="light"] .shell,
+[data-theme="light"] main,
+[data-theme="light"] .sidebar {
+  background: var(--bg) !important;
+  color: var(--tx) !important;
+}
+
+[data-theme="light"] .card {
+  background: var(--s1) !important;
+  border-color: var(--br) !important;
+  color: var(--tx) !important;
+}
+
+/* Topbar and sidebar */
+[data-theme="light"] .topbar {
+  background: var(--s1) !important;
+  border-bottom-color: var(--br) !important;
+}
+[data-theme="light"] .sidebar {
+  background: var(--bg2) !important;
+  border-right-color: var(--br) !important;
+}
+[data-theme="light"] .ni {
+  color: var(--txm) !important;
+}
+[data-theme="light"] .ni:hover,
+[data-theme="light"] .ni.active {
+  background: var(--s2) !important;
+  color: var(--tx) !important;
+}
+[data-theme="light"] .nav-lbl {
+  color: var(--txf) !important;
+}
+[data-theme="light"] .nav-sec {
+  border-bottom-color: var(--div) !important;
+}
+
+/* Tables */
+[data-theme="light"] table {
+  background: var(--s1) !important;
+  color: var(--tx) !important;
+}
+[data-theme="light"] th {
+  background: var(--s2) !important;
+  color: var(--txm) !important;
+  border-color: var(--br) !important;
+}
+[data-theme="light"] td {
+  border-color: var(--div) !important;
+  color: var(--tx) !important;
+}
+[data-theme="light"] tr:hover td {
+  background: var(--s3) !important;
+}
+
+/* Inputs / selects */
+[data-theme="light"] input:not([type=range]):not([type=checkbox]):not([type=radio]),
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: var(--s1) !important;
+  border-color: var(--br) !important;
+  color: var(--tx) !important;
+}
+
+/* Badges */
+[data-theme="light"] .badge {
+  background: var(--s3) !important;
+  color: var(--txm) !important;
+}
+
+/* Page headers */
+[data-theme="light"] .ph { border-bottom-color: var(--div) !important; }
+[data-theme="light"] .ph-title { color: var(--tx) !important; }
+[data-theme="light"] .ph-sub   { color: var(--txm) !important; }
+
+/* Panels opened by JS (fixed position divs) — override inline bg */
+[data-theme="light"] #pdp,
+[data-theme="light"] #fpdp,
+[data-theme="light"] #sections-panel,
+[data-theme="light"] #lifecycle-panel,
+[data-theme="light"] #roster-panel,
+[data-theme="light"] #calendar-panel,
+[data-theme="light"] #sov-modal,
+[data-theme="light"] #task-manager-modal,
+[data-theme="light"] #edit-proj-modal,
+[data-theme="light"] .shell {
+  background: var(--bg) !important;
+  color: var(--tx) !important;
+}
+
+/* Sync pill, topbar labels */
+[data-theme="light"] .sync-pill {
+  background: var(--s2) !important;
+  border-color: var(--br) !important;
+  color: var(--txm) !important;
+}
+[data-theme="light"] .t-name { color: var(--tx) !important; }
+[data-theme="light"] .t-sub  { color: var(--txm) !important; }
+[data-theme="light"] .weather-line { color: var(--txm) !important; }
+[data-theme="light"] .icon-btn { color: var(--txm) !important; }
+
+/* Progress bars */
+[data-theme="light"] .pw { background: var(--s3) !important; }
+
+/* Charts */
+[data-theme="light"] canvas { filter: none; }
+
+/* Empty states */
+[data-theme="light"] .empty { color: var(--txm) !important; }
+
+/* KPI tiles */
+[data-theme="light"] .kpi-card,
+[data-theme="light"] [class*="stat"] {
+  background: var(--s2) !important;
+  border-color: var(--br) !important;
+}
+
+/* Dropdown / modal overlays */
+[data-theme="light"] select option {
+  background: var(--s1);
+  color: var(--tx);
+}
+
+/* Force text colors on any element using hardcoded dark text colors */
+[data-theme="light"] [style*="color:#A08060"] { color: var(--txm) !important; }
+[data-theme="light"] [style*="color:#604030"] { color: var(--txf) !important; }
+[data-theme="light"] [style*="color:#F5E6D3"] { color: var(--tx)  !important; }
+[data-theme="light"] [style*="color:#3d2410"]  { color: var(--txf) !important; }
+
+/* Force backgrounds on any element using hardcoded dark bg colors */
+[data-theme="light"] [style*="background:#1a1008"] { background: var(--s1) !important; }
+[data-theme="light"] [style*="background:#0f0803"] { background: var(--bg) !important; }
+[data-theme="light"] [style*="background:#150c07"] { background: var(--bg) !important; }
+[data-theme="light"] [style*="background:#2e1a0d"] { background: var(--s2) !important; }
+[data-theme="light"] [style*="background:#111"]    { background: var(--s2) !important; }
+[data-theme="light"] [style*="background:#111111"] { background: var(--s2) !important; }
+
+/* Force borders */
+[data-theme="light"] [style*="border:1px solid #3d2410"]  { border-color: var(--br)  !important; }
+[data-theme="light"] [style*="border:1px solid #2a1a0d"]  { border-color: var(--div) !important; }
+[data-theme="light"] [style*="border-bottom:1px solid #3d2410"] { border-bottom-color: var(--br) !important; }
+[data-theme="light"] [style*="border-bottom:1px solid #2a1a0d"] { border-bottom-color: var(--div) !important; }
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased}
 body{font-family:var(--font);font-size:14px;color:var(--tx);background:var(--bg);height:100dvh;overflow:hidden}
@@ -1492,6 +1657,40 @@ textarea.fc{resize:vertical;min-height:80px}
   --br:#d8c8b8; --div:#e8ddd4;
   --tx:#2a1508; --txm:#7a5c40; --txf:#a08060;
 }
+
+[data-theme="light"] .t-ver,
+[data-theme="light"] [style*="letter-spacing:.08em"] {
+  color: #8B6240 !important;
+  background: rgba(139,98,64,.1) !important;
+  border-color: rgba(139,98,64,.3) !important;
+}
+
+#desk-version-badge {
+  color: #C8935A !important;
+}
+[data-theme="light"] #desk-version-badge {
+  color: #8B6240 !important;
+  background: rgba(139,98,64,.1) !important;
+  border-color: rgba(139,98,64,.3) !important;
+}
+
+/* Version badge — always visible */
+[id$="version-badge"],
+[id*="version"],
+.version-badge {
+  color: #C8935A !important;
+  background: rgba(200,147,90,.15) !important;
+  border: 1.5px solid rgba(200,147,90,.45) !important;
+  border-radius: 99px !important;
+  padding: 3px 12px !important;
+}
+[data-theme="light"] [id$="version-badge"],
+[data-theme="light"] [id*="version"],
+[data-theme="light"] .version-badge {
+  color: #7a4f24 !important;
+  background: rgba(139,98,64,.12) !important;
+  border-color: rgba(139,98,64,.4) !important;
+}
 </style>
 </head>
 <body>
@@ -1520,11 +1719,11 @@ textarea.fc{resize:vertical;min-height:80px}
       <span id="t-weather-ico" style="font-size:18px;line-height:1">🌤</span>
       <span id="t-weather-txt">Loading...</span>
     </div>
-    <div class="t-row" style="font-size:10px;font-weight:800;color:rgba(255,255,255,.25);letter-spacing:.08em;margin-top:1px">v10.5</div>
+    <div class="t-row" style="font-size:10px;font-weight:800;color:#C8935A;letter-spacing:.08em;margin-top:2px;background:rgba(200,147,90,.12);border:1px solid rgba(200,147,90,.3);border-radius:99px;padding:2px 10px;display:inline-block" id="desk-version-badge">v10.6</div>
   </div>
   <div class="t-actions">
     <div class="alert-pill" id="alerts-pill" onclick="showView('safety')" style="display:none">⚠️ <span id="alerts-count">0</span></div>
-    <div class="sync-pill" onclick="syncWithField()"><div id="sync-dot"></div><span id="sync-label">Synced</span></div>
+    <div class="sync-pill" onclick="openSyncSettings()" title="Click to sync with iPhone"><div id="sync-dot"></div><span id="sync-label">Synced</span></div>
     <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(255,255,255,.05);border-radius:8px;border:1px solid #3d2410" title="Font size">
       <span style="font-size:10px;color:#604030;font-weight:700;white-space:nowrap">A</span>
       <input type="range" id="font-size-slider" min="11" max="22" value="14" step="1"
@@ -1569,6 +1768,10 @@ textarea.fc{resize:vertical;min-height:80px}
   </div>
   <div class="nav-sec">
     <div class="nav-lbl">Data &amp; Sync</div>
+    <button onclick="openSyncSettings()" style="width:calc(100% - 12px);margin:4px 6px 4px;padding:10px 12px;border-radius:9px;border:1px solid rgba(200,147,90,.4);background:rgba(200,147,90,.1);color:#C8935A;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:8px;text-align:left">
+      <span id="nav-sync-dot" style="width:8px;height:8px;border-radius:50%;background:#C8935A;flex-shrink:0"></span>
+      <span>☁️ Sync with iPhone</span>
+    </button>
     <div style="padding:4px 8px">
       <div class="save-chip" id="save-chip" onclick="autoSaveNow()">⏳ Not saved</div>
       <button class="ni w100" style="margin-top:4px" onclick="exportData()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Backup JSON</button>
@@ -1609,8 +1812,8 @@ textarea.fc{resize:vertical;min-height:80px}
       <button class="btn btn-o btn-sm" onclick="showView('eod')">📋 EOD Reports</button>
       <button class="btn btn-p btn-sm" onclick="openPushCOModal()">📤 Push CO</button>
       <button class="btn btn-o btn-sm" onclick="openPushDrawingModal()">📤 Push Drawing</button>
-      <button class="btn btn-p" onclick="openNewProjectDesktop()">+ New Project</button>
-      <button class="btn btn-g" onclick="syncWithField()">🔄 Sync Field Data</button>
+      <button class="btn btn-p" onclick="typeof openNewProjectDesktopFull==='function'?openNewProjectDesktopFull():openNewProjectDesktop()">+ New Project</button>
+      <button class="btn btn-g" onclick="openSyncSettings()" title="Click to sync with iPhone">🔄 Sync Field Data</button>
     </div>
   </div>
   <!-- Sync bar -->
@@ -1624,7 +1827,7 @@ textarea.fc{resize:vertical;min-height:80px}
         <button class="btn btn-g btn-sm" onclick="pbGistPull()" title="Pull field data from GitHub Gist">⬇ Pull from Cloud</button>
         <button class="btn btn-o btn-sm" onclick="pbGistPush()" title="Push desktop data to GitHub Gist">⬆ Push to Cloud</button>
         <button class="btn btn-o btn-sm" onclick="pbPasteSync()" title="Paste sync data copied from field app">📥 Paste Data</button>
-        <button class="btn btn-o btn-sm" onclick="syncWithField()" title="Same-browser sync">🔄 Same Browser</button>
+        <button class="btn btn-o btn-sm" onclick="openSyncSettings()" title="Click to sync with iPhone" title="Same-browser sync">🔄 Same Browser</button>
       </div>
     </div>
     <div style="margin-top:8px;font-size:11px;color:var(--txf)">
@@ -2016,334 +2219,7 @@ textarea.fc{resize:vertical;min-height:80px}
 
 
 
-<script>
-
-/* ══════════════════════════════════════════════════════════════
-   PROBUILDERS CROSS-DEVICE SYNC ENGINE v2
-   
-   Method 1: GitHub Gist (free, automatic, reliable)
-   Method 2: Copy/Paste JSON (zero setup, works everywhere)
-   Method 3: Google Drive (existing)
-══════════════════════════════════════════════════════════════ */
-
-var _syncGistId    = null;   // stored per workspace
-var _syncGithubToken = null; // stored per workspace
-var _lastSyncTime  = null;
-
-/* ── Gist storage helpers ── */
-function pbSyncGetSettings() {
-  var ws = _currentWorkspace;
-  if (!ws) return {};
-  try {
-    var raw = localStorage.getItem('pb_sync_' + ws.id);
-    return raw ? JSON.parse(raw) : {};
-  } catch(e) { return {}; }
-}
-function pbSyncSaveSettings(obj) {
-  var ws = _currentWorkspace;
-  if (!ws) return;
-  try {
-    var cur = pbSyncGetSettings();
-    localStorage.setItem('pb_sync_' + ws.id, JSON.stringify(Object.assign(cur, obj)));
-  } catch(e) {}
-}
-
-/* ══ METHOD 1: GITHUB GIST SYNC ══════════════════════════════ */
-async function pbGistPush() {
-  var settings = pbSyncGetSettings();
-  var token    = settings.githubToken;
-  if (!token) { openGithubTokenSetup('push'); return; }
-
-  var ws = _currentWorkspace;
-  var gistDesc = 'ProBuilders-Sync-' + (ws ? ws.id : 'default');
-  var payload  = {
-    description: gistDesc,
-    public: false,
-    files: {
-      'probuilders_data.json': {
-        content: JSON.stringify({
-          db:        (typeof DB !== 'undefined' ? DB : {}),
-          workspace: ws ? ws.id : '',
-          pushedAt:  new Date().toISOString(),
-          pushedBy:  _currentUser ? _currentUser.name : 'Unknown',
-        })
-      }
-    }
-  };
-
-  var gistId = settings.gistId;
-
-  try {
-    var method  = gistId ? 'PATCH' : 'POST';
-    var url     = gistId
-      ? 'https://api.github.com/gists/' + gistId
-      : 'https://api.github.com/gists';
-
-    var res  = await fetch(url, {
-      method,
-      headers: {
-        'Authorization': 'token ' + token,
-        'Content-Type':  'application/json',
-        'Accept':        'application/vnd.github.v3+json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        pbSyncSaveSettings({ githubToken: null, gistId: null });
-        if(typeof toast==='function') toast('❌ GitHub token invalid — please re-enter it');
-        openGithubTokenSetup('push');
-        return;
-      }
-      throw new Error('HTTP ' + res.status);
-    }
-
-    var data = await res.json();
-    pbSyncSaveSettings({ gistId: data.id });
-    _lastSyncTime = new Date().toLocaleTimeString();
-    if(typeof toast==='function') toast('✅ Synced to GitHub — ' + _lastSyncTime);
-    pbUpdateSyncStatus('pushed');
-  } catch(e) {
-    if(typeof toast==='function') toast('❌ Gist sync failed: ' + e.message);
-    console.error('Gist push error:', e);
-  }
-}
-
-async function pbGistPull() {
-  var settings = pbSyncGetSettings();
-  var token    = settings.githubToken;
-  if (!token) { openGithubTokenSetup('pull'); return; }
-
-  var gistId = settings.gistId;
-  if (!gistId) {
-    if(typeof toast==='function') toast('⚠️ No gist found — push data from the field app first');
-    return;
-  }
-
-  try {
-    var res = await fetch('https://api.github.com/gists/' + gistId, {
-      headers: {
-        'Authorization': 'token ' + token,
-        'Accept':        'application/vnd.github.v3+json',
-      }
-    });
-    if (!res.ok) {
-      if (res.status === 401) { pbSyncSaveSettings({githubToken:null}); if(typeof toast==='function') toast('❌ Token invalid'); openGithubTokenSetup('pull'); return; }
-      throw new Error('HTTP ' + res.status);
-    }
-    var gist   = await res.json();
-    var content = gist.files['probuilders_data.json']?.content;
-    if (!content) throw new Error('No data in gist');
-
-    var parsed  = JSON.parse(content);
-    var incoming = parsed.db || parsed;
-
-    // Merge — never delete existing records
-    if (typeof DB !== 'undefined') {
-      ['projects','tasks','photos','reports','workers','timesheets',
-       'inventory','suppliers','receipts','materialOrders','hazards',
-       'changeOrders','payments','documents','changelog','budgetItems'].forEach(function(k) {
-        if (!incoming[k]) return;
-        if (!DB[k]) { DB[k] = incoming[k]; return; }
-        // Merge by ID — add new items, keep existing
-        var existingIds = new Set(DB[k].map(function(x){ return x.id; }));
-        incoming[k].forEach(function(item) {
-          if (!existingIds.has(item.id)) {
-            DB[k].push(item);
-          }
-        });
-        if (incoming.nextId > DB.nextId) DB.nextId = incoming.nextId;
-      });
-
-      if(typeof saveToLocal === 'function') saveToLocal();
-      if(typeof refreshAll === 'function') refreshAll();
-      else if(typeof refreshHome === 'function') refreshHome();
-    }
-
-    _lastSyncTime = new Date().toLocaleTimeString();
-    if(typeof toast==='function') toast('✅ Pulled from GitHub — ' + _lastSyncTime + ' · by ' + (parsed.pushedBy||'field'));
-    pbUpdateSyncStatus('pulled');
-  } catch(e) {
-    if(typeof toast==='function') toast('❌ Pull failed: ' + e.message);
-    console.error('Gist pull error:', e);
-  }
-}
-
-function openGithubTokenSetup(action) {
-  var existing = document.getElementById('pb-gist-setup');
-  if (existing) existing.remove();
-
-  window._pbGistAction = action;
-  var mo = document.createElement('div');
-  mo.id  = 'pb-gist-setup';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-
-  mo.innerHTML =
-    '<div style="background:#1B261B;border-radius:18px;padding:26px 24px;max-width:500px;width:100%;border:1px solid #243024">'
-    + '<div style="font-size:20px;font-weight:800;color:#4CAF50;margin-bottom:4px">🔗 GitHub Gist Sync Setup</div>'
-    + '<div style="font-size:13px;color:#7A9E7A;margin-bottom:20px;line-height:1.5">One-time setup. Your data syncs automatically between iPhone and Mac — for free, using your existing GitHub account.</div>'
-    + '<div style="background:#162016;border-radius:12px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.8;color:#7A9E7A">'
-    + '<strong style="color:#D4E8D4">Step 1:</strong> Go to <a href="https://github.com/settings/tokens/new" target="_blank" style="color:#4CAF50">github.com/settings/tokens/new</a><br>'
-    + '<strong style="color:#D4E8D4">Step 2:</strong> Set name: <code style="background:#243024;padding:1px 6px;border-radius:4px">ProBuilders Sync</code><br>'
-    + '<strong style="color:#D4E8D4">Step 3:</strong> Set expiration: <code style="background:#243024;padding:1px 6px;border-radius:4px">No expiration</code><br>'
-    + '<strong style="color:#D4E8D4">Step 4:</strong> Check only: <code style="background:#243024;padding:1px 6px;border-radius:4px">✅ gist</code><br>'
-    + '<strong style="color:#D4E8D4">Step 5:</strong> Click Generate token → copy it → paste below'
-    + '</div>'
-    + '<div style="margin-bottom:14px">'
-    + '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7A9E7A;margin-bottom:6px">Paste your GitHub Token</div>'
-    + '<input id="pb-gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx..." style="width:100%;padding:11px 14px;border-radius:8px;border:1px solid #243024;background:#0D1B0D;color:#D4E8D4;font-size:14px;font-family:monospace;box-sizing:border-box"/>'
-    + '</div>'
-    + '<div style="display:flex;gap:10px">'
-    + '<button onclick="pbCloseGistSetup()" style="flex:1;padding:11px;border-radius:10px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
-    + '<button id="pb-gist-save-btn" onclick="pbSaveGithubTokenBtn()" style="flex:2;padding:11px;border-radius:10px;border:none;background:#4CAF50;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Save & Sync Now</button>'
-    + '</div>'
-    + '<div style="font-size:11px;color:#3A5A3A;margin-top:12px;text-align:center">Token is stored only on this device. Never shared with anyone.</div>'
-    + '</div>';
-
-  document.body.appendChild(mo);
-  setTimeout(function(){ var inp=document.getElementById('pb-gh-token-input'); if(inp)inp.focus(); }, 100);
-}
-
-function pbSaveGithubToken(action) {
-  var token = document.getElementById('pb-gh-token-input')?.value?.trim();
-  if (!token || !token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
-    if(typeof toast==='function') toast('❌ Paste a valid GitHub token (starts with ghp_ or github_pat_)');
-    return;
-  }
-  pbSyncSaveSettings({ githubToken: token });
-  document.getElementById('pb-gist-setup')?.remove();
-  if(typeof toast==='function') toast('✅ Token saved — syncing now...');
-  if (action === 'push') pbGistPush();
-  else pbGistPull();
-}
-
-/* ══ METHOD 2: CLIPBOARD SYNC ═════════════════════════════════ */
-async function pbCopySync() {
-  try {
-    var payload = JSON.stringify({
-      db:       (typeof DB !== 'undefined' ? DB : {}),
-      syncedAt: new Date().toISOString(),
-      by:       _currentUser ? _currentUser.name : 'Field',
-      ws:       _currentWorkspace ? _currentWorkspace.id : '',
-    });
-    await navigator.clipboard.writeText(payload);
-    if(typeof toast==='function') toast('📋 Data copied to clipboard — paste it in the other app');
-  } catch(e) {
-    // Fallback: show in a textarea
-    pbShowCopyFallback();
-  }
-}
-
-function pbShowCopyFallback() {
-  var mo = document.createElement('div');
-  mo.id = 'pb-copy-modal';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-  var data = JSON.stringify({db:typeof DB!=='undefined'?DB:{},syncedAt:new Date().toISOString()});
-  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:22px;max-width:480px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;color:#4CAF50;margin-bottom:10px">📋 Copy Sync Data</div>'
-    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:10px">Select all text below and copy (⌘A then ⌘C on Mac, tap & hold on iPhone):</div>'
-    +'<textarea readonly style="width:100%;height:120px;background:#0D1B0D;border:1px solid #243024;border-radius:8px;color:#4CAF50;font-family:monospace;font-size:10px;padding:10px;box-sizing:border-box;resize:none" onclick="this.select()">'+data+'</textarea>'
-    +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button onclick="pbCloseCopyModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>'
-    +'</div></div>';
-  document.body.appendChild(mo);
-  setTimeout(function(){ var ta=mo.querySelector('textarea'); if(ta)ta.select(); }, 100);
-}
-
-async function pbPasteSync() {
-  try {
-    var text = await navigator.clipboard.readText();
-    pbImportSyncData(text);
-  } catch(e) {
-    // Fallback: show paste dialog
-    pbShowPasteDialog();
-  }
-}
-
-function pbShowPasteDialog() {
-  var mo = document.createElement('div');
-  mo.id = 'pb-paste-modal';
-  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Plus Jakarta Sans,system-ui,sans-serif';
-  mo.innerHTML = '<div style="background:#1B261B;border-radius:16px;padding:22px;max-width:480px;width:100%">'
-    +'<div style="font-size:16px;font-weight:800;color:#E91E8C;margin-bottom:10px">📥 Paste Sync Data</div>'
-    +'<div style="font-size:12px;color:#7A9E7A;margin-bottom:10px">Paste the data you copied from the other device:</div>'
-    +'<textarea id="pb-paste-input" style="width:100%;height:120px;background:#0D1B0D;border:1px solid #243024;border-radius:8px;color:#4CAF50;font-family:monospace;font-size:10px;padding:10px;box-sizing:border-box;resize:none" placeholder="Paste sync data here..."></textarea>'
-    +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button onclick="pbClosePasteModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #243024;background:transparent;color:#7A9E7A;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
-    +'<button onclick="pbPasteAndClose()" style="flex:2;padding:10px;border-radius:8px;border:none;background:#E91E8C;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Import Data</button>'
-    +'</div></div>';
-  document.body.appendChild(mo);
-  setTimeout(function(){ var inp=document.getElementById('pb-paste-input'); if(inp)inp.focus(); }, 100);
-}
-
-function pbImportSyncData(text) {
-  try {
-    var parsed   = JSON.parse(text);
-    var incoming = parsed.db || parsed;
-    if (!incoming || typeof incoming !== 'object') throw new Error('Invalid data format');
-
-    var keys = ['projects','tasks','photos','reports','workers','timesheets',
-                 'inventory','suppliers','receipts','materialOrders','hazards',
-                 'changeOrders','payments','documents','changelog','budgetItems'];
-
-    if (typeof DB !== 'undefined') {
-      keys.forEach(function(k) {
-        if (!incoming[k]) return;
-        if (!DB[k]) { DB[k] = incoming[k]; return; }
-        var existingIds = new Set(DB[k].map(function(x){ return x.id; }));
-        incoming[k].forEach(function(item) {
-          if (!existingIds.has(item.id)) DB[k].push(item);
-        });
-      });
-      if (incoming.nextId > DB.nextId) DB.nextId = incoming.nextId;
-
-      if (typeof saveToLocal === 'function') saveToLocal();
-      if (typeof refreshAll === 'function') refreshAll();
-      else if (typeof refreshHome === 'function') refreshHome();
-      if(typeof toast==='function') toast('✅ Data merged — ' + (incoming.projects||[]).length + ' projects, ' + (incoming.photos||[]).length + ' photos imported');
-    }
-  } catch(e) {
-    if(typeof toast==='function') toast('❌ Import failed: ' + e.message);
-    console.error('Import error:', e);
-  }
-}
-
-/* ── Sync status indicator ── */
-function pbUpdateSyncStatus(action) {
-  var els = document.querySelectorAll('.pb-sync-status');
-  els.forEach(function(el) {
-    el.textContent = action === 'pushed' ? '✅ Pushed ' + _lastSyncTime : '✅ Pulled ' + _lastSyncTime;
-    el.style.color = '#4CAF50';
-    setTimeout(function(){ el.textContent = 'Last sync: ' + _lastSyncTime; }, 5000);
-  });
-}
-
-/* ── Auto sync every 2 minutes if token is set ── */
-function pbAutoSyncStart() {
-  var settings = pbSyncGetSettings();
-  if (!settings.githubToken) return;
-  setInterval(function() {
-    var settings2 = pbSyncGetSettings();
-    if (settings2.githubToken && settings2.gistId) {
-      pbGistPull();
-    }
-  }, 120000); // every 2 minutes
-}
-
-function pbCloseGistSetup()  { var m=document.getElementById('pb-gist-setup');  if(m)m.remove(); }
-function pbCloseCopyModal()  { var m=document.getElementById('pb-copy-modal');   if(m)m.remove(); }
-function pbClosePasteModal() { var m=document.getElementById('pb-paste-modal');  if(m)m.remove(); }
-
-function pbPasteAndClose(){
-  var inp=document.getElementById('pb-paste-input');
-  if(inp) pbImportSyncData(inp.value);
-  pbClosePasteModal();
-}
-
-function pbSaveGithubTokenBtn(){ pbSaveGithubToken(window._pbGistAction || 'push'); }
-
-</script>
+<!-- sync replaced -->
 
 
 
@@ -3796,6 +3672,7 @@ function renderEODList(pid){
       +'<span class="badge bg">'+(r.progress||0)+'%</span>'
       +(r.incomplete?'<span class="badge bw">Incomplete items</span>':'')
       +'<span class="badge bn xs">'+(r.weather||'—')+'</span>'
+      +'<button class="btn btn-o btn-xs" onclick="event.stopPropagation();editDailyReport(\''+r.id+'\')" style="color:#C8935A;border-color:rgba(200,147,90,.3)">✏️ Edit</button>'
       +'<button class="btn btn-o btn-xs" onclick="event.stopPropagation();window.print()">🖨️</button>'
       +'<span id="eod-arrow-'+r.id+'" style="color:var(--txm);font-size:12px;transition:transform .2s">▼</span></div></div>'
       +'<div id="eod-body-'+r.id+'" style="display:none">'
@@ -6830,12 +6707,23 @@ window.openDocViewer = function(id) {
 <script>
 /* Theme toggle */
 function toggleTheme() {
-  var h = document.documentElement;
+  var h    = document.documentElement;
   var next = (h.getAttribute('data-theme')||'dark') === 'dark' ? 'light' : 'dark';
   h.setAttribute('data-theme', next);
   localStorage.setItem('pb_theme', next);
   var btn = document.getElementById('theme-toggle-btn');
-  if (btn) { btn.querySelector('.tt-icon').textContent = next==='dark'?'☀️':'🌙'; }
+  if (btn) {
+    var icon  = btn.querySelector('.tt-icon');
+    var label = btn.querySelector('.tt-label');
+    if (icon)  icon.textContent  = next === 'dark' ? '☀️' : '🌙';
+    if (label) label.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+  }
+  setTimeout(function() {
+    if (typeof renderProjectsDesktop === 'function') renderProjectsDesktop();
+    if (typeof renderInvoices        === 'function') renderInvoices();
+    if (typeof refreshCommand        === 'function') refreshCommand();
+    if (typeof renderHR              === 'function') renderHR();
+  }, 80);
 }
 /* Restore saved theme */
 (function(){
@@ -6875,455 +6763,1002 @@ function pbSetFontSize(size) {
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════════
-   PROBUILDERS — PROJECT SECTIONS + CHECKLIST + PHOTOS
-   Works in both Field App and Desktop Command Center
-
-   Data structure:
-   DB.sections = [{
-     id, projectId, name, order,
-     items: [{ id, desc, done, photos:[{src,caption,ts}],
-               notes, completedBy, completedAt, photoRequired }]
-   }]
+   PROBUILDERS SYNC ENGINE v2
+   GitHub Gist sync between Field App (iPhone) and Command Center
+   - Token stored per workspace in localStorage
+   - Push: uploads full DB as JSON gist
+   - Pull: merges remote DB into local (never deletes)
+   - Auto-pull every 2 mins if token is set
+   - Works on both Field and Desktop
 ══════════════════════════════════════════════════════════════ */
 
-/* ── Helpers ── */
-function secEsc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function secUid(){ return 'sc'+Math.random().toString(36).slice(2,9)+Date.now().toString(36); }
-function secNow(){ return new Date().toISOString(); }
-function secSave(){ if(typeof saveToLocal==='function')saveToLocal(); if(typeof broadcastData==='function')broadcastData(); }
+/* ── Settings helpers ── */
+window.pbSyncGetSettings = function() {
+  var ws = _currentWorkspace;
+  if (!ws) return {};
+  try { return JSON.parse(localStorage.getItem('pb_sync_' + ws.id) || '{}'); }
+  catch(e) { return {}; }
+};
 
-/* ── Init sections for a project ── */
-function secGetSections(projId){
-  if(!DB.sections) DB.sections=[];
-  return DB.sections.filter(function(s){return s.projectId===projId;}).sort(function(a,b){return (a.order||0)-(b.order||0);});
-}
+window.pbSyncSaveSettings = function(obj) {
+  var ws = _currentWorkspace;
+  if (!ws) return;
+  try {
+    var cur = pbSyncGetSettings();
+    localStorage.setItem('pb_sync_' + ws.id, JSON.stringify(Object.assign(cur, obj)));
+  } catch(e) {}
+};
 
-/* ══ MAIN PANEL — opens full-screen sections manager ════════ */
-function openProjectSections(projId) {
-  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
-  if (!proj) return;
-  var ex = document.getElementById('sections-panel');
-  if (ex) ex.remove();
+/* ── Status indicator ── */
+window.pbUpdateSyncStatus = function(state) {
+  var dot   = document.getElementById('sync-dot');
+  var label = document.getElementById('sync-label');
+  var states = {
+    synced:  { color:'#C8935A', text:'Synced' },
+    pulling: { color:'#2196F3', text:'Pulling...' },
+    pushing: { color:'#FF9800', text:'Pushing...' },
+    pulled:  { color:'#C8935A', text:'Synced ✓' },
+    pushed:  { color:'#C8935A', text:'Pushed ✓' },
+    error:   { color:'#EF5350', text:'Sync Error' },
+    notoken: { color:'#888',    text:'Not synced' },
+  };
+  var s = states[state] || states.notoken;
+  if (dot)   dot.style.background   = s.color;
+  if (label) label.textContent       = s.text;
+};
 
-  var panel = document.createElement('div');
-  panel.id  = 'sections-panel';
-  panel.style.cssText = 'position:fixed;inset:0;z-index:9300;background:#0f0803;overflow-y:auto;font-family:inherit';
-  panel.innerHTML = secBuildPanel(projId, proj);
-  document.body.appendChild(panel);
-}
+/* ── PUSH (Field → Cloud) ── */
+window.pbGistPush = async function() {
+  var settings = pbSyncGetSettings();
+  var token    = settings.githubToken;
+  if (!token) { openGithubTokenSetup('push'); return; }
 
-function secBuildPanel(projId, proj){
-  var sections = secGetSections(projId);
-  var totalItems = 0, doneItems = 0;
-  sections.forEach(function(s){
-    (s.items||[]).forEach(function(it){
-      totalItems++;
-      if(it.done) doneItems++;
+  pbUpdateSyncStatus('pushing');
+  var ws = _currentWorkspace;
+
+  var payload = {
+    description: 'ProBuilders-Sync-' + (ws ? ws.id : 'default'),
+    public:      false,
+    files: {
+      'probuilders_data.json': {
+        content: JSON.stringify({
+          db:       DB,
+          wsId:     ws ? ws.id : '',
+          wsName:   ws ? ws.name : '',
+          pushedBy: (_currentUser && _currentUser.name) || 'Field User',
+          pushedAt: new Date().toISOString(),
+          appVersion: '10.5',
+        }, null, 2)
+      }
+    }
+  };
+
+  try {
+    var gistId  = settings.gistId;
+    var method  = gistId ? 'PATCH' : 'POST';
+    var url     = gistId
+      ? 'https://api.github.com/gists/' + gistId
+      : 'https://api.github.com/gists';
+
+    var res = await fetch(url, {
+      method:  method,
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept':        'application/vnd.github.v3+json',
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(payload),
     });
-  });
-  var pct = totalItems ? Math.round(doneItems/totalItems*100) : 0;
 
-  var sectionsHtml = sections.length
-    ? sections.map(function(sec){ return secBuildSection(sec, projId); }).join('')
-    : '<div style="text-align:center;padding:40px 20px;color:#604030;font-size:14px">No sections yet — tap <strong>+ Add Section</strong> to get started</div>';
+    if (res.status === 401) {
+      pbSyncSaveSettings({ githubToken: null });
+      pbUpdateSyncStatus('error');
+      toast && toast('❌ GitHub token invalid — re-enter it');
+      openGithubTokenSetup('push');
+      return;
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
 
-  return '<div>'
-    /* ── Header ── */
-    +'<div style="position:sticky;top:0;z-index:10;background:#0f0803;border-bottom:1px solid #3d2410;padding:12px 16px;display:flex;align-items:center;gap:10px">'
-    +'<button onclick="document.getElementById(\'sections-panel\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:13px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:inherit;flex-shrink:0">← Back</button>'
-    +'<div style="flex:1;min-width:0">'
-    +'<div style="font-size:16px;font-weight:900;color:#F5E6D3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+secEsc(proj.name)+'</div>'
-    +'<div style="font-size:10px;color:#604030">Work Sections & Checklists</div>'
-    +'</div>'
-    +'<button onclick="secAddSection(\''+projId+'\')" style="background:#C8935A;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer;font-family:inherit;white-space:nowrap">+ Add Section</button>'
-    +'</div>'
-    /* ── Progress bar ── */
-    +'<div style="padding:12px 16px;border-bottom:1px solid #2a1a0d;background:#111">'
-    +'<div style="display:flex;justify-content:space-between;font-size:11px;color:#604030;margin-bottom:5px">'
-    +'<span>Overall Completion</span><span style="font-weight:800;color:#C8935A">'+pct+'% &nbsp;('+doneItems+'/'+totalItems+' items)</span>'
-    +'</div>'
-    +'<div style="height:6px;background:#1a1008;border-radius:99px;overflow:hidden">'
-    +'<div style="height:6px;width:'+pct+'%;background:linear-gradient(90deg,#C8935A,#8B6240);border-radius:99px;transition:width .4s"></div>'
-    +'</div>'
-    +'</div>'
-    /* ── Sections ── */
-    +'<div id="sec-list-'+projId+'" style="padding:12px 16px">'
-    +sectionsHtml
-    +'</div></div>';
-}
-
-function secBuildSection(sec, projId){
-  var items   = sec.items || [];
-  var done    = items.filter(function(it){return it.done;}).length;
-  var pct     = items.length ? Math.round(done/items.length*100) : 0;
-  var allDone = items.length > 0 && done === items.length;
-
-  var itemsHtml = items.map(function(it){ return secBuildItem(it, sec.id, projId); }).join('');
-
-  return '<div id="sec-'+sec.id+'" style="background:#1a1008;border:1px solid #3d2410;border-radius:12px;margin-bottom:14px;overflow:hidden">'
-    /* Section header */
-    +'<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:'+(allDone?'rgba(200,147,90,.12)':'#1a1008')+';border-bottom:1px solid #2a1a0d">'
-    +'<div style="width:36px;height:36px;border-radius:8px;background:'+(allDone?'rgba(200,147,90,.2)':'rgba(255,255,255,.04)')+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'+(allDone?'✅':'📋')+'</div>'
-    +'<div style="flex:1;min-width:0">'
-    +'<div style="font-size:14px;font-weight:800;color:#F5E6D3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+secEsc(sec.name)+'</div>'
-    +'<div style="font-size:10px;color:#604030;margin-top:1px">'+done+'/'+items.length+' completed &nbsp;·&nbsp; '+pct+'%</div>'
-    +'</div>'
-    /* Section progress mini-bar */
-    +'<div style="width:60px;height:4px;background:#2a1a0d;border-radius:99px;overflow:hidden;flex-shrink:0">'
-    +'<div style="height:4px;width:'+pct+'%;background:#C8935A;border-radius:99px"></div>'
-    +'</div>'
-    /* Section actions */
-    +'<button onclick="secAddItem(\''+sec.id+'\',\''+projId+'\')" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:7px;color:#C8935A;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;font-family:inherit;flex-shrink:0">+ Item</button>'
-    +'<button onclick="secEditSection(\''+sec.id+'\',\''+projId+'\')" style="background:none;border:1px solid #2a1a0d;border-radius:7px;color:#604030;font-size:11px;padding:5px 8px;cursor:pointer;font-family:inherit;flex-shrink:0">✏️</button>'
-    +'<button onclick="secDeleteSection(\''+sec.id+'\',\''+projId+'\')" style="background:none;border:1px solid rgba(239,83,80,.2);border-radius:7px;color:#EF5350;font-size:11px;padding:5px 8px;cursor:pointer;font-family:inherit;flex-shrink:0">🗑</button>'
-    +'</div>'
-    /* Items list */
-    +'<div id="sec-items-'+sec.id+'" style="padding:0 14px">'
-    +(itemsHtml||'<div style="padding:12px 0;font-size:12px;color:#604030">No items yet — tap + Item to add checklist tasks</div>')
-    +'</div>'
-    +'</div>';
-}
-
-function secBuildItem(it, secId, projId){
-  var photos = it.photos || [];
-  return '<div id="sit-'+it.id+'" style="padding:10px 0;border-bottom:1px solid #111;display:flex;flex-direction:column;gap:6px">'
-    /* Row 1: checkbox + desc + actions */
-    +'<div style="display:flex;align-items:center;gap:10px">'
-    +'<div onclick="secToggleItem(\''+it.id+'\',\''+secId+'\',\''+projId+'\')" '
-    +'style="width:22px;height:22px;border-radius:6px;border:2px solid '+(it.done?'#C8935A':'#3d2410')+';background:'+(it.done?'#C8935A':'transparent')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s">'
-    +(it.done?'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" style="width:14px;height:14px"><polyline points="20 6 9 17 4 12"/></svg>':'')
-    +'</div>'
-    +'<div style="flex:1;min-width:0">'
-    +'<div style="font-size:13px;color:'+(it.done?'#604030':'#F5E6D3')+';text-decoration:'+(it.done?'line-through':'none')+';line-height:1.35;word-break:break-word">'+secEsc(it.desc)+'</div>'
-    +(it.completedBy?'<div style="font-size:9px;color:#3d2410;margin-top:2px">✅ '+secEsc(it.completedBy)+' · '+secEsc(it.completedAt||'')+'</div>':'')
-    +(it.notes?'<div style="font-size:11px;color:#604030;margin-top:2px;font-style:italic">'+secEsc(it.notes)+'</div>':'')
-    +'</div>'
-    /* Photo count badge */
-    +(photos.length?'<div style="font-size:10px;font-weight:700;color:#C8935A;flex-shrink:0">📸 '+photos.length+'</div>':'')
-    /* Actions */
-    +'<label style="cursor:pointer;flex-shrink:0" title="Add photo">'
-    +'<span style="background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.2);border-radius:6px;color:#C8935A;font-size:12px;padding:4px 8px">📷</span>'
-    +'<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="secAddPhoto(this,\''+it.id+'\',\''+secId+'\',\''+projId+'\')">'
-    +'</label>'
-    +'<button onclick="secEditItem(\''+it.id+'\',\''+secId+'\',\''+projId+'\')" style="background:none;border:1px solid #2a1a0d;border-radius:6px;color:#604030;font-size:11px;padding:4px 7px;cursor:pointer;flex-shrink:0">✏️</button>'
-    +'<button onclick="secDeleteItem(\''+it.id+'\',\''+secId+'\',\''+projId+'\')" style="background:none;border:1px solid rgba(239,83,80,.15);border-radius:6px;color:#EF5350;font-size:11px;padding:4px 7px;cursor:pointer;flex-shrink:0">✕</button>'
-    +'</div>'
-    /* Row 2: photo thumbnails */
-    +(photos.length?'<div style="display:flex;gap:5px;flex-wrap:wrap;padding-left:32px">'
-      +photos.map(function(ph,pi){
-        return '<div style="position:relative">'
-          +'<img src="'+ph.src+'" onclick="secViewPhoto(\''+it.id+'\','+pi+',\''+secId+'\',\''+projId+'\')" '
-          +'style="width:56px;height:56px;object-fit:cover;border-radius:7px;border:1px solid #3d2410;cursor:pointer"/>'
-          +'<button onclick="secDeletePhoto(\''+it.id+'\','+pi+',\''+secId+'\',\''+projId+'\')" '
-          +'style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:#EF5350;border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>'
-          +'</div>';
-      }).join('')
-      +'</div>':'')
-    +'</div>';
-}
-
-/* ══ ACTIONS ════════════════════════════════════════════════ */
-
-window.secAddSection = function(projId) {
-  var name = prompt('Section name (e.g. "Demo & Rough-In", "Waterproofing", "Tile"):');
-  if (!name || !name.trim()) return;
-  if (!DB.sections) DB.sections = [];
-  var maxOrder = Math.max(0, ...secGetSections(projId).map(function(s){return s.order||0;}));
-  DB.sections.push({ id:secUid(), projectId:projId, name:name.trim(), order:maxOrder+1, items:[] });
-  secSave();
-  secRefresh(projId);
-  toast && toast('📋 Section "'+name.trim()+'" added');
+    var gist = await res.json();
+    pbSyncSaveSettings({ gistId: gist.id });
+    pbUpdateSyncStatus('pushed');
+    toast && toast('☁️ Pushed to GitHub · ' + new Date().toLocaleTimeString());
+    console.log('[PB Sync] Pushed gist:', gist.id);
+  } catch(e) {
+    pbUpdateSyncStatus('error');
+    toast && toast('❌ Push failed: ' + e.message);
+    console.error('[PB Sync] Push error:', e);
+  }
 };
 
-window.secEditSection = function(secId, projId) {
-  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
-  if (!sec) return;
-  var name = prompt('Rename section:', sec.name);
-  if (name === null) return;
-  if (name.trim()) sec.name = name.trim();
-  secSave(); secRefresh(projId);
-};
+/* ── PULL (Cloud → Field/Desktop) ── */
+window.pbGistPull = async function() {
+  var settings = pbSyncGetSettings();
+  var token    = settings.githubToken;
+  if (!token) { openGithubTokenSetup('pull'); return; }
 
-window.secDeleteSection = function(secId, projId) {
-  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
-  if (!sec) return;
-  if (!confirm('Delete section "'+sec.name+'" and all its items?')) return;
-  DB.sections = (DB.sections||[]).filter(function(s){return s.id!==secId;});
-  secSave(); secRefresh(projId);
-  toast && toast('Section deleted');
-};
-
-window.secAddItem = function(secId, projId) {
-  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
-  if (!sec) return;
-
-  var mo = document.createElement('div');
-  mo.id  = 'sec-add-item-modal';
-  mo.style.cssText = 'position:fixed;inset:0;z-index:9400;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
-  mo.innerHTML = '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:600px;max-height:70vh;overflow-y:auto">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
-    +'<div style="font-size:15px;font-weight:800;color:#F5E6D3">+ Add Checklist Item</div>'
-    +'<button onclick="document.getElementById(\'sec-add-item-modal\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
-    +'</div>'
-    +'<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">Task Description *'
-    +'<button type="button" data-pbv-btn="1" data-pbv-target="sai-desc" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" style="background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.4);border-radius:5px;color:#C8935A;font-size:10px;padding:1px 7px;cursor:pointer;font-family:inherit;margin-left:8px;vertical-align:middle">🎤</button>'
-    +'</div>'
-    +'<input id="sai-desc" type="text" placeholder="Describe the work item..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit"/>'
-    +'</div>'
-    +'<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">Notes (optional)</div>'
-    +'<textarea id="sai-notes" rows="2" placeholder="Additional details..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:inherit;resize:vertical"></textarea>'
-    +'</div>'
-    +'<label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:12px;color:#A08060;cursor:pointer">'
-    +'<input type="checkbox" id="sai-photo-req" style="accent-color:#C8935A;width:16px;height:16px"> Require photo to mark complete'
-    +'</label>'
-    +'<div style="display:flex;gap:8px">'
-    +'<button onclick="document.getElementById(\'sec-add-item-modal\').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #3d2410;background:transparent;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
-    +'<button onclick="secSaveNewItem(\''+secId+'\',\''+projId+'\')" style="flex:2;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">+ Add Item</button>'
-    +'</div>'
-    +'</div>';
-  document.body.appendChild(mo);
-  setTimeout(function(){ document.getElementById('sai-desc')&&document.getElementById('sai-desc').focus(); }, 100);
-};
-
-window.secSaveNewItem = function(secId, projId) {
-  var desc = document.getElementById('sai-desc')?.value?.trim();
-  if (!desc) { toast&&toast('Description required'); return; }
-  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
-  if (!sec) return;
-  if (!sec.items) sec.items = [];
-  sec.items.push({
-    id:            secUid(),
-    desc:          desc,
-    notes:         document.getElementById('sai-notes')?.value?.trim() || '',
-    photoRequired: !!(document.getElementById('sai-photo-req')?.checked),
-    done:          false,
-    photos:        [],
-    createdAt:     secNow(),
-  });
-  document.getElementById('sec-add-item-modal')?.remove();
-  secSave(); secRefresh(projId);
-  toast && toast('✅ Item added');
-};
-
-window.secEditItem = function(itemId, secId, projId) {
-  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
-  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
-  if (!item) return;
-  var newDesc = prompt('Edit item:', item.desc);
-  if (newDesc===null) return;
-  if (newDesc.trim()) item.desc = newDesc.trim();
-  var newNotes = prompt('Notes (optional):', item.notes||'');
-  if (newNotes!==null) item.notes = newNotes.trim();
-  secSave(); secRefresh(projId);
-};
-
-window.secDeleteItem = function(itemId, secId, projId) {
-  var sec = (DB.sections||[]).find(function(s){return s.id===secId;});
-  if (!sec) return;
-  sec.items = (sec.items||[]).filter(function(it){return it.id!==itemId;});
-  secSave(); secRefresh(projId);
-};
-
-window.secToggleItem = function(itemId, secId, projId) {
-  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
-  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
-  if (!item) return;
-
-  // Require photo before marking done if set
-  if (!item.done && item.photoRequired && (!item.photos || !item.photos.length)) {
-    if (typeof toast !== 'undefined') toast('📸 This item requires a photo before marking complete');
-    // Trigger the file input
-    var el = document.getElementById('sit-'+itemId);
-    var inp = el && el.querySelector('input[type="file"]');
-    if (inp) inp.click();
+  var gistId = settings.gistId;
+  if (!gistId) {
+    toast && toast('⚠️ No cloud data yet — push from field app first');
     return;
   }
 
-  item.done = !item.done;
-  if (item.done) {
-    item.completedBy  = (typeof _currentUser!=='undefined'&&_currentUser) ? _currentUser.name : 'User';
-    item.completedAt  = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  } else {
-    delete item.completedBy; delete item.completedAt;
-  }
-  secSave();
-  // Fast update without full refresh
-  var el = document.getElementById('sit-'+itemId);
-  if (el) {
-    var sec2 = (DB.sections||[]).find(function(s){return s.id===secId;});
-    var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
-    el.outerHTML = secBuildItem(item, secId, projId);
-  }
-  // Update section progress bar
-  secRefreshProgress(secId, projId);
-};
+  pbUpdateSyncStatus('pulling');
 
-window.secAddPhoto = function(input, itemId, secId, projId) {
-  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
-  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
-  if (!item) return;
-  if (!item.photos) item.photos = [];
-
-  Array.from(input.files).forEach(function(file) {
-    if (!file.type.startsWith('image/')) return;
-    var r = new FileReader();
-    r.onload = function(e) {
-      var src = e.target.result;
-      if (!src || src.length < 200) return;
-      item.photos.push({
-        src:     src,
-        caption: file.name,
-        ts:      secNow(),
-        addedBy: (typeof _currentUser!=='undefined'&&_currentUser)?_currentUser.name:'User',
-        geo:     (typeof currentGeo!=='undefined'&&currentGeo)?currentGeo.display||'':'',
-      });
-      // If photoRequired and not done, mark done now
-      if (item.photoRequired && !item.done) {
-        item.done = true;
-        item.completedBy = (typeof _currentUser!=='undefined'&&_currentUser)?_currentUser.name:'User';
-        item.completedAt = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-        toast && toast('📸 Photo saved — item marked complete');
-      } else {
-        toast && toast('📸 Photo added');
+  try {
+    var res = await fetch('https://api.github.com/gists/' + gistId, {
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept':        'application/vnd.github.v3+json',
       }
-      secSave(); secRefresh(projId);
-    };
-    r.readAsDataURL(file);
-  });
+    });
+
+    if (res.status === 401) {
+      pbSyncSaveSettings({ githubToken: null });
+      pbUpdateSyncStatus('error');
+      openGithubTokenSetup('pull');
+      return;
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    var gist    = await res.json();
+    var file    = gist.files['probuilders_data.json'];
+    if (!file)  throw new Error('No data file in gist');
+
+    // Handle truncated gists (large files)
+    var content = file.truncated
+      ? await (await fetch(file.raw_url)).text()
+      : file.content;
+
+    var parsed   = JSON.parse(content);
+    var incoming = parsed.db || parsed;
+
+    /* ── Smart merge: add new, update existing, never delete ── */
+    var ARRAY_KEYS = ['projects','tasks','photos','reports','workers',
+      'timesheets','inventory','suppliers','receipts','materialOrders',
+      'hazards','changeOrders','payments','documents','changelog',
+      'budgetItems','estimates','materialsTakeoff','calEvents',
+      'voiceNotes','roster','sov'];
+
+    ARRAY_KEYS.forEach(function(k) {
+      if (!incoming[k]) return;
+      if (k === 'sov' || k === 'materialsTakeoff') {
+        // Object merge
+        DB[k] = Object.assign(DB[k] || {}, incoming[k]);
+        return;
+      }
+      if (!Array.isArray(incoming[k])) return;
+      if (!DB[k]) { DB[k] = incoming[k]; return; }
+      var existingIds = {};
+      DB[k].forEach(function(x){ existingIds[x.id] = true; });
+      incoming[k].forEach(function(item) {
+        if (!existingIds[item.id]) {
+          DB[k].push(item);
+        }
+        // Optionally update existing (take newer)
+      });
+    });
+
+    // Merge sections
+    if (incoming.sections) {
+      if (!DB.sections) DB.sections = [];
+      var existingSecs = {};
+      DB.sections.forEach(function(s){ existingSecs[s.id] = s; });
+      (incoming.sections||[]).forEach(function(sec) {
+        if (!existingSecs[sec.id]) {
+          DB.sections.push(sec);
+        } else {
+          // Merge items within section
+          var local = existingSecs[sec.id];
+          if (!local.items) local.items = [];
+          var localItemIds = {};
+          local.items.forEach(function(it){ localItemIds[it.id] = true; });
+          (sec.items||[]).forEach(function(it) {
+            if (!localItemIds[it.id]) local.items.push(it);
+          });
+        }
+      });
+    }
+
+    // Sync counters
+    if (incoming.nextId        > (DB.nextId||0))        DB.nextId        = incoming.nextId;
+    if (incoming.dprCounter    > (DB.dprCounter||0))    DB.dprCounter    = incoming.dprCounter;
+    if (incoming.paymentCounter> (DB.paymentCounter||0)) DB.paymentCounter= incoming.paymentCounter;
+
+    saveToLocal && saveToLocal();
+
+    // Refresh all views
+    if (typeof renderProjectsDesktop === 'function') renderProjectsDesktop();
+    if (typeof renderProjects        === 'function') renderProjects();
+    if (typeof refreshHome           === 'function') refreshHome();
+    if (typeof refreshCommand        === 'function') refreshCommand();
+    if (typeof renderInvoices        === 'function') renderInvoices();
+    if (typeof renderTasks           === 'function') renderTasks();
+
+    pbUpdateSyncStatus('pulled');
+    var by = parsed.pushedBy ? ' by ' + parsed.pushedBy : '';
+    var at = parsed.pushedAt ? ' · ' + new Date(parsed.pushedAt).toLocaleTimeString() : '';
+    toast && toast('✅ Pulled from GitHub' + by + at);
+    console.log('[PB Sync] Pulled gist:', gistId, parsed.pushedAt);
+  } catch(e) {
+    pbUpdateSyncStatus('error');
+    toast && toast('❌ Pull failed: ' + e.message);
+    console.error('[PB Sync] Pull error:', e);
+  }
 };
 
-window.secDeletePhoto = function(itemId, photoIdx, secId, projId) {
-  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
-  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
-  if (!item || !item.photos) return;
-  item.photos.splice(photoIdx, 1);
-  secSave(); secRefresh(projId);
+/* ── Auto-pull every 2 minutes if token configured ── */
+window._pbAutoSyncInterval = null;
+window.pbStartAutoSync = function() {
+  if (window._pbAutoSyncInterval) clearInterval(window._pbAutoSyncInterval);
+  window._pbAutoSyncInterval = setInterval(async function() {
+    var settings = pbSyncGetSettings();
+    if (settings.githubToken && settings.gistId) {
+      console.log('[PB Sync] Auto-pulling...');
+      await pbGistPull();
+    }
+  }, 120000); // every 2 minutes
 };
 
-window.secViewPhoto = function(itemId, photoIdx, secId, projId) {
-  var sec  = (DB.sections||[]).find(function(s){return s.id===secId;});
-  var item = sec && (sec.items||[]).find(function(it){return it.id===itemId;});
-  if (!item || !item.photos[photoIdx]) return;
-  var ph = item.photos[photoIdx];
+/* ── Token setup modal ── */
+window.openGithubTokenSetup = function(action) {
+  document.getElementById('pb-gist-setup') && document.getElementById('pb-gist-setup').remove();
+
+  window._pbGistAction = action || 'push';
+  var settings  = pbSyncGetSettings();
+  var hasToken  = !!(settings.githubToken);
+  var hasGist   = !!(settings.gistId);
 
   var mo = document.createElement('div');
-  mo.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.95);display:flex;flex-direction:column;font-family:inherit';
-  mo.innerHTML = '<div style="padding:10px 14px;display:flex;align-items:center;gap:10px;background:#0f0803;border-bottom:1px solid #3d2410;flex-shrink:0">'
-    +'<button onclick="this.closest(\'[style*=fixed]\').remove()" style="background:#1a1008;border:1px solid #3d2410;border-radius:7px;color:#A08060;font-size:13px;font-weight:700;padding:6px 12px;cursor:pointer;font-family:inherit">← Close</button>'
-    +'<div style="flex:1;min-width:0;overflow:hidden">'
-    +'<div style="font-size:12px;color:#A08060;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+secEsc(item.desc)+'</div>'
-    +'<div style="font-size:10px;color:#604030">Photo '+(photoIdx+1)+' of '+item.photos.length+' &nbsp;·&nbsp; '+secEsc(ph.ts?ph.ts.slice(0,10):'')+(ph.addedBy?' · '+ph.addedBy:'')+'</div>'
+  mo.id  = 'pb-gist-setup';
+  mo.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9900;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+
+  mo.innerHTML =
+    '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:24px;max-width:460px;width:100%">'
+
+    // Header
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:18px;font-weight:800;color:#F5E6D3">☁️ GitHub Sync Setup</div>'
+    +'<button onclick="document.getElementById(\'pb-gist-setup\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
     +'</div>'
-    +'<a href="'+ph.src+'" download="photo-'+itemId+'-'+photoIdx+'.jpg" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:7px;color:#C8935A;font-size:11px;font-weight:700;padding:6px 12px;text-decoration:none">⬇ Save</a>'
+
+    // Status
+    +(hasToken
+      ? '<div style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#C8935A">✅ Token configured · '+(hasGist?'Gist linked':'No gist yet — push to create one')+'</div>'
+      : '<div style="background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#EF5350">⚠️ No GitHub token — enter one below to enable sync</div>'
+    )
+
+    // Instructions
+    +'<div style="font-size:12px;color:#A08060;line-height:1.7;margin-bottom:16px">'
+    +'<strong style="color:#F5E6D3">One-time setup (5 min):</strong><br>'
+    +'1. Go to <strong style="color:#C8935A">github.com</strong> → Settings<br>'
+    +'2. Developer settings → Personal access tokens → Tokens (classic)<br>'
+    +'3. Generate new token → check <strong>gist</strong> scope only<br>'
+    +'4. Paste the token below — saved on this device only<br><br>'
+    +'<strong style="color:#F5E6D3">Then:</strong> Tap <em>Push to Cloud</em> on iPhone → <em>Pull from Cloud</em> on Mac'
     +'</div>'
-    +'<div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px">'
-    +'<img src="'+ph.src+'" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px"/>'
+
+    // Token input
+    +'<div style="margin-bottom:12px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#604030;margin-bottom:5px">GitHub Token</div>'
+    +'<input id="pb-gist-token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="'+(settings.githubToken||'')+'" '
+    +'style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-family:monospace"/>'
     +'</div>'
-    +(ph.caption&&ph.caption!=='photo'?'<div style="padding:10px 14px;font-size:12px;color:#604030;text-align:center;flex-shrink:0">'+secEsc(ph.caption)+'</div>':'');
+
+    // Gist ID (optional)
+    +(hasGist
+      ? '<div style="margin-bottom:14px;font-size:11px;color:#604030">Gist ID: <code style="color:#A08060">'+settings.gistId+'</code>'
+        +'<button onclick="pbSyncSaveSettings({gistId:null});document.getElementById(\'pb-gist-setup\').remove();openGithubTokenSetup()" '
+        +'style="background:none;border:none;color:#EF5350;font-size:10px;cursor:pointer;margin-left:8px;text-decoration:underline">Reset</button></div>'
+      : ''
+    )
+
+    // Buttons
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById(\'pb-gist-setup\').remove()" style="flex:1;padding:11px;border-radius:9px;border:1px solid #3d2410;background:transparent;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<a href="https://github.com/settings/tokens/new?scopes=gist&description=ProBuilders" target="_blank" style="flex:1;padding:11px;border-radius:9px;border:1px solid rgba(200,147,90,.3);background:rgba(200,147,90,.08);color:#C8935A;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center">Get Token →</a>'
+    +'<button onclick="pbSaveGistToken()" style="flex:1;padding:11px;border-radius:9px;border:none;background:#C8935A;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Save & '+(action==='pull'?'Pull':'Push')+'</button>'
+    +'</div>'
+    +'</div>';
+
+  document.body.appendChild(mo);
+  setTimeout(function(){ document.getElementById('pb-gist-token-input')&&document.getElementById('pb-gist-token-input').focus(); }, 100);
+};
+
+window.pbSaveGistToken = async function() {
+  var token = document.getElementById('pb-gist-token-input')?.value?.trim();
+  if (!token || token.length < 10) {
+    toast && toast('Please enter a valid GitHub token');
+    return;
+  }
+  pbSyncSaveSettings({ githubToken: token });
+  document.getElementById('pb-gist-setup')?.remove();
+  toast && toast('✅ Token saved');
+
+  // Run the action that triggered setup
+  var action = window._pbGistAction || 'push';
+  if (action === 'pull') await pbGistPull();
+  else await pbGistPush();
+
+  pbStartAutoSync();
+};
+
+/* ── Sync settings panel ── */
+window.openSyncSettings = function() {
+  document.getElementById('sync-settings-panel') && document.getElementById('sync-settings-panel').remove();
+  var settings = pbSyncGetSettings();
+  var mo = document.createElement('div');
+  mo.id  = 'sync-settings-panel';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+  mo.innerHTML =
+    '<div style="background:#1a1008;border:1px solid #3d2410;border-radius:16px;padding:22px;max-width:460px;width:100%">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:16px;font-weight:800;color:#F5E6D3">⚙️ Sync Settings</div>'
+    +'<button onclick="document.getElementById(\'sync-settings-panel\').remove()" style="background:none;border:none;color:#604030;font-size:22px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:10px">'
+    +'<button onclick="pbGistPush().then(function(){document.getElementById(\'sync-settings-panel\')&&document.getElementById(\'sync-settings-panel\').remove()})" style="padding:12px;border-radius:10px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">⬆ Push to Cloud &nbsp;<span style=\'font-size:11px;color:#604030\'>Upload your data to GitHub</span></button>'
+    +'<button onclick="pbGistPull().then(function(){document.getElementById(\'sync-settings-panel\')&&document.getElementById(\'sync-settings-panel\').remove()})" style="padding:12px;border-radius:10px;border:1px solid #3d2410;background:#111;color:#F5E6D3;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">⬇ Pull from Cloud &nbsp;<span style=\'font-size:11px;color:#604030\'>Download latest data from GitHub</span></button>'
+    +'<button onclick="openGithubTokenSetup();document.getElementById(\'sync-settings-panel\').remove()" style="padding:12px;border-radius:10px;border:1px solid #3d2410;background:#111;color:#A08060;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">🔑 GitHub Token &nbsp;<span style=\'font-size:11px;color:#604030\'>'+(settings.githubToken?'✅ Configured':'Not set')+'</span></button>'
+    +(settings.gistId?'<div style="font-size:11px;color:#604030;padding:6px 10px">Gist: <code style="color:#A08060">'+settings.gistId.slice(0,16)+'...</code></div>':'')
+    +'</div>'
+    +'</div>';
   document.body.appendChild(mo);
 };
 
-/* ── Refresh the sections panel in place ── */
-function secRefresh(projId) {
-  var panel = document.getElementById('sections-panel');
-  if (!panel) return;
-  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
-  if (!proj) return;
-  panel.innerHTML = secBuildPanel(projId, proj);
-}
+/* ── Wire the sync pill to open settings ── */
+document.addEventListener('DOMContentLoaded', function() {
+  var pill = document.querySelector('.sync-pill');
+  if (pill) {
+    pill.onclick = openSyncSettings;
+    pill.style.cursor = 'pointer';
+    pill.title = 'Click to sync settings';
+  }
 
-function secRefreshProgress(secId, projId) {
-  // Update just the progress indicators without full rebuild
-  var sec     = (DB.sections||[]).find(function(s){return s.id===secId;});
-  var secEl   = document.getElementById('sec-'+secId);
-  if (!sec || !secEl) { secRefresh(projId); return; }
-  var items   = sec.items||[];
-  var done    = items.filter(function(it){return it.done;}).length;
-  var pct     = items.length ? Math.round(done/items.length*100) : 0;
-  var bar     = secEl.querySelector('[style*="background:#C8935A;border-radius:99px"]');
-  if (bar) bar.style.width = pct+'%';
-}
-
-/* ══ WIRE INTO BOTH APPS ════════════════════════════════════ */
-
-/* Field app: add Sections button to project card actions */
-document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(function(){
-    // Add Sections button to field project cards
-    document.querySelectorAll('.project-card').forEach(function(card) {
-      if (card.querySelector('.sec-btn')) return;
-      var oc = card.getAttribute('onclick')||'';
-      var m  = oc.match(/openFieldProjectDetail\('([^']+)'\)/);
-      var pid = m ? m[1] : null;
-      if (!pid) return;
-      var actDiv = card.querySelector('[onclick*="stopPropagation"]')?.parentElement
-                || card.querySelector('[style*="flex-wrap"]');
-      if (!actDiv) return;
-      var btn = document.createElement('button');
-      btn.className = 'sec-btn';
-      btn.textContent = '📋 Sections';
-      btn.style.cssText = 'padding:6px 12px;border-radius:7px;border:1px solid rgba(200,147,90,.3);background:rgba(200,147,90,.1);color:#C8935A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
-      btn.onclick = function(e){ e.stopPropagation(); openProjectSections(pid); };
-      actDiv.appendChild(btn);
-    });
-
-    // Desktop: add Sections button to project cards
-    document.querySelectorAll('#proj-cards-grid .card').forEach(function(card) {
-      if (card.querySelector('.sec-btn')) return;
-      var oc = card.getAttribute('onclick')||'';
-      var m  = oc.match(/openProjectDetail\('([^']+)'\)/);
-      var pid = m ? m[1] : null;
-      if (!pid) return;
-      var lastBtn = card.querySelectorAll('button');
-      var lastEl  = lastBtn[lastBtn.length-1];
-      var btn = document.createElement('button');
-      btn.className = 'sec-btn';
-      btn.textContent = '📋 Sections';
-      btn.style.cssText = 'padding:5px 11px;border-radius:7px;border:1px solid rgba(200,147,90,.3);background:rgba(200,147,90,.1);color:#C8935A;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;margin-right:4px';
-      btn.onclick = function(e){ e.stopPropagation(); openProjectSections(pid); };
-      if (lastEl && lastEl.parentElement) lastEl.parentElement.appendChild(btn);
-      else card.appendChild(btn);
-    });
-  }, 1200);
+  // Check token and start auto-sync
+  var settings = pbSyncGetSettings();
+  if (settings.githubToken && settings.gistId) {
+    pbUpdateSyncStatus('synced');
+    pbStartAutoSync();
+  } else {
+    pbUpdateSyncStatus('notoken');
+  }
 });
 
-/* Also add to project detail panel when it opens */
-var _origOPD = typeof openProjectDetail!=='undefined' ? openProjectDetail : null;
-window.openProjectDetail = function(projId) {
-  if (_origOPD) _origOPD(projId);
-  setTimeout(function(){
-    var panel = document.getElementById('pdp');
-    if (!panel || panel.querySelector('.sec-detail-btn')) return;
-    var hdr = panel.querySelector('[style*="sticky"]');
-    if (!hdr) return;
-    var btn = document.createElement('button');
-    btn.className = 'sec-detail-btn';
-    btn.textContent = '📋 Sections';
-    btn.style.cssText = 'background:#1a1008;border:1px solid #3d2410;border-radius:8px;color:#A08060;font-size:11px;font-weight:700;padding:6px 11px;cursor:pointer;font-family:inherit;white-space:nowrap';
-    btn.onclick = function(){ openProjectSections(projId); };
-    hdr.insertBefore(btn, hdr.querySelector('button:last-child'));
-  }, 100);
+if (document.readyState !== 'loading') {
+  var _s = pbSyncGetSettings();
+  if (_s.githubToken && _s.gistId) {
+    pbUpdateSyncStatus('synced');
+    pbStartAutoSync();
+  } else {
+    pbUpdateSyncStatus('notoken');
+  }
+}
+
+console.log('[PB] Sync Engine v2 loaded');
+
+</script>
+<script>
+
+/* ── Sync Engine Patch: global token storage + better errors ── */
+window.pbSyncGetSettings = function() {
+  /* First try workspace-scoped, then fall back to global */
+  var ws = _currentWorkspace;
+  var wsKey = ws ? 'pb_sync_' + ws.id : null;
+  try {
+    var wsData  = wsKey ? JSON.parse(localStorage.getItem(wsKey)||'{}') : {};
+    var global  = JSON.parse(localStorage.getItem('pb_sync_global')||'{}');
+    /* Merge: workspace-specific overrides global */
+    return Object.assign({}, global, wsData);
+  } catch(e) { return {}; }
 };
 
-/* Also wire into openFieldProjectDetail */
-var _origOFPD = typeof openFieldProjectDetail!=='undefined' ? openFieldProjectDetail : null;
-window.openFieldProjectDetail = function(projId) {
-  if (_origOFPD) _origOFPD(projId);
-  setTimeout(function(){
-    var panel = document.getElementById('fpdp');
-    if (!panel || panel.querySelector('.sec-field-btn')) return;
-    var hdr = panel.querySelector('[style*="sticky"]');
-    if (!hdr) return;
-    var btn = document.createElement('button');
-    btn.className = 'sec-field-btn';
-    btn.textContent = '📋 Sections';
-    btn.style.cssText = 'background:#1a1008;border:1px solid #3d2410;border-radius:7px;color:#A08060;font-size:11px;font-weight:700;padding:6px 10px;cursor:pointer;font-family:inherit;flex-shrink:0';
-    btn.onclick = function(){ openProjectSections(projId); };
-    hdr.appendChild(btn);
-  }, 100);
+window.pbSyncSaveSettings = function(obj) {
+  /* Save to both global AND workspace-scoped storage */
+  try {
+    var global = JSON.parse(localStorage.getItem('pb_sync_global')||'{}');
+    Object.assign(global, obj);
+    localStorage.setItem('pb_sync_global', JSON.stringify(global));
+
+    var ws = _currentWorkspace;
+    if (ws) {
+      var wsKey = 'pb_sync_' + ws.id;
+      var wsData = JSON.parse(localStorage.getItem(wsKey)||'{}');
+      Object.assign(wsData, obj);
+      localStorage.setItem(wsKey, JSON.stringify(wsData));
+    }
+  } catch(e) { console.error('pbSyncSaveSettings error', e); }
 };
 
-console.log('[PB] Sections v1.0 loaded');
+window.pbSaveGistToken = async function() {
+  var input = document.getElementById('pb-gist-token-input');
+  var token = input ? input.value.trim() : '';
+  if (!token || token.length < 10) {
+    if(input) { input.style.borderColor='#EF5350'; }
+    toast && toast('⚠️ Please paste a valid GitHub token (starts with ghp_)');
+    return;
+  }
+  pbSyncSaveSettings({ githubToken: token });
+  document.getElementById('pb-gist-setup')?.remove();
+  toast && toast('✅ Token saved!');
+  pbStartAutoSync();
+
+  var action = window._pbGistAction || 'push';
+  if (action === 'pull') { await pbGistPull(); }
+  else { await pbGistPush(); }
+};
+
+/* Re-init auto-sync status check on load */
+(function checkSyncOnLoad() {
+  var tryInit = function() {
+    var settings = pbSyncGetSettings();
+    if (settings.githubToken) {
+      pbUpdateSyncStatus('synced');
+      pbStartAutoSync && pbStartAutoSync();
+    } else {
+      pbUpdateSyncStatus('notoken');
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(tryInit, 1500); });
+  } else {
+    setTimeout(tryInit, 1500);
+  }
+})();
+
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   DESKTOP FULL CAPABILITIES — Matches Field App
+   New Project · Edit Project · Task Manager · EOD Edit/Delete
+   Project Sections · Full DPR with Voice + Photos
+══════════════════════════════════════════════════════════════ */
+
+/* ── Shared helpers ── */
+function dfEsc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function dfField(label, id, type, val, opts) {
+  var s = 'width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--br,#3d2410);background:var(--s2,#111);color:var(--tx,#F5E6D3);font-size:13px;font-family:inherit';
+  var input = type==='textarea'
+    ? '<textarea id="'+id+'" rows="3" style="'+s+';resize:vertical">'+dfEsc(val||'')+'</textarea>'
+    : type==='select'
+    ? '<select id="'+id+'" style="'+s+'">'+(opts||[]).map(function(o){var v=typeof o==='object'?o.v:o,l=typeof o==='object'?o.l:o;return '<option value="'+v+'"'+(v===val?' selected':'')+'>'+l+'</option>';}).join('')+'</select>'
+    : '<input type="'+type+'" id="'+id+'" value="'+dfEsc(val||'')+'" style="'+s+'"/>';
+  return '<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf,#604030);margin-bottom:5px">'+label+'</div>'+input+'</div>';
+}
+
+/* ══ NEW PROJECT MODAL (Desktop) ═════════════════════════════ */
+function openNewProjectDesktopFull() {
+  document.getElementById('dp-new-proj-modal')?.remove();
+
+  var TRADES = ['General Contracting','Electrical','Plumbing','HVAC','Carpentry / Framing',
+    'Masonry / Concrete','Roofing','Painting','Flooring','Landscaping','Drywall / Insulation',
+    'Waterproofing','Demolition','Steel / Structural','Tile / Stone','Millwork / Cabinets',
+    'Glass / Glazing','Fire Protection','Low Voltage / Data','Other'];
+
+  var mo = document.createElement('div');
+  mo.id  = 'dp-new-proj-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.88);overflow-y:auto;font-family:inherit;padding:20px;display:flex;align-items:flex-start;justify-content:center';
+  mo.innerHTML =
+    '<div style="background:var(--s1,#1a1008);border:1px solid var(--br,#3d2410);border-radius:16px;padding:24px;max-width:720px;width:100%;margin:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">'
+    +'<div style="font-size:20px;font-weight:900;color:var(--tx,#F5E6D3)">+ New Project</div>'
+    +'<button onclick="document.getElementById(\'dp-new-proj-modal\').remove()" style="background:none;border:none;color:var(--txf);font-size:24px;cursor:pointer">✕</button>'
+    +'</div>'
+
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +dfField('Project Name *','dpnp-name','text','')
+    +dfField('Status','dpnp-status','select','In Progress',['Estimate','Pending','In Progress','On Hold','Completed'])
+    +dfField('Client Name','dpnp-client','text','')
+    +dfField('Client Phone','dpnp-phone','tel','')
+    +dfField('Client Email','dpnp-email','email','')
+    +dfField('Contract Amount ($)','dpnp-contract','number','')
+    +dfField('Start Date','dpnp-start','date',new Date().toISOString().slice(0,10))
+    +dfField('Target End Date','dpnp-end','date','')
+    +dfField('Property Type','dpnp-property','select','',['','Residential','Commercial','Industrial','Mixed Use'])
+    +dfField('Category','dpnp-category','select','',['','Renovation','New Construction','Repair','Maintenance','Tenant Improvement'])
+    +dfField('Room / Space','dpnp-room','select','',['','Kitchen','Bathroom','Bedroom','Living Room','Basement','Attic','Office','Common Space','Exterior','Full Home','Other'])
+    +dfField('Location Type','dpnp-location','select','',['','Interior','Exterior','Interior & Exterior'])
+    +'</div>'
+
+    +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:11px">'
+    +dfField('Street Address','dpnp-address','text','')
+    +dfField('City','dpnp-city','text','')
+    +dfField('State','dpnp-state','text','')
+    +'</div>'
+
+    +'<div style="margin-bottom:14px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf,#604030);margin-bottom:6px">Trades (select all that apply)</div>'
+    +'<div id="dpnp-trades" style="display:flex;flex-wrap:wrap;gap:4px">'
+    +TRADES.map(function(t){ return '<button type="button" data-trade="'+t+'" onclick="dfToggleTrade(this)" style="padding:5px 10px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--br,#2a1a0d);background:var(--s2,#111);color:var(--txf,#604030)">'+t+'</button>'; }).join('')
+    +'</div></div>'
+
+    +'<div style="margin-bottom:14px">'
+    +dfField('Scope / Notes','dpnp-notes','textarea','')
+    +'</div>'
+
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="document.getElementById(\'dp-new-proj-modal\').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--txm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<button onclick="dfSaveNewProject()" style="flex:2;padding:12px;border-radius:10px;border:none;background:#C8935A;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">+ Create Project</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+}
+
+window.dfToggleTrade = function(btn) {
+  var on = btn.getAttribute('data-on')==='1';
+  btn[on?'removeAttribute':'setAttribute']('data-on', on?'':'1');
+  btn.style.borderColor = on ? 'var(--br,#2a1a0d)' : '#C8935A';
+  btn.style.background  = on ? 'var(--s2,#111)'    : 'rgba(200,147,90,.18)';
+  btn.style.color       = on ? 'var(--txf,#604030)' : '#C8935A';
+};
+
+window.dfSaveNewProject = function() {
+  var name = document.getElementById('dpnp-name')?.value?.trim();
+  if (!name) { toast&&toast('Project name required'); return; }
+  if (!DB.projects) DB.projects=[];
+  var trades = Array.from(document.querySelectorAll('#dpnp-trades [data-on="1"]'))
+    .map(function(b){ return b.getAttribute('data-trade'); }).join(', ');
+  var projId = typeof uid!=='undefined' ? uid() : 'p'+Date.now();
+  DB.projects.push({
+    id:           projId,
+    name:         name,
+    status:       document.getElementById('dpnp-status')?.value||'In Progress',
+    client:       document.getElementById('dpnp-client')?.value?.trim()||'',
+    phone:        document.getElementById('dpnp-phone')?.value?.trim()||'',
+    email:        document.getElementById('dpnp-email')?.value?.trim()||'',
+    contract:     +(document.getElementById('dpnp-contract')?.value||0),
+    start:        document.getElementById('dpnp-start')?.value||'',
+    end:          document.getElementById('dpnp-end')?.value||'',
+    address:      document.getElementById('dpnp-address')?.value?.trim()||'',
+    city:         document.getElementById('dpnp-city')?.value?.trim()||'',
+    state:        document.getElementById('dpnp-state')?.value?.trim()||'',
+    propertyType: document.getElementById('dpnp-property')?.value||'',
+    category:     document.getElementById('dpnp-category')?.value||'',
+    roomType:     document.getElementById('dpnp-room')?.value||'',
+    locationType: document.getElementById('dpnp-location')?.value||'',
+    trade:        trades,
+    notes:        document.getElementById('dpnp-notes')?.value?.trim()||'',
+    progress:     0,
+    lifecycleStage:'DRAFT',
+    createdAt:    new Date().toISOString(),
+    source:       'desktop',
+  });
+  document.getElementById('dp-new-proj-modal')?.remove();
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  renderProjectsDesktop&&renderProjectsDesktop();
+  if(typeof logChange==='function') logChange('ADD_PROJECT','project',projId,{name});
+  toast&&toast('✅ Project "'+name+'" created');
+};
+
+/* ══ EDIT PROJECT DESKTOP ════════════════════════════════════ */
+window.editProjectDesktop = function(projId) {
+  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+  if (!proj) return;
+
+  var TRADES = ['General Contracting','Electrical','Plumbing','HVAC','Carpentry / Framing',
+    'Masonry / Concrete','Roofing','Painting','Flooring','Landscaping','Drywall / Insulation',
+    'Waterproofing','Demolition','Steel / Structural','Tile / Stone','Millwork / Cabinets',
+    'Glass / Glazing','Fire Protection','Low Voltage / Data','Other'];
+
+  var selTrades = (proj.trade||'').split(',').map(function(t){return t.trim();}).filter(Boolean);
+
+  document.getElementById('dp-edit-proj-modal')?.remove();
+  var mo = document.createElement('div');
+  mo.id  = 'dp-edit-proj-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.88);overflow-y:auto;font-family:inherit;padding:20px;display:flex;align-items:flex-start;justify-content:center';
+  mo.innerHTML =
+    '<div style="background:var(--s1,#1a1008);border:1px solid var(--br,#3d2410);border-radius:16px;padding:24px;max-width:720px;width:100%;margin:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">'
+    +'<div><div style="font-size:20px;font-weight:900;color:var(--tx,#F5E6D3)">✏️ Edit Project</div>'
+    +'<div style="font-size:12px;color:var(--txf);margin-top:2px">'+dfEsc(proj.name)+'</div></div>'
+    +'<button onclick="document.getElementById(\'dp-edit-proj-modal\').remove()" style="background:none;border:none;color:var(--txf);font-size:24px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
+    +dfField('Project Name *','dpep-name','text',proj.name)
+    +dfField('Status','dpep-status','select',proj.status,['Estimate','Pending','In Progress','On Hold','Completed'])
+    +dfField('Client Name','dpep-client','text',proj.client)
+    +dfField('Client Phone','dpep-phone','tel',proj.phone)
+    +dfField('Client Email','dpep-email','email',proj.email)
+    +dfField('Contract Amount ($)','dpep-contract','number',proj.contract||0)
+    +dfField('Start Date','dpep-start','date',proj.start)
+    +dfField('Target End Date','dpep-end','date',proj.end)
+    +dfField('Property Type','dpep-property','select',proj.propertyType,['','Residential','Commercial','Industrial','Mixed Use'])
+    +dfField('Category','dpep-category','select',proj.category,['','Renovation','New Construction','Repair','Maintenance','Tenant Improvement'])
+    +dfField('Room / Space','dpep-room','select',proj.roomType,['','Kitchen','Bathroom','Bedroom','Living Room','Basement','Attic','Office','Common Space','Exterior','Full Home','Other'])
+    +dfField('Lifecycle Stage','dpep-stage','select',proj.lifecycleStage||'DRAFT',
+      ['DRAFT','ESTIMATE','PENDING_APPROVAL','APPROVED','MATERIALS_TAKEOFF','MATERIALS_ORDERED','IN_PROGRESS','INSPECTION','COMPLETED'].map(function(s){return {v:s,l:s.replace(/_/g,' ')};}))
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:11px">'
+    +dfField('Street Address','dpep-address','text',proj.address)
+    +dfField('City','dpep-city','text',proj.city)
+    +dfField('State','dpep-state','text',proj.state)
+    +'</div>'
+    +'<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf,#604030);margin-bottom:6px">Trades</div>'
+    +'<div id="dpep-trades" style="display:flex;flex-wrap:wrap;gap:4px">'
+    +TRADES.map(function(t){ var on=selTrades.indexOf(t)>=0; return '<button type="button" data-trade="'+t+'" '+(on?'data-on="1"':'')+' onclick="dfToggleTrade(this)" style="padding:5px 10px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid '+(on?'#C8935A':'var(--br,#2a1a0d)')+';background:'+(on?'rgba(200,147,90,.18)':'var(--s2,#111)')+';color:'+(on?'#C8935A':'var(--txf,#604030)')+'">'+t+'</button>'; }).join('')
+    +'</div></div>'
+    +dfField('Scope / Notes','dpep-notes','textarea',proj.notes)
+    +'<div style="display:flex;gap:8px;margin-top:6px">'
+    +'<button onclick="dfDeleteProject(\''+projId+'\')" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(239,83,80,.4);background:transparent;color:#EF5350;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 Delete</button>'
+    +'<button onclick="document.getElementById(\'dp-edit-proj-modal\').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--txm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<button onclick="dfSaveEditProject(\''+projId+'\')" style="flex:2;padding:12px;border-radius:10px;border:none;background:#C8935A;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save Changes</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(mo);
+};
+
+window.dfSaveEditProject = function(projId) {
+  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+  if (!proj) return;
+  var name = document.getElementById('dpep-name')?.value?.trim();
+  if (!name) { toast&&toast('Name required'); return; }
+  proj.name         = name;
+  proj.status       = document.getElementById('dpep-status')?.value||proj.status;
+  proj.client       = document.getElementById('dpep-client')?.value?.trim()||'';
+  proj.phone        = document.getElementById('dpep-phone')?.value?.trim()||'';
+  proj.email        = document.getElementById('dpep-email')?.value?.trim()||'';
+  proj.contract     = +(document.getElementById('dpep-contract')?.value||0);
+  proj.start        = document.getElementById('dpep-start')?.value||'';
+  proj.end          = document.getElementById('dpep-end')?.value||'';
+  proj.address      = document.getElementById('dpep-address')?.value?.trim()||'';
+  proj.city         = document.getElementById('dpep-city')?.value?.trim()||'';
+  proj.state        = document.getElementById('dpep-state')?.value?.trim()||'';
+  proj.propertyType = document.getElementById('dpep-property')?.value||'';
+  proj.category     = document.getElementById('dpep-category')?.value||'';
+  proj.roomType     = document.getElementById('dpep-room')?.value||'';
+  proj.lifecycleStage = document.getElementById('dpep-stage')?.value||proj.lifecycleStage;
+  proj.notes        = document.getElementById('dpep-notes')?.value?.trim()||'';
+  var trades = Array.from(document.querySelectorAll('#dpep-trades [data-on="1"]')).map(function(b){return b.getAttribute('data-trade');});
+  proj.trade = trades.join(', ');
+  proj.updatedAt = new Date().toISOString();
+  // Sync status with lifecycle
+  var statusMap = {DRAFT:'Pending',ESTIMATE:'Estimate',PENDING_APPROVAL:'Pending',APPROVED:'Pending',
+    MATERIALS_TAKEOFF:'Pending',MATERIALS_ORDERED:'Pending',IN_PROGRESS:'In Progress',INSPECTION:'In Progress',COMPLETED:'Completed'};
+  if (statusMap[proj.lifecycleStage]) proj.status = statusMap[proj.lifecycleStage];
+  document.getElementById('dp-edit-proj-modal')?.remove();
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  renderProjectsDesktop&&renderProjectsDesktop();
+  toast&&toast('✅ Project updated');
+};
+
+window.dfDeleteProject = function(projId) {
+  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+  if (!confirm('Delete "'+( proj?proj.name:'this project')+'"?\n\nThis removes all tasks, reports, photos and payments for this project.')) return;
+  DB.projects  = (DB.projects||[]).filter(function(p){return p.id!==projId;});
+  DB.tasks     = (DB.tasks||[]).filter(function(t){return t.projectId!==projId;});
+  DB.reports   = (DB.reports||[]).filter(function(r){return r.projectId!==projId;});
+  DB.photos    = (DB.photos||[]).filter(function(p){return p.projectId!==projId;});
+  DB.payments  = (DB.payments||[]).filter(function(p){return p.projectId!==projId;});
+  DB.sections  = (DB.sections||[]).filter(function(s){return s.projectId!==projId;});
+  document.getElementById('dp-edit-proj-modal')?.remove();
+  document.getElementById('pdp')?.remove();
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  renderProjectsDesktop&&renderProjectsDesktop();
+  toast&&toast('Project deleted');
+};
+
+/* ══ EOD REPORT FULL EDIT ════════════════════════════════════ */
+window.editDailyReport = function(rptId) {
+  var rpt  = (DB.reports||[]).find(function(r){return r.id===rptId;});
+  if (!rpt) return;
+  var proj = (DB.projects||[]).find(function(p){return p.id===rpt.projectId;});
+
+  document.getElementById('dp-edit-rpt-modal')?.remove();
+  var mo = document.createElement('div');
+  mo.id  = 'dp-edit-rpt-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.88);overflow-y:auto;font-family:inherit;padding:20px;display:flex;align-items:flex-start;justify-content:center';
+
+  mo.innerHTML =
+    '<div style="background:var(--s1,#1a1008);border:1px solid var(--br,#3d2410);border-radius:16px;padding:24px;max-width:680px;width:100%;margin:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div><div style="font-size:18px;font-weight:900;color:var(--tx,#F5E6D3)">✏️ Edit Report</div>'
+    +'<div style="font-size:12px;color:var(--txf);margin-top:2px">'+(rpt.dprNumber||'DPR')+' &nbsp;·&nbsp; '+dfEsc(proj?proj.name:'')+'</div></div>'
+    +'<button onclick="document.getElementById(\'dp-edit-rpt-modal\').remove()" style="background:none;border:none;color:var(--txf);font-size:24px;cursor:pointer">✕</button>'
+    +'</div>'
+
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'
+    +dfField('Date','dper-date','date',rpt.date)
+    +dfField('Workers on Site','dper-workers','number',rpt.workers||1)
+    +dfField('Weather','dper-weather','text',rpt.weather||'')
+    +'</div>'
+
+    +'<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf,#604030);margin-bottom:5px">Work Completed'
+    +'<button type="button" data-pbv-btn="1" data-pbv-target="dper-completed" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" style="margin-left:8px;background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.3);border-radius:5px;color:#C8935A;font-size:10px;padding:2px 7px;cursor:pointer;font-family:inherit">🎤</button>'
+    +'</div>'
+    +'<textarea id="dper-completed" rows="4" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--br,#3d2410);background:var(--s2,#111);color:var(--tx,#F5E6D3);font-size:13px;font-family:inherit;resize:vertical">'+dfEsc(rpt.completed||'')+'</textarea>'
+    +'</div>'
+
+    +'<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf,#604030);margin-bottom:5px">Incomplete / Blockers'
+    +'<button type="button" data-pbv-btn="1" data-pbv-target="dper-incomplete" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" style="margin-left:8px;background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.3);border-radius:5px;color:#C8935A;font-size:10px;padding:2px 7px;cursor:pointer;font-family:inherit">🎤</button>'
+    +'</div>'
+    +'<textarea id="dper-incomplete" rows="3" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--br,#3d2410);background:var(--s2,#111);color:var(--tx,#F5E6D3);font-size:13px;font-family:inherit;resize:vertical">'+dfEsc(rpt.incomplete||'')+'</textarea>'
+    +'</div>'
+
+    +'<div style="margin-bottom:11px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf,#604030);margin-bottom:5px">Tomorrow\'s Plan'
+    +'<button type="button" data-pbv-btn="1" data-pbv-target="dper-tomorrow" onclick="if(typeof pbVToggle!==\'undefined\')pbVToggle(this)" style="margin-left:8px;background:rgba(200,147,90,.08);border:1px solid rgba(200,147,90,.3);border-radius:5px;color:#C8935A;font-size:10px;padding:2px 7px;cursor:pointer;font-family:inherit">🎤</button>'
+    +'</div>'
+    +'<textarea id="dper-tomorrow" rows="3" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--br,#3d2410);background:var(--s2,#111);color:var(--tx,#F5E6D3);font-size:13px;font-family:inherit;resize:vertical">'+dfEsc(rpt.tomorrow||'')+'</textarea>'
+    +'</div>'
+
+    +dfField('Safety Notes','dper-safety','textarea',rpt.safety||'')
+    +dfField('Progress %','dper-progress','number',rpt.progress||0)
+
+    /* Report Photos */
+    +(rpt.photos&&rpt.photos.length
+      ? '<div style="margin-bottom:14px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf);margin-bottom:6px">Attached Photos ('+rpt.photos.length+')</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+        +rpt.photos.slice(0,8).map(function(ph,i){ return '<img src="'+(ph.src||ph)+'" style="width:72px;height:72px;object-fit:cover;border-radius:7px;border:1px solid var(--br)"/>'; }).join('')
+        +'</div></div>'
+      : '')
+
+    +'<div style="display:flex;gap:8px;margin-top:6px">'
+    +'<button onclick="dfDeleteReport(\''+rptId+'\')" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(239,83,80,.4);background:transparent;color:#EF5350;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 Delete</button>'
+    +'<button onclick="document.getElementById(\'dp-edit-rpt-modal\').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--txm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Cancel</button>'
+    +'<button onclick="dfSaveReport(\''+rptId+'\')" style="flex:2;padding:12px;border-radius:10px;border:none;background:#C8935A;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">💾 Save Report</button>'
+    +'</div>'
+    +'</div>';
+
+  document.body.appendChild(mo);
+};
+
+window.dfSaveReport = function(rptId) {
+  var rpt = (DB.reports||[]).find(function(r){return r.id===rptId;});
+  if (!rpt) return;
+  rpt.date       = document.getElementById('dper-date')?.value||rpt.date;
+  rpt.workers    = +(document.getElementById('dper-workers')?.value||1);
+  rpt.weather    = document.getElementById('dper-weather')?.value?.trim()||'';
+  rpt.completed  = document.getElementById('dper-completed')?.value?.trim()||'';
+  rpt.incomplete = document.getElementById('dper-incomplete')?.value?.trim()||'';
+  rpt.tomorrow   = document.getElementById('dper-tomorrow')?.value?.trim()||'';
+  rpt.safety     = document.getElementById('dper-safety')?.value?.trim()||'';
+  rpt.progress   = +(document.getElementById('dper-progress')?.value||0);
+  rpt.updatedAt  = new Date().toISOString();
+  rpt.editedBy   = (_currentUser&&_currentUser.name)||'Desktop';
+  document.getElementById('dp-edit-rpt-modal')?.remove();
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  renderEOD&&renderEOD(); renderEODList&&renderEODList($('eod-proj-filter')?.value||'');
+  toast&&toast('📋 Report updated');
+};
+
+window.dfDeleteReport = function(rptId) {
+  var rpt = (DB.reports||[]).find(function(r){return r.id===rptId;});
+  if (!confirm('Delete '+(rpt?rpt.dprNumber||'this report':'this report')+'?')) return;
+  DB.reports = (DB.reports||[]).filter(function(r){return r.id!==rptId;});
+  document.getElementById('dp-edit-rpt-modal')?.remove();
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  renderEOD&&renderEOD(); renderEODList&&renderEODList('');
+  toast&&toast('Report deleted');
+};
+
+/* ══ TASK MANAGER (Desktop) ══════════════════════════════════ */
+window.openTaskManager = function(projId) {
+  var proj = (DB.projects||[]).find(function(p){return p.id===projId;});
+  if (!proj) return;
+  document.getElementById('dp-task-mgr')?.remove();
+  var mo = document.createElement('div');
+  mo.id  = 'dp-task-mgr';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9400;background:rgba(0,0,0,.88);overflow-y:auto;font-family:inherit;padding:20px;display:flex;align-items:flex-start;justify-content:center';
+
+  function buildTaskList() {
+    var tasks = (DB.tasks||[]).filter(function(t){return t.projectId===projId;}).sort(function(a,b){return (a.order||0)-(b.order||0);});
+    var done  = tasks.filter(function(t){return t.done&&!t.isPhaseHeader;}).length;
+    var total = tasks.filter(function(t){return !t.isPhaseHeader;}).length;
+    if (!tasks.length) return '<div style="font-size:13px;color:var(--txf);padding:16px 0;text-align:center">No tasks yet — add one above</div>';
+    return '<div style="font-size:11px;color:var(--txm);margin-bottom:8px">'+done+' / '+total+' complete &nbsp;·&nbsp; '+(total?Math.round(done/total*100):0)+'%</div>'
+      +tasks.map(function(t) {
+        if (t.isPhaseHeader) return '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf);padding:10px 0 4px;border-bottom:1px solid var(--div,#2a1a0d);margin-top:6px">'+dfEsc(t.desc)+'</div>';
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--s3,#111)">'
+          +'<input type="checkbox" '+(t.done?'checked':'')+' onchange="dfToggleTask(\''+t.id+'\',this.checked,\''+projId+'\')" style="width:16px;height:16px;accent-color:#C8935A;margin-top:2px;flex-shrink:0"/>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:13px;color:'+(t.done?'var(--txf)':'var(--tx)')+';text-decoration:'+(t.done?'line-through':'none')+';line-height:1.3">'+dfEsc(t.desc)+'</div>'
+          +(t.notes?'<div style="font-size:11px;color:var(--txf);margin-top:2px">'+dfEsc(t.notes)+'</div>':'')
+          +(t.due?'<div style="font-size:10px;color:var(--txm);margin-top:1px">📅 '+t.due+'</div>':'')
+          +(t.completedBy?'<div style="font-size:9px;color:var(--txf)">✅ '+dfEsc(t.completedBy)+'</div>':'')
+          +'</div>'
+          +'<div style="display:flex;gap:4px;flex-shrink:0">'
+          +'<button onclick="dfEditTask(\''+t.id+'\',\''+projId+'\')" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:5px;color:#C8935A;font-size:11px;padding:3px 8px;cursor:pointer">✏️</button>'
+          +'<button onclick="dfDeleteTask(\''+t.id+'\',\''+projId+'\')" style="background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.2);border-radius:5px;color:#EF5350;font-size:11px;padding:3px 8px;cursor:pointer">✕</button>'
+          +'</div>'
+          +'</div>';
+      }).join('');
+  }
+
+  mo.innerHTML =
+    '<div style="background:var(--s1,#1a1008);border:1px solid var(--br,#3d2410);border-radius:16px;padding:24px;max-width:660px;width:100%;margin:auto">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div><div style="font-size:18px;font-weight:900;color:var(--tx,#F5E6D3)">✅ Task Manager</div>'
+    +'<div style="font-size:12px;color:var(--txf);margin-top:2px">'+dfEsc(proj.name)+'</div></div>'
+    +'<button onclick="document.getElementById(\'dp-task-mgr\').remove()" style="background:none;border:none;color:var(--txf);font-size:24px;cursor:pointer">✕</button>'
+    +'</div>'
+    /* Add task */
+    +'<div style="background:var(--s2,#111);border-radius:10px;padding:14px;margin-bottom:14px">'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end;margin-bottom:8px">'
+    +'<div><div style="font-size:10px;font-weight:700;color:var(--txf);margin-bottom:4px">Task Description *</div>'
+    +'<input id="dptm-desc" type="text" placeholder="Describe the task..." style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--br,#3d2410);background:var(--s1,#1a1008);color:var(--tx,#F5E6D3);font-size:13px;font-family:inherit"/></div>'
+    +'<button onclick="dfAddTask(\''+projId+'\')" style="padding:9px 16px;border-radius:8px;border:none;background:#C8935A;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap">+ Add</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+    +'<div><div style="font-size:10px;color:var(--txf);margin-bottom:3px">Phase / Group</div>'
+    +'<input id="dptm-phase" type="text" placeholder="Phase 1 — Demo" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--br);background:var(--s1,#1a1008);color:var(--tx);font-size:12px;font-family:inherit"/></div>'
+    +'<div><div style="font-size:10px;color:var(--txf);margin-bottom:3px">Due Date</div>'
+    +'<input id="dptm-due" type="date" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--br);background:var(--s1,#1a1008);color:var(--tx);font-size:12px;font-family:inherit"/></div>'
+    +'<div><div style="font-size:10px;color:var(--txf);margin-bottom:3px">Priority</div>'
+    +'<select id="dptm-priority" style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--br);background:var(--s1,#1a1008);color:var(--tx);font-size:12px;font-family:inherit"><option>Normal</option><option>High</option><option>Critical</option><option>Low</option></select></div>'
+    +'</div>'
+    +'<div style="margin-top:8px"><div style="font-size:10px;color:var(--txf);margin-bottom:3px">Notes</div>'
+    +'<input id="dptm-notes" type="text" placeholder="Optional notes..." style="width:100%;box-sizing:border-box;padding:7px 10px;border-radius:7px;border:1px solid var(--br);background:var(--s1,#1a1008);color:var(--tx);font-size:12px;font-family:inherit"/></div>'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--txm);cursor:pointer"><input type="checkbox" id="dptm-photo" style="accent-color:#C8935A"/> Require photo to complete</label>'
+    +'</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:12px">'
+    +'<button onclick="dfAddPhaseHeader(\''+projId+'\')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--br);background:var(--s2,#111);color:var(--txm);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📂 Add Phase Header</button>'
+    +'<button onclick="openTemplatePicker&&openTemplatePicker(\''+projId+'\')" style="padding:7px 14px;border-radius:8px;border:1px solid var(--br);background:var(--s2,#111);color:var(--txm);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">📋 Load Template</button>'
+    +'</div>'
+    +'<div id="dptm-list" style="max-height:420px;overflow-y:auto">'+buildTaskList()+'</div>'
+    +'<button onclick="document.getElementById(\'dp-task-mgr\').remove()" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:1px solid var(--br);background:transparent;color:var(--txm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Close</button>'
+    +'</div>';
+
+  document.body.appendChild(mo);
+  window._dptmProjId = projId;
+};
+
+window.dfAddTask = function(projId) {
+  var desc = document.getElementById('dptm-desc')?.value?.trim();
+  if (!desc) { toast&&toast('Description required'); return; }
+  if (!DB.tasks) DB.tasks=[];
+  var maxOrder = Math.max(0,...(DB.tasks.filter(function(t){return t.projectId===projId;}).map(function(t){return t.order||0;})));
+  var phase = document.getElementById('dptm-phase')?.value?.trim();
+  if (phase) {
+    var exists = (DB.tasks||[]).find(function(t){return t.projectId===projId&&t.isPhaseHeader&&t.desc===phase;});
+    if (!exists) { DB.tasks.push({id:typeof uid!=='undefined'?uid():'ph'+Date.now(),projectId:projId,desc:phase,isPhaseHeader:true,done:false,order:maxOrder+1,source:'desktop'}); maxOrder+=1; }
+  }
+  DB.tasks.push({
+    id:typeof uid!=='undefined'?uid():'t'+Date.now(),
+    projectId:projId,desc:desc,done:false,
+    photoRequired:!!(document.getElementById('dptm-photo')?.checked),
+    priority:document.getElementById('dptm-priority')?.value||'Normal',
+    due:document.getElementById('dptm-due')?.value||'',
+    notes:document.getElementById('dptm-notes')?.value?.trim()||'',
+    order:maxOrder+2,source:'desktop',createdAt:new Date().toISOString(),
+  });
+  ['dptm-desc','dptm-phase','dptm-due','dptm-notes'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  var cb=document.getElementById('dptm-photo'); if(cb)cb.checked=false;
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  // Refresh list
+  var list=document.getElementById('dptm-list');
+  if(list) { var tmp=document.createElement('div'); tmp.innerHTML=''; list.innerHTML=dfRebuildTaskList(projId); }
+  toast&&toast('✅ Task added');
+};
+
+window.dfRebuildTaskList = function(projId) {
+  var tasks = (DB.tasks||[]).filter(function(t){return t.projectId===projId;}).sort(function(a,b){return (a.order||0)-(b.order||0);});
+  var done  = tasks.filter(function(t){return t.done&&!t.isPhaseHeader;}).length;
+  var total = tasks.filter(function(t){return !t.isPhaseHeader;}).length;
+  if (!tasks.length) return '<div style="font-size:13px;color:var(--txf);padding:16px 0;text-align:center">No tasks yet</div>';
+  return '<div style="font-size:11px;color:var(--txm);margin-bottom:8px">'+done+' / '+total+' complete</div>'
+    +tasks.map(function(t) {
+      if (t.isPhaseHeader) return '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--txf);padding:10px 0 4px;border-bottom:1px solid var(--div,#2a1a0d);margin-top:6px">'+dfEsc(t.desc)+'</div>';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--s3,#111)">'
+        +'<input type="checkbox" '+(t.done?'checked':'')+' onchange="dfToggleTask(\''+t.id+'\',this.checked,\''+projId+'\')" style="width:16px;height:16px;accent-color:#C8935A;margin-top:2px;flex-shrink:0"/>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:13px;color:'+(t.done?'var(--txf)':'var(--tx)')+';text-decoration:'+(t.done?'line-through':'none')+';line-height:1.3">'+dfEsc(t.desc)+'</div>'
+        +(t.notes?'<div style="font-size:11px;color:var(--txf);margin-top:2px">'+dfEsc(t.notes)+'</div>':'')
+        +'</div>'
+        +'<div style="display:flex;gap:4px;flex-shrink:0">'
+        +'<button onclick="dfEditTask(\''+t.id+'\',\''+projId+'\')" style="background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:5px;color:#C8935A;font-size:11px;padding:3px 8px;cursor:pointer">✏️</button>'
+        +'<button onclick="dfDeleteTask(\''+t.id+'\',\''+projId+'\')" style="background:rgba(239,83,80,.08);border:1px solid rgba(239,83,80,.2);border-radius:5px;color:#EF5350;font-size:11px;padding:3px 8px;cursor:pointer">✕</button>'
+        +'</div></div>';
+    }).join('');
+};
+
+window.dfToggleTask = function(taskId, checked, projId) {
+  var task=(DB.tasks||[]).find(function(t){return t.id===taskId;});
+  if(!task) return;
+  task.done=!!checked;
+  if(checked){task.completedBy=(_currentUser&&_currentUser.name)||'Desktop';task.completedAt=new Date().toLocaleString();}
+  else{delete task.completedBy;delete task.completedAt;}
+  if(projId){var proj=(DB.projects||[]).find(function(p){return p.id===projId;});if(proj){var ts=(DB.tasks||[]).filter(function(t){return t.projectId===projId&&!t.isPhaseHeader;});proj.progress=ts.length?Math.round(ts.filter(function(t){return t.done;}).length/ts.length*100):0;}}
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  var list=document.getElementById('dptm-list');
+  if(list&&projId) list.innerHTML=dfRebuildTaskList(projId);
+};
+
+window.dfEditTask = function(taskId, projId) {
+  var t=(DB.tasks||[]).find(function(x){return x.id===taskId;});
+  if(!t) return;
+  var d=prompt('Edit task:',t.desc); if(d===null) return;
+  if(d.trim()) t.desc=d.trim();
+  var n=prompt('Notes:',t.notes||''); if(n!==null) t.notes=n.trim();
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  var list=document.getElementById('dptm-list');
+  if(list&&projId) list.innerHTML=dfRebuildTaskList(projId);
+};
+
+window.dfDeleteTask = function(taskId, projId) {
+  DB.tasks=(DB.tasks||[]).filter(function(t){return t.id!==taskId;});
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  var list=document.getElementById('dptm-list');
+  if(list&&projId) list.innerHTML=dfRebuildTaskList(projId);
+};
+
+window.dfAddPhaseHeader = function(projId) {
+  var phase=prompt('Phase header name:','Phase 1 — ');
+  if(!phase||!phase.trim()) return;
+  if(!DB.tasks) DB.tasks=[];
+  var maxOrder=Math.max(0,...(DB.tasks.filter(function(t){return t.projectId===projId;}).map(function(t){return t.order||0;})));
+  DB.tasks.push({id:typeof uid!=='undefined'?uid():'ph'+Date.now(),projectId:projId,desc:phase.trim(),isPhaseHeader:true,done:false,order:maxOrder+1,source:'desktop'});
+  saveToLocal&&saveToLocal(); broadcastData&&broadcastData();
+  var list=document.getElementById('dptm-list');
+  if(list&&projId) list.innerHTML=dfRebuildTaskList(projId);
+};
+
+/* ══ WIRE NEW PROJECT BUTTON ON DESKTOP ══════════════════════ */
+/* Override existing new project button to use full form */
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    /* Replace any + New Project button that calls openNewProjectDesktop */
+    document.querySelectorAll('[onclick*="openNewProjectDesktop"]').forEach(function(btn) {
+      btn.setAttribute('onclick', 'openNewProjectDesktopFull()');
+    });
+
+    /* Add Edit + Tasks + EOD buttons to project cards after render */
+    var grid = document.getElementById('proj-cards-grid');
+    if (grid) {
+      var obs = new MutationObserver(function() {
+        grid.querySelectorAll('.card[onclick*="openProjectDetail"]').forEach(function(card) {
+          if (card.querySelector('.df-card-btns')) return;
+          var oc  = card.getAttribute('onclick')||'';
+          var m   = oc.match(/openProjectDetail\('([^']+)'\)/);
+          if (!m) return;
+          var pid = m[1];
+          var bar = document.createElement('div');
+          bar.className = 'df-card-btns';
+          bar.style.cssText = 'display:flex;gap:5px;margin-top:8px;flex-wrap:wrap';
+          bar.onclick = function(e){e.stopPropagation();};
+          var mkBtn = function(label, col, fn) {
+            var b=document.createElement('button');
+            b.textContent=label;
+            b.style.cssText='padding:5px 10px;border-radius:7px;border:1px solid '+col+'44;background:'+col+'18;color:'+col+';font-size:11px;font-weight:700;cursor:pointer;font-family:inherit';
+            b.onclick=function(e){e.stopPropagation();fn();};
+            return b;
+          };
+          bar.appendChild(mkBtn('✏️ Edit','#C8935A',function(){editProjectDesktop(pid);}));
+          bar.appendChild(mkBtn('✅ Tasks','#2196F3',function(){openTaskManager(pid);}));
+          bar.appendChild(mkBtn('📋 Sections','#9C27B0',function(){openProjectSections&&openProjectSections(pid);}));
+          bar.appendChild(mkBtn('📝 Notes','#888',function(){editProjectNotes&&editProjectNotes(pid);}));
+          card.appendChild(bar);
+        });
+      });
+      obs.observe(grid, {childList:true});
+    }
+  }, 800);
+});
+
+/* ══ WIRE EDIT BUTTON INTO EOD REPORT CARDS ═════════════════ */
+var _origRenderEODList = typeof renderEODList !== 'undefined' ? renderEODList : null;
+window.renderEODList = function(pid) {
+  if (_origRenderEODList) _origRenderEODList(pid);
+  /* Add Edit buttons to each expanded report body */
+  setTimeout(function() {
+    document.querySelectorAll('.eod-hdr').forEach(function(hdr) {
+      if (hdr.querySelector('.df-eod-edit')) return;
+      var row = hdr.parentElement;
+      if (!row) return;
+      /* Find the report ID from the body div sibling */
+      var bodyDiv = row.querySelector('[id^="eod-body-"]');
+      if (!bodyDiv) return;
+      var rptId = bodyDiv.id.replace('eod-body-','');
+      var btn = document.createElement('button');
+      btn.className = 'df-eod-edit';
+      btn.textContent = '✏️ Edit';
+      btn.style.cssText = 'background:rgba(200,147,90,.1);border:1px solid rgba(200,147,90,.3);border-radius:6px;color:#C8935A;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;font-family:inherit;margin-left:6px;flex-shrink:0';
+      btn.onclick = function(e) { e.stopPropagation(); editDailyReport(rptId); };
+      var actionsArea = hdr.querySelector('[style*="gap:6px"]');
+      if (actionsArea) actionsArea.insertBefore(btn, actionsArea.firstChild);
+      else hdr.appendChild(btn);
+    });
+  }, 200);
+};
+
+console.log('[PB] Desktop Full Capabilities loaded');
 
 </script>
 </body>
