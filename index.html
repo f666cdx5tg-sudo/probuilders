@@ -2699,6 +2699,50 @@ label, .form-label {
   background: rgba(139,98,64,.12) !important;
   border-color: rgba(139,98,64,.4) !important;
 }
+
+/* ── Project scroll fix ── */
+.view {
+  display: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.view.active {
+  display: block;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  height: calc(100dvh - 60px);  /* minus topbar */
+  padding-bottom: 100px !important; /* clear bottom nav */
+}
+/* Shell takes full height, main scrolls */
+.shell {
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 100px !important;
+}
+/* Project grid scrolls */
+#view-projects,
+#view-home,
+#view-tasks,
+#view-photos,
+#view-safety,
+#view-reports,
+#view-budget {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-bottom: 120px !important;
+}
+.projects-grid,
+.project-grid,
+.section-grid {
+  overflow: visible !important;
+}
 </style>
 </head>
 <body>
