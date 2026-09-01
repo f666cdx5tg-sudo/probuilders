@@ -1,0 +1,2848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>ProBuilders</title>
+<style>
+:root {
+  --bg:     #0f0f0f;
+  --card:   #1a1a1a;
+  --card2:  #222;
+  --border: #2a2a2a;
+  --accent: #34C759;
+  --accent2:#FF2D78;
+  --text:   #f0f0f0;
+  --muted:  #888;
+  --faint:  #444;
+  --red:    #ef5350;
+  --pink:   #FF2D78;
+  --green:  #66bb6a;
+  --blue:   #42a5f5;
+  --radius: 14px;
+  --nav-h:  72px;
+}
+[data-theme="light"] {
+  --bg:     #f8fdf8;
+  --accent: #28a745;
+  --card:   #ffffff;
+  --card2:  #f0f0f0;
+  --border: #e0e0e0;
+  --text:   #111111;
+  --muted:  #666666;
+  --faint:  #aaaaaa;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;overflow:hidden}
+
+/* NAV */
+.nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--card);border-top:2px solid #FF2D78;display:flex;align-items:stretch;z-index:100;padding-bottom:env(safe-area-inset-bottom);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nav-btn{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:color .15s;padding:8px 0}
+.nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-btn.active{color:var(--accent)}
+.nav-btn.active svg{stroke:var(--accent)}
+
+/* SCREENS */
+.screen{position:fixed;inset:0;bottom:var(--nav-h);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:0 0 20px}
+.screen.active{display:block}
+
+/* TOPBAR */
+.topbar{padding:54px 18px 16px;display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-size:28px;font-weight:800;letter-spacing:-.5px}
+.topbar-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.topbar-btn{width:42px;height:42px;border-radius:12px;background:var(--card2);border:none;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.topbar-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* CARDS */
+.card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin:0 16px 10px}
+.card-tap{cursor:pointer;transition:background .15s}
+.card-tap:active{background:var(--card2)}
+.card-body{padding:14px 16px}
+.card-row{display:flex;align-items:center;gap:12px}
+
+/* JOB CARD */
+.job-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.job-name{font-size:16px;font-weight:700;line-height:1.25;flex:1}
+.job-meta{font-size:12px;color:var(--muted);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap}
+.job-progress{height:3px;background:var(--border);border-radius:99px;margin-top:10px;overflow:hidden}
+.job-progress-fill{height:3px;background:var(--accent);border-radius:99px;transition:width .3s}
+.job-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--card2);color:var(--muted);border:1px solid var(--border)}
+.chip.amber{color:var(--accent);border-color:rgba(52,199,89,.3);background:rgba(52,199,89,.08)}
+.chip.green{color:var(--green);border-color:rgba(102,187,106,.3);background:rgba(102,187,106,.08)}
+.chip.red{color:var(--red);border-color:rgba(239,83,80,.3);background:rgba(239,83,80,.08)}
+.chip.blue{color:var(--blue);border-color:rgba(66,165,245,.3);background:rgba(66,165,245,.08)}
+
+/* TASK ITEM */
+.task-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.task-item:last-child{border-bottom:none}
+.task-check{width:24px;height:24px;border-radius:7px;border:2px solid var(--faint);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .15s}
+.task-check.done{background:var(--accent);border-color:var(--accent)}
+.task-check.done svg{display:block}
+.task-check svg{display:none;width:14px;height:14px;stroke:#000;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.task-text{flex:1;font-size:15px;font-weight:500;line-height:1.4}
+.task-text.done{text-decoration:line-through;color:var(--faint)}
+.task-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* PHOTO GRID */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px}
+.photo-thumb{aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--card2);position:relative}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-add{aspect-ratio:1;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--card2);border:2px dashed var(--faint)}
+.photo-add svg{width:28px;height:28px;stroke:var(--faint);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;font-family:inherit;font-weight:700;cursor:pointer;transition:opacity .15s}
+.btn:active{opacity:.7}
+.btn-primary{background:var(--accent);color:#000;font-size:15px;padding:14px 20px;width:100%}
+.btn-ghost{background:var(--card2);color:var(--text);font-size:14px;padding:12px 18px;border:1px solid var(--border)}
+.btn-icon{width:44px;height:44px;border-radius:11px;background:var(--card2);border:1px solid var(--border);color:var(--text);flex-shrink:0}
+.btn-danger{background:rgba(239,83,80,.12);color:var(--red);border:1px solid rgba(239,83,80,.25);font-size:14px;padding:12px 18px}
+.btn-voice{background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.3);color:#FF2D78;font-size:14px;padding:11px 16px;border-radius:12px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:inherit;font-weight:700}
+.btn-voice.recording{background:rgba(255,45,120,.2);border-color:#FF2D78;color:#FF2D78}
+
+/* MODAL SHEET */
+.sheet-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
+.sheet-overlay.open{display:flex}
+.sheet{background:var(--card);border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);width:100%;max-height:92vh;overflow-y:auto}
+.sheet-handle{width:36px;height:4px;background:var(--faint);border-radius:99px;margin:12px auto 4px}
+.sheet-header{padding:8px 18px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.sheet-title{font-size:17px;font-weight:700}
+.sheet-close{width:30px;height:30px;border-radius:50%;background:var(--card2);border:none;color:var(--muted);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sheet-body{padding:16px 18px}
+
+/* FORM */
+.field{margin-bottom:14px}
+.field-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.field input,.field textarea,.field select{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-family:inherit;padding:12px 14px;outline:none;-webkit-appearance:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.5}
+.field select option{background:var(--card2)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:60px 24px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:.4}
+.empty-text{font-size:16px;font-weight:600;margin-bottom:6px;color:var(--text);opacity:.5}
+.empty-sub{font-size:14px;color:var(--faint)}
+
+/* SECTION HEADER */
+.section-header{padding:18px 18px 8px;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+
+/* BADGE */
+.badge{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px}
+
+/* HOME KPIs */
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 10px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.kpi-val{font-size:32px;font-weight:900;line-height:1}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+
+/* DETAIL HEADER */
+.detail-header{position:sticky;top:0;z-index:10;background:var(--bg);padding:50px 16px 12px;border-bottom:1px solid var(--border)}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;padding:0;margin-bottom:10px}
+.back-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.detail-title{font-size:22px;font-weight:800;letter-spacing:-.3px;line-height:1.2}
+.detail-meta{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* FLOATING ACTION */
+.fab{position:fixed;right:18px;bottom:calc(var(--nav-h) + 16px);width:56px;height:56px;border-radius:18px;background:linear-gradient(135deg,#34C759,#28a745);border:none;color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(52,199,89,.4);z-index:90;transition:transform .15s}
+.fab:active{transform:scale(.93)}
+
+/* NOTE CARD */
+.note-card{background:var(--card2);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+.note-text{font-size:14px;line-height:1.6;color:var(--text)}
+.note-meta{font-size:11px;color:var(--faint);margin-top:6px;display:flex;gap:10px}
+
+/* PHOTO VIEWER */
+.photo-viewer{position:fixed;inset:0;z-index:800;background:#000;display:none;flex-direction:column}
+.photo-viewer.open{display:flex}
+.photo-viewer-img{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.photo-viewer-img img{max-width:100%;max-height:100%;object-fit:contain}
+.photo-viewer-bar{padding:50px 16px 16px;display:flex;align-items:center;justify-content:space-between}
+
+/* SYNC STATUS */
+.sync-bar{display:flex;align-items:center;gap:8px;padding:10px 18px;background:var(--card);border-radius:12px;margin:0 16px 10px;cursor:pointer;border:1px solid var(--border)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sync-dot.error{background:var(--red)}
+.sync-dot.pending{background:var(--accent);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-label{font-size:13px;font-weight:600;flex:1}
+.sync-time{font-size:11px;color:var(--faint)}
+
+/* VOICE TRANSCRIPT */
+.voice-live{min-height:44px;padding:10px 14px;background:var(--card2);border-radius:10px;border:1px solid var(--border);font-size:14px;color:var(--muted);font-style:italic;margin-bottom:10px}
+.voice-live.active{border-color:rgba(239,83,80,.4);color:var(--text);font-style:normal}
+
+/* Info bar always visible in both modes */
+#info-time { color: #34C759 !important; }
+[data-theme="light"] #info-time { color: #28a745 !important; }
+[data-theme="light"] #info-loc-text,
+[data-theme="light"] #info-weather-text { color: #222 !important; }
+
+/* Finance — bolder bigger text */
+#s-finance .card-title,
+#s-finance [style*="font-size:15px;font-weight:700"] { font-size:16px !important; font-weight:800 !important; }
+#s-finance [style*="font-size:18px;font-weight:900"] { font-size:20px !important; }
+#s-finance [style*="font-size:12px;color:var(--muted)"] { font-size:13px !important; }
+#s-finance .chip { font-size:13px !important; font-weight:700 !important; }
+#s-finance [style*="font-size:20px;font-weight:900"] { font-size:22px !important; }
+#s-finance [style*="font-size:16px;font-weight:800"] { font-size:18px !important; }
+
+/* ── Shared page header ── */
+.pb-header {
+  padding: 50px 18px 0;
+}
+.pb-header-geo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+.pb-header-loc {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.pb-header-loc svg {
+  width: 13px; height: 13px;
+  stroke: #34C759; fill: none;
+  stroke-width: 2.5; stroke-linecap: round;
+  flex-shrink: 0;
+}
+.pb-header-weather {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding-left: 2px;
+}
+.pb-header-time {
+  font-size: 22px;
+  font-weight: 900;
+  color: #34C759;
+  letter-spacing: -.5px;
+  margin-top: 4px;
+}
+[data-theme="light"] .pb-header-loc { color: #111; }
+[data-theme="light"] .pb-header-time { color: #28a745; }
+
+.geo-mirror, .wicon-mirror, .wtxt-mirror, .ttime-mirror {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.geo-mirror { color: var(--text) !important; font-weight: 700 !important; }
+.ttime-mirror { font-size: 20px !important; font-weight: 900 !important; color: #34C759 !important; }
+</style>
+</head>
+<body>
+
+<!-- ─── SCREENS ─────────────────────────────── -->
+
+<!-- HOME -->
+<div class="screen active" id="s-home">
+  <div style="position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:52px 16px 12px">
+
+    <!-- Row 1: Greeting (left) + Controls with time below (right) -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+
+      <!-- Left: Greeting -->
+      <div id="home-greeting" style="font-size:30px;font-weight:900;line-height:1.1;background:linear-gradient(135deg,#34C759,#FF2D78);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Good Morning</div>
+
+      <!-- Right: Buttons + Time below -->
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <!-- Buttons row -->
+        <div style="display:flex;gap:6px">
+          <button onclick="cycleFontSize()" style="width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:inherit">AA</button>
+          <button onclick="toggleTheme()" style="width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px">☀️</button>
+          <button onclick="openSync()" style="width:36px;height:36px;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Row 2: Location + Weather -->
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+      <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#34C759;fill:none;stroke-width:2.5;flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span id="info-loc-text" style="font-size:13px;font-weight:700;color:var(--text)">Detecting...</span>
+      <span id="info-weather-icon" style="font-size:14px">🌡️</span>
+      <span id="info-weather-text" style="font-size:13px;font-weight:600;color:var(--muted)">Loading...</span>
+    </div>
+
+    <!-- Row 3: Day + Date + Time -->
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div id="home-date" style="font-size:14px;font-weight:600;color:var(--muted)"></div>
+      <div id="info-time" style="font-size:18px;font-weight:900;color:#34C759;letter-spacing:-.3px">--:--</div>
+    </div>
+
+  </div>
+  <div id="sync-status-bar" style="display:none" onclick="openSync()">
+    <div class="sync-bar">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span class="sync-label" id="sync-label">Tap to sync</span>
+      <span class="sync-time" id="sync-time"></span>
+    </div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi" onclick="showScreen('s-jobs')">
+      <div class="kpi-val" style="color:#FF2D78" id="kpi-jobs">0</div>
+      <div class="kpi-lbl">Active Jobs</div>
+    </div>
+    <div class="kpi" onclick="showScreen('s-tasks')">
+      <div class="kpi-val" id="kpi-tasks">0</div>
+      <div class="kpi-lbl">Open Tasks</div>
+    </div>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-val blue" id="kpi-photos">0</div>
+      <div class="kpi-lbl">Photos Today</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" id="kpi-notes">0</div>
+      <div class="kpi-lbl">Notes</div>
+    </div>
+  </div>
+  <div class="section-header">Recent Jobs</div>
+  <div id="home-recent-jobs"></div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- JOBS -->
+<div class="screen" id="s-jobs">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Jobs</div>
+      <div class="topbar-sub" id="jobs-count">0 active</div>
+    </div>
+    <button class="topbar-btn" onclick="openAddJob()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  </div>
+  <div id="jobs-list"></div>
+</div>
+
+<!-- ROOMS -->
+<div class="screen" id="s-rooms">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Rooms</div>
+      <div class="topbar-sub" id="rooms-count">All areas &amp; rooms</div>
+    </div>
+    <button class="topbar-btn" onclick="openAddRoom()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  </div>
+  <div id="rooms-list"></div>
+</div>
+
+<!-- TASKS -->
+<div class="screen" id="s-tasks">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Tasks</div>
+      <div class="topbar-sub" id="tasks-count">Loading...</div>
+    </div>
+    <button class="topbar-btn" onclick="openAddTask()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  </div>
+  <div id="tasks-list"></div>
+</div>
+
+<!-- PHOTOS -->
+<div class="screen" id="s-photos">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Photos</div>
+      <div class="topbar-sub" id="photos-count">0 photos</div>
+    </div>
+    <label class="topbar-btn" style="cursor:pointer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="addPhotos(this)"/>
+      </label>
+  </div>
+  <div style="padding:0 16px 10px">
+    <select id="photo-job-filter" onchange="renderPhotos()" style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;padding:10px 14px;font-family:inherit">
+      <option value="">All Jobs</option>
+    </select>
+  </div>
+  <div id="photos-grid" class="photo-grid" style="padding:0 3px"></div>
+</div>
+
+<!-- NOTES -->
+<div class="screen" id="s-notes">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Checklist</div>
+      <div class="topbar-sub" id="checklist-sub">Items with before &amp; after photos</div>
+    </div>
+    <button class="topbar-btn" onclick="openAddNote()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+  </div>
+  <div id="checklist-list" style="padding:0 16px 80px"></div>
+</div>
+
+<!-- ─── JOB DETAIL ─────────────────────────── -->
+<div class="screen" id="s-job-detail">
+  <div class="detail-header">
+    <button class="back-btn" onclick="showScreen('s-jobs')">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Jobs
+    </button>
+    <div class="detail-title" id="jd-name">Job Name</div>
+    <div class="detail-meta" id="jd-meta"></div>
+  </div>
+  <!-- Progress bar -->
+  <div style="padding:14px 16px 0">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">
+      <span>Progress</span><span id="jd-pct" style="color:var(--accent);font-weight:700">0%</span>
+    </div>
+    <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden">
+      <div id="jd-bar" style="height:6px;background:var(--accent);border-radius:99px;width:0;transition:width .3s"></div>
+    </div>
+  </div>
+  <!-- Quick actions -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;padding:14px 16px">
+    <button class="btn btn-ghost" onclick="openAddRoom(currentJobId)" style="flex-direction:column;gap:4px;padding:12px;font-size:11px">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Add Room
+    </button>
+    <button class="btn btn-ghost" onclick="openAddTask(currentJobId)" style="flex-direction:column;gap:4px;padding:12px;font-size:11px">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Add Task
+    </button>
+    <label class="btn btn-ghost" style="flex-direction:column;gap:4px;padding:12px;font-size:12px;cursor:pointer">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8"/><path d="M2 5l8 8 4-4 7 7"/></svg>
+      Add Photo
+      <input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="addPhotos(this,currentJobId)"/>
+    </label>
+    <button class="btn btn-ghost" onclick="openAddNote(currentJobId)" style="flex-direction:column;gap:4px;padding:12px;font-size:12px">
+      <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Add Note
+    </button>
+  </div>
+  <!-- Tasks in this job -->
+  <div class="section-header">Tasks</div>
+  <div id="jd-tasks" class="card" style="margin-bottom:10px"></div>
+  <!-- Photos in this job -->
+  <div class="section-header">Photos</div>
+  <div id="jd-photos" class="card photo-grid" style="margin:0 16px 10px"></div>
+  <!-- Notes in this job -->
+  <div class="section-header">Notes</div>
+  <div id="jd-notes" style="padding:0 16px 20px"></div>
+</div>
+
+<!-- ─── BOTTOM NAV ──────────────────────────── -->
+<!-- FINANCE -->
+<div class="screen" id="s-finance">
+
+  <!-- Sticky top bar -->
+  <div style="position:sticky;top:0;z-index:20;background:var(--bg)">
+    <!-- Title + sub -->
+    <div style="padding:8px 18px 10px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:28px;font-weight:900;letter-spacing:-.5px">Finance</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px" id="finance-sub">Running totals</div>
+      </div>
+      <select id="finance-job-filter" onchange="renderFinance()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-weight:600;padding:8px 12px;font-family:inherit;max-width:140px">
+        <option value="">All Jobs</option>
+      </select>
+    </div>
+
+    <!-- BIG TAB BUTTONS -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:0 16px 10px">
+
+      <!-- Invoices -->
+      <button id="ftab-invoices" onclick="setFinanceTab('invoices')"
+        style="padding:14px 6px;border-radius:14px;border:2px solid rgba(245,166,35,.5);background:rgba(245,166,35,.12);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .15s">
+        <span style="font-size:22px">🧾</span>
+        <span style="font-size:13px;font-weight:800;color:var(--accent)">Invoices</span>
+        <span style="font-size:10px;font-weight:700;color:var(--muted)" id="ftab-invoices-count">0</span>
+      </button>
+
+      <!-- Expenses -->
+      <button id="ftab-expenses" onclick="setFinanceTab('expenses')"
+        style="padding:14px 6px;border-radius:14px;border:2px solid var(--border);background:var(--card2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .15s">
+        <span style="font-size:22px">💸</span>
+        <span style="font-size:13px;font-weight:800;color:var(--muted)">Expenses</span>
+        <span style="font-size:10px;font-weight:700;color:var(--muted)" id="ftab-expenses-count">0</span>
+      </button>
+
+      <!-- Contractors -->
+      <button id="ftab-contractors" onclick="setFinanceTab('contractors')"
+        style="padding:14px 6px;border-radius:14px;border:2px solid var(--border);background:var(--card2);cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .15s">
+        <span style="font-size:22px">👷</span>
+        <span style="font-size:13px;font-weight:800;color:var(--muted)">Contractors</span>
+        <span style="font-size:10px;font-weight:700;color:var(--muted)" id="ftab-contractors-count">0</span>
+      </button>
+
+    </div>
+
+    <!-- ADD button -->
+    <div style="padding:0 16px 10px">
+      <button onclick="openFinanceAdd()" id="finance-add-btn"
+        style="width:100%;padding:15px;border-radius:12px;border:none;background:linear-gradient(135deg,#34C759,#28a745);color:#000;font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="finance-add-label">Add Invoice</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:var(--border);margin:0 16px"></div>
+  </div>
+
+  <!-- Balance summary cards -->
+  <div id="finance-summary" style="padding:10px 16px 6px"></div>
+
+  <!-- Content area -->
+  <div id="finance-content" style="padding:0 16px 100px"></div>
+</div>
+
+
+<nav class="nav">
+  <button class="nav-btn active" id="nav-home" onclick="showScreen('s-home')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button class="nav-btn" id="nav-s-jobs" onclick="showScreen('s-jobs')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+    Jobs
+  </button>
+  <button class="nav-btn" id="nav-s-rooms" onclick="showScreen('s-rooms')">
+    <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Rooms
+  </button>
+  <button class="nav-btn" id="nav-s-tasks" onclick="showScreen('s-tasks')">
+    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Tasks
+  </button>
+  <button class="nav-btn" id="nav-s-photos" onclick="showScreen('s-photos')">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Photos
+  </button>
+  <button class="nav-btn" id="nav-s-notes" onclick="showScreen('s-notes')">
+    <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    Checklist
+  </button>
+  <button class="nav-btn" id="nav-s-finance" onclick="showScreen('s-finance')">
+    <svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Finance
+  </button>
+</nav>
+
+<!-- ─── SHEETS ───────────────────────────────── -->
+
+<!-- Add Job Sheet -->
+<div class="sheet-overlay" id="sheet-add-job">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">New Job</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-job')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Job Name *</div><input id="aj-name" type="text" placeholder="e.g. Smith Kitchen Reno"/></div>
+      <div class="field"><div class="field-label">Client</div><input id="aj-client" type="text" placeholder="Client name"/></div>
+      <div class="field"><div class="field-label">Address</div><input id="aj-address" type="text" placeholder="Job site address"/></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Status</div>
+          <select id="aj-status"><option>Active</option><option>Pending</option><option>Complete</option><option>On Hold</option></select>
+        </div>
+        <div class="field"><div class="field-label">Contract ($)</div><input id="aj-contract" type="number" placeholder="0.00"/></div>
+      </div>
+      <div class="field"><div class="field-label">Notes</div><textarea id="aj-notes" placeholder="Scope of work, special notes..."></textarea></div>
+      <button class="btn btn-primary" onclick="saveJob()">Create Job</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Add Room Sheet -->
+<div class="sheet-overlay" id="sheet-add-room">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">New Room / Area</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-room')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Room / Area Name *</div>
+        <input id="ar-name" type="text" placeholder="e.g. Master Bathroom, Kitchen, Basement"/>
+      </div>
+      <div class="field"><div class="field-label">Job</div>
+        <select id="ar-job"><option value="">No job</option></select>
+      </div>
+      <div class="field"><div class="field-label">Type</div>
+        <select id="ar-type">
+          <option>Kitchen</option><option>Bathroom</option><option>Bedroom</option>
+          <option>Living Room</option><option>Basement</option><option>Attic</option>
+          <option>Garage</option><option>Office</option><option>Hallway</option>
+          <option>Laundry</option><option>Exterior</option><option>Roof</option>
+          <option>HVAC</option><option>Electrical</option><option>Plumbing</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field"><div class="field-label">Notes</div>
+        <textarea id="ar-notes" rows="2" placeholder="Scope, condition, special instructions..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="saveRoom()" style="margin-bottom:6px">Add Room</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Task Sheet -->
+<div class="sheet-overlay" id="sheet-add-task">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">New Task</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-task')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Task Description *</div><input id="at-desc" type="text" placeholder="What needs to be done?"/></div>
+      <div class="field"><div class="field-label">Job</div>
+        <select id="at-job"><option value="">No job</option></select>
+      </div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Due Date</div><input id="at-due" type="date"/></div>
+        <div class="field"><div class="field-label">Priority</div>
+          <select id="at-priority"><option>Normal</option><option>High</option><option>Critical</option></select>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:14px;cursor:pointer">
+        <input type="checkbox" id="at-photo-req" style="width:18px;height:18px;accent-color:var(--accent)"/>
+        Require photo to complete
+      </label>
+      <button class="btn btn-primary" onclick="saveTask()">Add Task</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Checklist Item Sheet -->
+<div class="sheet-overlay" id="sheet-add-note">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">New Checklist Item</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-note')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Item Description *</div>
+        <input id="an-text" type="text" placeholder="What needs to be checked or done?"/>
+      </div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Job</div>
+          <select id="an-job"><option value="">No job</option></select>
+        </div>
+        <div class="field"><div class="field-label">Priority</div>
+          <select id="an-priority"><option>Normal</option><option>High</option><option>Critical</option></select>
+        </div>
+      </div>
+      <div class="field"><div class="field-label">Notes (optional)</div>
+        <textarea id="an-notes" rows="2" placeholder="Additional details..."></textarea>
+      </div>
+      <button class="btn-voice" id="voice-note-btn" onclick="toggleVoiceNote()">🎤 Dictate Description</button>
+      <div class="voice-live" id="voice-note-live" style="margin-top:8px">Voice transcript will appear here...</div>
+      <div style="height:10px"></div>
+      <button class="btn btn-primary" onclick="saveNote()">+ Add Item</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Sync Sheet -->
+<div class="sheet-overlay" id="sheet-sync">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">☁️ Sync</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-sync')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div id="sync-status-display" style="background:var(--card2);border-radius:12px;padding:14px;margin-bottom:14px;font-size:13px;color:var(--muted)">Checking sync status...</div>
+      <button class="btn btn-ghost" onclick="doPush()" style="width:100%;margin-bottom:10px;justify-content:flex-start;gap:12px;padding:16px">
+        <span style="font-size:20px">⬆️</span>
+        <div style="text-align:left"><div style="font-size:15px;font-weight:700">Push to Cloud</div><div style="font-size:12px;color:var(--muted)">Upload your data to GitHub</div></div>
+      </button>
+      <button class="btn btn-ghost" onclick="doPull()" style="width:100%;margin-bottom:14px;justify-content:flex-start;gap:12px;padding:16px">
+        <span style="font-size:20px">⬇️</span>
+        <div style="text-align:left"><div style="font-size:15px;font-weight:700">Pull from Cloud</div><div style="font-size:12px;color:var(--muted)">Get latest from desktop</div></div>
+      </button>
+      <div id="token-section">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.6">
+          Get a free token at <strong style="color:var(--accent)">github.com/settings/tokens</strong> — create a token with <strong>gist</strong> scope only.
+        </div>
+        <div class="field"><div class="field-label">GitHub Token</div><input id="sync-token" type="password" placeholder="ghp_xxxxxxxxxxxx"/></div>
+        <button class="btn btn-primary" onclick="saveToken()" style="margin-bottom:10px">Save Token</button>
+      </div>
+      <div id="sync-result" style="display:none;padding:12px;border-radius:10px;font-size:14px;font-weight:600;text-align:center;margin-bottom:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Photo Viewer -->
+<div class="photo-viewer" id="photo-viewer">
+  <div class="photo-viewer-bar">
+    <button onclick="closePhotoViewer()" style="background:none;border:none;color:#fff;font-size:16px;font-weight:600;cursor:pointer">✕ Close</button>
+    <a id="photo-dl" download="photo.jpg" style="color:var(--accent);font-size:14px;font-weight:600;text-decoration:none">⬇ Save</a>
+  </div>
+  <div class="photo-viewer-img"><img id="photo-viewer-img" src=""/></div>
+  <div style="padding:12px 16px;font-size:13px;color:#888;text-align:center" id="photo-viewer-cap"></div>
+</div>
+
+<script>
+/* ── DB ── */
+var DB = { jobs:[], rooms:[], tasks:[], photos:[], notes:[], invoices:[], expenses:[], contractors:[], nextId:1 };
+var currentJobId = null;
+var _syncToken = '', _syncGistId = '', _lastSync = '';
+
+/* ── Init ── */
+function init() {
+  load();
+  updateGreeting();
+  setInterval(updateGreeting, 60000);
+  renderAll();
+  // Show sync bar if token configured
+  if (_syncToken) {
+    document.getElementById('sync-status-bar').style.display = 'block';
+    setSyncStatus('ready','Synced');
+  }
+}
+
+function uid() { return 'pb' + (DB.nextId++) + '_' + Math.random().toString(36).slice(2,7); }
+function now() { return new Date().toISOString(); }
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function fmtDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+function fmtTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ── Storage ── */
+function save() {
+  try { localStorage.setItem('pb2_db', JSON.stringify(DB)); } catch(e) {}
+  try { localStorage.setItem('pb2_sync', JSON.stringify({token:_syncToken,gistId:_syncGistId,lastSync:_lastSync})); } catch(e) {}
+}
+function load() {
+  try { var d = localStorage.getItem('pb2_db'); if(d) DB = JSON.parse(d); } catch(e) {}
+  try { var s = localStorage.getItem('pb2_sync'); if(s) { var p=JSON.parse(s); _syncToken=p.token||''; _syncGistId=p.gistId||''; _lastSync=p.lastSync||''; }} catch(e) {}
+  if (!DB.jobs)   DB.jobs   = [];
+  if (!DB.tasks)  DB.tasks  = [];
+  if (!DB.photos) DB.photos = [];
+  if (!DB.notes)  DB.notes  = [];
+  if (!DB.rooms)       DB.rooms       = [];
+  if (!DB.invoices)    DB.invoices    = [];
+  if (!DB.expenses)    DB.expenses    = [];
+  if (!DB.contractors) DB.contractors = [];
+  if (!DB.nextId) DB.nextId = 1;
+}
+
+/* ── Navigation ── */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  var navBtn = document.getElementById('nav-' + id);
+  if (navBtn) navBtn.classList.add('active');
+  // Render the screen
+  if (id === 's-home')   renderHome();
+  if (id === 's-jobs')   renderJobs();
+  if (id === 's-tasks')  renderTasks();
+  if (id === 's-photos') renderPhotos();
+  if (id === 's-notes')  renderNotes();
+}
+
+/* ── Sheets ── */
+function openSheet(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeSheet(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+/* ── Greeting ── */
+function updateGreeting() {
+  var h = new Date().getHours();
+  var g = h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening';
+  document.getElementById('home-greeting').textContent = g;
+  document.getElementById('home-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+
+/* ── Render All ── */
+function renderAll() {
+  renderHome(); renderJobs(); renderTasks(); renderPhotos(); renderNotes();
+  populateJobSelects();
+}
+
+/* ── HOME ── */
+function renderHome() {
+  var activeJobs  = DB.jobs.filter(function(j){ return j.status==='Active'; }).length;
+  var openTasks   = DB.tasks.filter(function(t){ return !t.done; }).length;
+  var todayPhotos = DB.photos.filter(function(p){ return (p.date||'').startsWith(todayStr()); }).length;
+  document.getElementById('kpi-jobs').textContent   = activeJobs;
+  document.getElementById('kpi-tasks').textContent  = openTasks;
+  document.getElementById('kpi-photos').textContent = todayPhotos;
+  document.getElementById('kpi-notes').textContent  = DB.notes.length;
+
+  // Recent jobs
+  var recent = DB.jobs.slice(-3).reverse();
+  var el = document.getElementById('home-recent-jobs');
+  if (!recent.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔨</div><div class="empty-text">No jobs yet</div><div class="empty-sub">Tap Jobs to create your first job</div></div>';
+    return;
+  }
+  el.innerHTML = recent.map(function(j){ return buildJobCard(j, true); }).join('');
+}
+
+/* ── JOBS ── */
+function renderJobs() {
+  var el = document.getElementById('jobs-list');
+  var count = document.getElementById('jobs-count');
+  var active = DB.jobs.filter(function(j){ return j.status==='Active'; }).length;
+  if (count) count.textContent = active + ' active · ' + DB.jobs.length + ' total';
+  if (!DB.jobs.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🏗️</div><div class="empty-text">No jobs yet</div><div class="empty-sub">Tap + to create your first job</div></div>';
+    return;
+  }
+  el.innerHTML = DB.jobs.slice().reverse().map(function(j){ return buildJobCard(j); }).join('');
+}
+
+function buildJobCard(job, mini) {
+  var tasks     = DB.tasks.filter(function(t){ return t.jobId===job.id; });
+  var doneTasks = tasks.filter(function(t){ return t.done; }).length;
+  var pct       = tasks.length ? Math.round(doneTasks/tasks.length*100) : 0;
+  var photos    = DB.photos.filter(function(p){ return p.jobId===job.id; }).length;
+  var statusColor = {Active:'amber',Complete:'green','On Hold':'red',Pending:''}[job.status]||'';
+  return '<div class="card card-tap" onclick="openJobDetail(\'' + job.id + '\')">'
+    + '<div class="card-body">'
+    + '<div class="card-row">'
+    + '<div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:' + ({Active:'var(--accent)',Complete:'var(--green)','On Hold':'var(--red)',Pending:'var(--muted)'}[job.status]||'var(--faint)') + '"></div>'
+    + '<div style="flex:1;min-width:0"><div class="job-name">' + esc(job.name) + '</div>'
+    + (job.client ? '<div style="font-size:13px;color:var(--muted);margin-top:2px">👤 ' + esc(job.client) + '</div>' : '')
+    + (job.address ? '<div style="font-size:12px;color:var(--faint);margin-top:1px">📍 ' + esc(job.address) + '</div>' : '')
+    + '</div>'
+    + '<span class="chip ' + statusColor + '">' + job.status + '</span>'
+    + '</div>'
+    + (tasks.length ? '<div class="job-progress"><div class="job-progress-fill" style="width:' + pct + '%"></div></div>' : '')
+    + '<div class="job-chips">'
+    + (tasks.length ? '<span class="chip">' + doneTasks + '/' + tasks.length + ' tasks</span>' : '')
+    + (photos ? '<span class="chip blue">' + photos + ' photos</span>' : '')
+    + (job.contract ? '<span class="chip amber">$' + (+job.contract).toLocaleString() + '</span>' : '')
+    + '</div>'
+    + '</div></div>';
+}
+
+function openJobDetail(jobId) {
+  currentJobId = jobId;
+  var job = DB.jobs.find(function(j){ return j.id===jobId; });
+  if (!job) return;
+  document.getElementById('jd-name').textContent = job.name;
+  var meta = [job.client&&('👤 '+job.client), job.address&&('📍 '+job.address), job.status].filter(Boolean).join(' · ');
+  document.getElementById('jd-meta').textContent = meta;
+  renderJobDetail(jobId);
+  showScreen('s-job-detail');
+  document.getElementById('nav-s-jobs').classList.add('active');
+}
+
+function renderJobDetail(jobId) {
+  var tasks   = DB.tasks.filter(function(t){ return t.jobId===jobId; });
+  var done    = tasks.filter(function(t){ return t.done; }).length;
+  var pct     = tasks.length ? Math.round(done/tasks.length*100) : 0;
+  var photos  = DB.photos.filter(function(p){ return p.jobId===jobId; });
+  var notes   = DB.notes.filter(function(n){ return n.jobId===jobId; });
+
+  document.getElementById('jd-pct').textContent = pct + '%';
+  document.getElementById('jd-bar').style.width = pct + '%';
+
+  // Tasks
+  var tEl = document.getElementById('jd-tasks');
+  if (!tasks.length) {
+    tEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--faint);font-size:14px">No tasks — tap Add Task</div>';
+  } else {
+    tEl.innerHTML = tasks.map(function(t){ return buildTaskItem(t); }).join('');
+  }
+
+  // Photos
+  var pEl = document.getElementById('jd-photos');
+  if (!photos.length) {
+    pEl.innerHTML = '<div style="padding:16px;text-align:center;color:var(--faint);font-size:14px;grid-column:1/-1">No photos — tap Add Photo</div>';
+  } else {
+    pEl.innerHTML = photos.slice(0,12).map(function(ph){ return '<div class="photo-thumb" onclick="viewPhoto(\'' + ph.id + '\')"><img src="' + ph.src + '" loading="lazy"/></div>'; }).join('');
+  }
+
+  // Notes
+  var nEl = document.getElementById('jd-notes');
+  if (!notes.length) {
+    nEl.innerHTML = '<div style="text-align:center;color:var(--faint);font-size:14px;padding:16px 0">No notes — tap Add Note</div>';
+  } else {
+    nEl.innerHTML = notes.slice().reverse().map(function(n){ return buildNoteCard(n); }).join('');
+  }
+}
+
+/* ── TASKS ── */
+function renderTasks() {
+  var filter = document.getElementById('task-job-filter')?.value||'';
+  var tasks  = filter ? DB.tasks.filter(function(t){return t.jobId===filter;}) : DB.tasks;
+  var open   = tasks.filter(function(t){return !t.done;}).length;
+  var el     = document.getElementById('tasks-list');
+  var cnt    = document.getElementById('tasks-count');
+  if (cnt) cnt.textContent = open + ' open · ' + tasks.length + ' total';
+
+  if (!tasks.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">No tasks yet</div><div class="empty-sub">Tap + to add a task</div></div>';
+    return;
+  }
+  // Group by job
+  var byJob = {};
+  tasks.forEach(function(t){ var k=t.jobId||''; if(!byJob[k])byJob[k]=[]; byJob[k].push(t); });
+  var html = '';
+  Object.keys(byJob).forEach(function(jid) {
+    var job = DB.jobs.find(function(j){return j.id===jid;});
+    if (job) html += '<div class="section-header">' + esc(job.name) + '</div>';
+    html += '<div class="card" style="margin-bottom:8px">' + byJob[jid].map(buildTaskItem).join('') + '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function buildTaskItem(t) {
+  var priorityColor = {Critical:'var(--red)',High:'var(--accent)'}[t.priority]||'';
+  return '<div class="task-item">'
+    + '<div class="task-check ' + (t.done?'done':'') + '" onclick="toggleTask(\'' + t.id + '\')">'
+    + '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>'
+    + '</div>'
+    + '<div style="flex:1;min-width:0">'
+    + '<div class="task-text ' + (t.done?'done':'') + '">' + esc(t.desc) + '</div>'
+    + '<div class="task-sub">'
+    + (t.due?'📅 '+t.due+' &nbsp;':'')
+    + (t.priority&&t.priority!=='Normal'?'<span style="color:'+priorityColor+';font-weight:700">'+t.priority+'</span>':'')
+    + (t.photoRequired&&!t.done?' &nbsp;📸 Photo required':'')
+    + (t.completedBy?'<div style="color:var(--faint)">✅ '+esc(t.completedBy)+'</div>':'')
+    + '</div>'
+    + '</div>'
+    + '<button onclick="deleteTask(\'' + t.id + '\')" style="background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;padding:0 0 0 8px;flex-shrink:0">×</button>'
+    + '</div>';
+}
+
+function toggleTask(id) {
+  var t = DB.tasks.find(function(x){return x.id===id;});
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done) { t.completedBy = 'Field'; t.completedAt = now(); }
+  else { delete t.completedBy; delete t.completedAt; }
+  save(); renderAll();
+  if (currentJobId === t.jobId) renderJobDetail(currentJobId);
+}
+
+function deleteTask(id) {
+  DB.tasks = DB.tasks.filter(function(t){return t.id!==id;});
+  save(); renderAll();
+  if (currentJobId) renderJobDetail(currentJobId);
+}
+
+/* ── PHOTOS ── */
+function renderPhotos() {
+  var filter = document.getElementById('photo-job-filter')?.value||'';
+  var photos = filter ? DB.photos.filter(function(p){return p.jobId===filter;}) : DB.photos;
+  var el     = document.getElementById('photos-grid');
+  var cnt    = document.getElementById('photos-count');
+  if (cnt) cnt.textContent = photos.length + ' photos';
+  if (!photos.length) {
+    el.innerHTML = '<div style="grid-column:1/-1" class="empty"><div class="empty-icon">📷</div><div class="empty-text">No photos yet</div><div class="empty-sub">Tap the camera icon to add</div></div>';
+    return;
+  }
+  el.innerHTML = photos.slice().reverse().map(function(ph){
+    return '<div class="photo-thumb" onclick="viewPhoto(\'' + ph.id + '\')"><img src="' + ph.src + '" loading="lazy"/></div>';
+  }).join('');
+}
+
+function addPhotos(input, jobId) {
+  if (!input.files) return;
+  Array.from(input.files).forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    var r = new FileReader();
+    r.onload = function(e) {
+      var src = e.target.result;
+      if (!src || src.length < 100) return;
+      DB.photos.push({
+        id:    uid(),
+        src:   src,
+        jobId: jobId || currentJobId || '',
+        date:  now(),
+        size:  Math.round(file.size/1024) + 'KB',
+      });
+      save(); renderAll();
+      if (currentJobId) renderJobDetail(currentJobId);
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+function viewPhoto(id) {
+  var ph = DB.photos.find(function(p){return p.id===id;});
+  if (!ph) return;
+  document.getElementById('photo-viewer-img').src = ph.src;
+  document.getElementById('photo-dl').href = ph.src;
+  document.getElementById('photo-viewer-cap').textContent = fmtDate(ph.date) + ' ' + fmtTime(ph.date);
+  document.getElementById('photo-viewer').classList.add('open');
+}
+function closePhotoViewer() {
+  document.getElementById('photo-viewer').classList.remove('open');
+}
+
+/* ── NOTES ── */
+function renderNotes() {
+  var el = document.getElementById('notes-list');
+  if (!DB.notes.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📝</div><div class="empty-text">No notes yet</div><div class="empty-sub">Tap + to add a note or voice memo</div></div>';
+    return;
+  }
+  el.innerHTML = DB.notes.slice().reverse().map(buildNoteCard).join('');
+}
+
+function buildNoteCard(n) {
+  var job = n.jobId ? DB.jobs.find(function(j){return j.id===n.jobId;}) : null;
+  return '<div class="note-card">'
+    + '<div class="note-text">' + esc(n.text) + '</div>'
+    + '<div class="note-meta">'
+    + '<span>' + fmtDate(n.date) + ' ' + fmtTime(n.date) + '</span>'
+    + (job ? '<span>📋 ' + esc(job.name) + '</span>' : '')
+    + (n.isVoice ? '<span>🎤 Voice</span>' : '')
+    + '</div>'
+    + '</div>';
+}
+
+/* ── JOB ACTIONS ── */
+function openAddJob() {
+  ['aj-name','aj-client','aj-address','aj-notes'].forEach(function(id){ var el=document.getElementById(id);if(el)el.value=''; });
+  document.getElementById('aj-status').value = 'Active';
+  document.getElementById('aj-contract').value = '';
+  openSheet('sheet-add-job');
+  setTimeout(function(){ document.getElementById('aj-name').focus(); }, 300);
+}
+
+function saveJob() {
+  var name = document.getElementById('aj-name').value.trim();
+  if (!name) { alert('Job name required'); return; }
+  DB.jobs.push({
+    id:       uid(),
+    name:     name,
+    client:   document.getElementById('aj-client').value.trim(),
+    address:  document.getElementById('aj-address').value.trim(),
+    status:   document.getElementById('aj-status').value,
+    contract: document.getElementById('aj-contract').value,
+    notes:    document.getElementById('aj-notes').value.trim(),
+    created:  now(),
+  });
+  closeSheet('sheet-add-job');
+  save(); renderAll();
+  toast('✅ Job "' + name + '" created');
+}
+
+/* ── TASK ACTIONS ── */
+function openAddTask(jobId) {
+  document.getElementById('at-desc').value = '';
+  document.getElementById('at-due').value  = '';
+  document.getElementById('at-priority').value = 'Normal';
+  document.getElementById('at-photo-req').checked = false;
+  populateJobSelects();
+  if (jobId) document.getElementById('at-job').value = jobId;
+  openSheet('sheet-add-task');
+  setTimeout(function(){ document.getElementById('at-desc').focus(); }, 300);
+}
+
+function saveTask() {
+  var desc = document.getElementById('at-desc').value.trim();
+  if (!desc) { alert('Task description required'); return; }
+  DB.tasks.push({
+    id:            uid(),
+    desc:          desc,
+    jobId:         document.getElementById('at-job').value,
+    due:           document.getElementById('at-due').value,
+    priority:      document.getElementById('at-priority').value,
+    photoRequired: document.getElementById('at-photo-req').checked,
+    done:          false,
+    created:       now(),
+  });
+  closeSheet('sheet-add-task');
+  save(); renderAll();
+  if (currentJobId) renderJobDetail(currentJobId);
+  toast('✅ Task added');
+}
+
+/* ── NOTE ACTIONS ── */
+function openAddNote(jobId) {
+  document.getElementById('an-text').value = '';
+  document.getElementById('voice-note-live').textContent = 'Voice transcript will appear here...';
+  document.getElementById('voice-note-live').classList.remove('active');
+  document.getElementById('voice-note-btn').textContent = '🎤 Tap to Dictate';
+  document.getElementById('voice-note-btn').classList.remove('recording');
+  populateJobSelects();
+  if (jobId) document.getElementById('an-job').value = jobId;
+  openSheet('sheet-add-note');
+}
+
+function saveNote() {
+  var text = document.getElementById('an-text').value.trim();
+  if (!text) { alert('Note text required'); return; }
+  DB.notes.push({
+    id:      uid(),
+    text:    text,
+    jobId:   document.getElementById('an-job').value,
+    isVoice: !!window._lastNoteWasVoice,
+    date:    now(),
+  });
+  window._lastNoteWasVoice = false;
+  closeSheet('sheet-add-note');
+  save(); renderAll();
+  if (currentJobId) renderJobDetail(currentJobId);
+  toast('📝 Note saved');
+}
+
+/* ── POPULATE SELECTS ── */
+function populateJobSelects() {
+  var opts = DB.jobs.map(function(j){ return '<option value="' + j.id + '">' + esc(j.name) + '</option>'; }).join('');
+  ['at-job','an-job','task-job-filter','photo-job-filter'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var first = id.includes('filter') ? '<option value="">All Jobs</option>' : '<option value="">No job</option>';
+    el.innerHTML = first + opts;
+  });
+}
+
+/* ── VOICE ── */
+var _voiceRecog = null, _voiceActive = false, _voiceFinal = '';
+
+function toggleVoiceNote() {
+  var btn  = document.getElementById('voice-note-btn');
+  var live = document.getElementById('voice-note-live');
+  var ta   = document.getElementById('an-text');
+
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    toast('🎤 Voice needs Chrome or Safari'); return;
+  }
+
+  if (_voiceActive) {
+    _voiceRecog && _voiceRecog.stop();
+    _voiceActive = false;
+    btn.textContent = '🎤 Tap to Dictate';
+    btn.classList.remove('recording');
+    if (_voiceFinal.trim()) {
+      ta.value = ta.value ? ta.value + ' ' + _voiceFinal.trim() : _voiceFinal.trim();
+      window._lastNoteWasVoice = true;
+    }
+    return;
+  }
+
+  _voiceFinal = '';
+  _voiceActive = true;
+  btn.textContent = '⏹ Tap to Stop';
+  btn.classList.add('recording');
+  live.textContent = 'Listening...';
+  live.classList.add('active');
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _voiceRecog = new SR();
+  _voiceRecog.lang = 'en-US';
+  _voiceRecog.continuous = true;
+  _voiceRecog.interimResults = true;
+
+  _voiceRecog.onresult = function(e) {
+    var interim = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) _voiceFinal += e.results[i][0].transcript + ' ';
+      else interim += e.results[i][0].transcript;
+    }
+    live.textContent = _voiceFinal + interim;
+  };
+
+  _voiceRecog.onerror = function(e) {
+    if (e.error === 'not-allowed') toast('🎤 Mic blocked — allow microphone access');
+    _voiceActive = false;
+    btn.textContent = '🎤 Tap to Dictate';
+    btn.classList.remove('recording');
+  };
+
+  _voiceRecog.onend = function() {
+    if (_voiceActive) { try { _voiceRecog.start(); } catch(e2){} }
+  };
+
+  _voiceRecog.start();
+}
+
+/* ── SYNC ── */
+function openSync() {
+  // Update status display
+  var settings_display = document.getElementById('sync-status-display');
+  if (_syncToken) {
+    settings_display.innerHTML = '<span style="color:var(--green)">✅ Token configured</span>' + (_syncGistId ? ' · Gist linked' : ' · No gist yet — Push to create') + (_lastSync ? '<br><span style="color:var(--faint)">Last sync: ' + new Date(_lastSync).toLocaleTimeString() + '</span>' : '');
+    document.getElementById('sync-token').value = _syncToken;
+  } else {
+    settings_display.innerHTML = '<span style="color:var(--accent)">⚠️ Enter your GitHub token below to enable sync</span>';
+  }
+  document.getElementById('sync-result').style.display = 'none';
+  openSheet('sheet-sync');
+}
+
+function saveToken() {
+  var t = document.getElementById('sync-token').value.trim();
+  if (!t || t.length < 10) { toast('Please enter a valid GitHub token'); return; }
+  _syncToken = t;
+  save();
+  setSyncStatus('ready', 'Token saved');
+  document.getElementById('sync-status-bar').style.display = 'block';
+  showSyncResult('✅ Token saved — tap Push to Cloud', 'var(--green)');
+  toast('✅ Token saved');
+}
+
+function setSyncStatus(state, msg) {
+  var dot   = document.getElementById('sync-dot');
+  var label = document.getElementById('sync-label');
+  if (!dot || !label) return;
+  dot.className   = 'sync-dot' + (state==='error'?' error':state==='pending'?' pending':'');
+  label.textContent = msg;
+}
+
+function showSyncResult(msg, color) {
+  var el = document.getElementById('sync-result');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background = color + '22';
+  el.style.color = color;
+  el.style.border = '1px solid ' + color + '44';
+  el.style.borderRadius = '10px';
+}
+
+async function doPush() {
+  if (!_syncToken) { showSyncResult('⚠️ Enter your GitHub token first', 'var(--accent)'); return; }
+  setSyncStatus('pending','Pushing...');
+  showSyncResult('⏳ Uploading...', 'var(--muted)');
+  try {
+    var payload = { description:'ProBuilders-v2-sync', public:false,
+      files:{'pb_data.json':{ content: JSON.stringify({db:DB, pushedAt:now(), version:'2.0'}, null, 2) }} };
+    var method  = _syncGistId ? 'PATCH' : 'POST';
+    var url     = _syncGistId ? 'https://api.github.com/gists/' + _syncGistId : 'https://api.github.com/gists';
+    var res = await fetch(url, { method:method,
+      headers:{'Authorization':'token '+_syncToken,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+      body: JSON.stringify(payload) });
+    if (!res.ok) {
+      if (res.status===404) { _syncGistId=''; save(); return doPush(); }
+      throw new Error('HTTP ' + res.status);
+    }
+    var gist = await res.json();
+    _syncGistId = gist.id;
+    _lastSync   = now();
+    save();
+    setSyncStatus('ready','Synced ✓');
+    showSyncResult('✅ Pushed successfully!', 'var(--green)');
+    document.getElementById('sync-time').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    setSyncStatus('error','Sync failed');
+    showSyncResult('❌ Push failed: ' + e.message, 'var(--red)');
+  }
+}
+
+async function doPull() {
+  if (!_syncToken) { showSyncResult('⚠️ Enter your GitHub token first', 'var(--accent)'); return; }
+  if (!_syncGistId) { showSyncResult('⚠️ Push from field app first', 'var(--accent)'); return; }
+  setSyncStatus('pending','Pulling...');
+  showSyncResult('⏳ Downloading...', 'var(--muted)');
+  try {
+    var res = await fetch('https://api.github.com/gists/' + _syncGistId, {
+      headers:{'Authorization':'token '+_syncToken,'Accept':'application/vnd.github.v3+json'} });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var gist = await res.json();
+    var file = gist.files['pb_data.json'];
+    if (!file) throw new Error('No data file found');
+    var content = file.truncated ? await (await fetch(file.raw_url)).text() : file.content;
+    var remote  = JSON.parse(content);
+    var incoming = remote.db || remote;
+    // Merge
+    ['jobs','tasks','photos','notes'].forEach(function(k) {
+      if (!incoming[k] || !Array.isArray(incoming[k])) return;
+      if (!DB[k]) { DB[k] = incoming[k]; return; }
+      var ids = {}; DB[k].forEach(function(x){ ids[x.id]=true; });
+      incoming[k].forEach(function(x){ if (!ids[x.id]) DB[k].push(x); });
+    });
+    if (incoming.nextId > (DB.nextId||0)) DB.nextId = incoming.nextId;
+    _lastSync = now();
+    save(); renderAll();
+    setSyncStatus('ready','Synced ✓');
+    showSyncResult('✅ Pulled successfully!', 'var(--green)');
+    document.getElementById('sync-time').textContent = new Date().toLocaleTimeString();
+  } catch(e) {
+    setSyncStatus('error','Sync failed');
+    showSyncResult('❌ Pull failed: ' + e.message, 'var(--red)');
+  }
+}
+
+/* ── TOAST ── */
+function toast(msg) {
+  var el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;bottom:calc(var(--nav-h)+16px);left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:fadeInUp .2s ease';
+  document.body.appendChild(el);
+  setTimeout(function(){ el.remove(); }, 2800);
+}
+
+/* ── START ── */
+window.onload = init;
+
+/* ── Theme ── */
+function toggleTheme() {
+  var h    = document.documentElement;
+  var curr = h.getAttribute('data-theme') || 'dark';
+  var next = curr === 'dark' ? 'light' : 'dark';
+  h.setAttribute('data-theme', next);
+  localStorage.setItem('pb2_theme', next);
+  var btn = document.getElementById('theme-btn');
+  if (btn) btn.title = next === 'dark' ? 'Switch to Light' : 'Switch to Dark';
+}
+(function applyTheme(){
+  var t = localStorage.getItem('pb2_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+
+/* ── Font Size ── */
+var FONT_SIZES = [14, 16, 18, 20];
+var _fontSize  = +localStorage.getItem('pb2_font') || 16;
+function applyFontSize(sz) {
+  _fontSize = sz;
+  var style = document.getElementById('pb2-font-style');
+  if (!style) { style = document.createElement('style'); style.id='pb2-font-style'; document.head.appendChild(style); }
+  style.textContent =
+    'body { font-size:' + sz + 'px !important; }' +
+    '.topbar-title { font-size:' + Math.round(sz*1.7) + 'px !important; }' +
+    '.kpi-val { font-size:' + Math.round(sz*2.2) + 'px !important; }' +
+    '.task-text, .note-text { font-size:' + Math.round(sz*0.95) + 'px !important; }' +
+    '.job-name { font-size:' + sz + 'px !important; }' +
+    '.chip { font-size:' + Math.round(sz*0.75) + 'px !important; }';
+  localStorage.setItem('pb2_font', sz);
+  // Update font btn label
+  var btn = document.getElementById('font-btn');
+  if (btn) btn.title = 'Font: ' + sz + 'px';
+}
+function cycleFontSize() {
+  var idx  = FONT_SIZES.indexOf(_fontSize);
+  var next = FONT_SIZES[(idx + 1) % FONT_SIZES.length];
+  applyFontSize(next);
+  toast('Font: ' + next + 'px');
+}
+applyFontSize(_fontSize);
+
+/* ── Live Clock ── */
+function updateClock() {
+  var el = document.getElementById('info-time');
+  if (!el) return;
+  var now  = new Date();
+  var h    = now.getHours(), m = now.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  var h12  = h % 12 || 12;
+  el.textContent = h12 + ':' + (m<10?'0'+m:m) + ' ' + ampm;
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+</script>
+
+<!-- Add Invoice Sheet -->
+<div class="sheet-overlay" id="sheet-add-invoice">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">New Invoice</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-invoice')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Description *</div><input id="inv-desc" type="text" placeholder="Invoice description"/></div>
+      <div class="field"><div class="field-label">Job</div><select id="inv-job"><option value="">No job</option></select></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Amount ($) *</div><input id="inv-amount" type="number" placeholder="0.00" step="0.01"/></div>
+        <div class="field"><div class="field-label">Date</div><input id="inv-date" type="date"/></div>
+      </div>
+      <div class="field"><div class="field-label">Status</div>
+        <select id="inv-status"><option>Draft</option><option>Sent</option><option>Paid</option><option>Overdue</option></select>
+      </div>
+      <div class="field"><div class="field-label">Notes</div><textarea id="inv-notes" rows="2" placeholder="Invoice notes..."></textarea></div>
+      <button class="btn btn-primary" onclick="saveInvoice()">Save Invoice</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Expense Sheet -->
+<div class="sheet-overlay" id="sheet-add-expense">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">New Expense / Receipt</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-expense')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Description *</div><input id="exp-desc" type="text" placeholder="What was purchased?"/></div>
+      <div class="field"><div class="field-label">Job</div><select id="exp-job"><option value="">No job</option></select></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Amount ($) *</div><input id="exp-amount" type="number" placeholder="0.00" step="0.01"/></div>
+        <div class="field"><div class="field-label">Date</div><input id="exp-date" type="date"/></div>
+      </div>
+      <div class="field"><div class="field-label">Category</div>
+        <select id="exp-cat"><option>Materials</option><option>Labor</option><option>Equipment</option><option>Permits</option><option>Subcontractor</option><option>Tools</option><option>Other</option></select>
+      </div>
+      <div class="field"><div class="field-label">Vendor / Supplier</div><input id="exp-vendor" type="text" placeholder="Home Depot, supplier name..."/></div>
+      <div class="field">
+        <div class="field-label">Receipt / Scan</div>
+        <!-- Photo preview -->
+        <div id="exp-receipt-preview" style="display:none;margin-bottom:8px;position:relative">
+          <img id="exp-receipt-img" src="" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid var(--border);background:var(--card2)"/>
+          <button onclick="clearExpenseReceipt()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700">×</button>
+        </div>
+        <!-- Action buttons -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <!-- Camera / file -->
+          <label style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:13px;background:var(--card2);border-radius:10px;border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text)">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#34C759;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            📷 Camera
+            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="attachExpenseReceipt(this)">
+          </label>
+          <!-- Library -->
+          <label style="display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:13px;background:var(--card2);border-radius:10px;border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text)">
+            <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#34C759;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            🖼 Library
+            <input type="file" accept="image/*" style="display:none" onchange="attachExpenseReceipt(this)">
+          </label>
+        </div>
+        <!-- Scan OCR button -->
+        <button onclick="scanReceiptOCR()" id="scan-ocr-btn" style="width:100%;margin-top:8px;padding:13px;border-radius:10px;border:1px solid rgba(52,199,89,.4);background:rgba(52,199,89,.08);color:#34C759;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="4 7 4 4 7 4"/><polyline points="17 4 20 4 20 7"/><polyline points="20 17 20 20 17 20"/><polyline points="7 20 4 20 4 17"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+          🔍 Scan &amp; Auto-Fill Amount
+        </button>
+        <div id="scan-result" style="display:none;margin-top:6px;padding:10px;border-radius:8px;font-size:13px;background:rgba(52,199,89,.08);border:1px solid rgba(52,199,89,.3);color:#34C759"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Contractor Sheet -->
+<div class="sheet-overlay" id="sheet-add-contractor">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <div class="sheet-title">Contractor / Sub</div>
+      <button class="sheet-close" onclick="closeSheet('sheet-add-contractor')">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field"><div class="field-label">Company / Name *</div><input id="con-name" type="text" placeholder="ABC Electrical LLC"/></div>
+      <div class="field"><div class="field-label">Job</div><select id="con-job"><option value="">No job</option></select></div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Trade</div>
+          <select id="con-trade"><option>General</option><option>Electrical</option><option>Plumbing</option><option>HVAC</option><option>Framing</option><option>Roofing</option><option>Masonry</option><option>Painting</option><option>Flooring</option><option>Tile</option><option>Drywall</option><option>Other</option></select>
+        </div>
+        <div class="field"><div class="field-label">Contract Value ($)</div><input id="con-value" type="number" placeholder="0.00" step="0.01"/></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><div class="field-label">Start Date</div><input id="con-start" type="date"/></div>
+        <div class="field"><div class="field-label">End Date</div><input id="con-end" type="date"/></div>
+      </div>
+      <div class="field"><div class="field-label">Scope of Work *</div>
+        <textarea id="con-scope" rows="4" placeholder="Detailed scope of work, inclusions, exclusions..."></textarea>
+      </div>
+      <div class="field"><div class="field-label">Contact Phone</div><input id="con-phone" type="tel" placeholder="(555) 000-0000"/></div>
+      <div class="field"><div class="field-label">Status</div>
+        <select id="con-status"><option>Active</option><option>Pending</option><option>Completed</option><option>On Hold</option></select>
+      </div>
+      <button class="btn btn-primary" onclick="saveContractor()">Save Contractor</button>
+      <div style="height:10px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Edit Room ── */
+window.openEditRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
+  if (!room) return;
+  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
+  var TYPES = ['Kitchen','Bathroom','Bedroom','Living Room','Basement','Attic','Garage','Office','Hallway','Laundry','Exterior','Roof','HVAC','Electrical','Plumbing','Other'];
+  var s = 'width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border,#2a2a2a);background:var(--card2,#222);color:var(--text,#f0f0f0);font-size:16px;font-family:inherit';
+  var typeOpts = TYPES.map(function(t){ return '<option'+(t===room.type?' selected':'')+'>'+t+'</option>'; }).join('');
+  var jobOpts  = '<option value="">No job</option>'+DB.jobs.map(function(j){ return '<option value="'+j.id+'"'+(j.id===room.jobId?' selected':'')+'>'+esc(j.name)+'</option>'; }).join('');
+  var mo = document.createElement('div');
+  mo.id  = 'edit-room-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
+  var html = '<div style="background:var(--card,#1a1a1a);border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);width:100%;max-width:480px;max-height:90vh;overflow-y:auto">';
+  html += '<div style="width:36px;height:4px;background:var(--faint,#444);border-radius:99px;margin:12px auto 4px"></div>';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 14px;border-bottom:1px solid var(--border,#2a2a2a)">';
+  html += '<div style="font-size:17px;font-weight:700">Edit Room</div>';
+  html += '<button onclick="document.getElementById(\'edit-room-modal\').remove()" style="width:30px;height:30px;border-radius:50%;background:var(--card2);border:none;color:var(--muted);font-size:18px;cursor:pointer">x</button>';
+  html += '</div><div style="padding:16px 18px">';
+  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Room Name *</div><input id="er-name" type="text" value="'+esc(room.name)+'" style="'+s+'"/></div>';
+  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Type</div><select id="er-type" style="'+s+'">'+typeOpts+'</select></div>';
+  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Job</div><select id="er-job" style="'+s+'">'+jobOpts+'</select></div>';
+  html += '<div style="margin-bottom:18px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Notes</div><textarea id="er-notes" rows="2" style="'+s+';resize:vertical">'+esc(room.notes||'')+'</textarea></div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button onclick="erDeleteRoom(\''+roomId+'\')" style="flex:1;padding:13px;border-radius:12px;border:1px solid rgba(239,83,80,.35);background:rgba(239,83,80,.08);color:#ef5350;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Delete Room</button>';
+  html += '<button onclick="saveEditRoom(\''+roomId+'\')" style="flex:2;padding:13px;border-radius:12px;border:none;background:#34C759;color:#000;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">Save Changes</button>';
+  html += '</div></div></div>';
+  mo.innerHTML = html;
+  document.body.appendChild(mo);
+  setTimeout(function(){ document.getElementById('er-name') && document.getElementById('er-name').focus(); }, 200);
+};
+
+window.saveEditRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
+  if (!room) return;
+  var name = (document.getElementById('er-name') && document.getElementById('er-name').value || '').trim();
+  if (!name) { toast('Room name required'); return; }
+  room.name  = name;
+  room.type  = (document.getElementById('er-type') && document.getElementById('er-type').value) || room.type;
+  room.jobId = (document.getElementById('er-job')  && document.getElementById('er-job').value)  || '';
+  room.notes = ((document.getElementById('er-notes') && document.getElementById('er-notes').value) || '').trim();
+  room.updatedAt = now();
+  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
+  save(); renderAll();
+  if (currentRoomId === roomId) openRoomDetail(roomId);
+  toast('Room updated');
+};
+
+window.erDeleteRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){return r.id===roomId;});
+  var taskCount = (DB.tasks||[]).filter(function(t){return t.roomId===roomId;}).length;
+  if (!confirm('Delete "' + (room ? room.name : 'this room') + '"?' + (taskCount ? '\n\nThis also deletes ' + taskCount + ' linked task(s).' : ''))) return;
+  DB.rooms = (DB.rooms||[]).filter(function(r){return r.id!==roomId;});
+  DB.tasks = (DB.tasks||[]).filter(function(t){return t.roomId!==roomId;});
+  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
+  var detail = document.getElementById('s-room-detail');
+  if (detail) detail.remove();
+  save(); renderAll();
+  showScreen('s-rooms');
+  toast('Room deleted');
+};
+
+/* ── Add Edit button to room cards ── */
+var _origBRC = buildRoomCard;
+buildRoomCard = function(room) {
+  var base = _origBRC(room);
+  var editBar = '<div style="border-top:1px solid var(--border,#2a2a2a);margin-top:8px;padding-top:8px;display:flex;gap:6px">'
+    + '<button onclick="event.stopPropagation();openEditRoom(\'' + room.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Edit Room</button>'
+    + '<button onclick="event.stopPropagation();openAddTask(null,\'' + room.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:none;background:#34C759;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ Add Task</button>'
+    + '</div>';
+  return base.replace('</div></div>', editBar + '</div></div>');
+};
+
+/* ── Add Edit button inside room detail header ── */
+var _origORD = openRoomDetail;
+openRoomDetail = function(roomId) {
+  _origORD(roomId);
+  setTimeout(function() {
+    var screen = document.getElementById('s-room-detail');
+    if (!screen || screen.querySelector('.room-edit-btn')) return;
+    var delBtn = screen.querySelector('[onclick*="deleteRoom"]');
+    if (!delBtn) return;
+    var btn = document.createElement('button');
+    btn.className = 'room-edit-btn';
+    btn.textContent = 'Edit';
+    btn.style.cssText = 'background:rgba(52,199,89,.1);border:1px solid rgba(52,199,89,.3);border-radius:9px;color:#34C759;font-size:14px;font-weight:700;padding:6px 14px;cursor:pointer;font-family:inherit;margin-right:6px';
+    btn.onclick = function(){ openEditRoom(roomId); };
+    delBtn.parentElement.insertBefore(btn, delBtn);
+  }, 100);
+};
+
+renderRooms && renderRooms();
+console.log('[PB] Room edit v2 ready');
+
+</script>
+<
+<script>
+
+</script>
+
+<script>
+/* ══ GEO + WEATHER — single source of truth ══════════════════ */
+(function pbGeo() {
+  function setEl(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  /* Weather via Open-Meteo (free, no key) */
+  function getWeather(lat, lng) {
+    setEl('info-weather-text', '...');
+    fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lng+'&current_weather=true&temperature_unit=fahrenheit')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        var cw = d && d.current_weather; if (!cw) return;
+        var temp = Math.round(cw.temperature);
+        var c2   = +cw.weathercode;
+        var ico  = c2===0?'☀️':c2<=2?'⛅':c2<=3?'☁️':c2<=49?'🌫':c2<=69?'🌧':c2<=79?'🌨':c2<=84?'🌦':'⛈';
+        var txt  = {0:'Clear',1:'Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',
+          51:'Drizzle',61:'Rain',63:'Rain',65:'Heavy Rain',
+          71:'Snow',80:'Showers',95:'Thunderstorm'}[c2] || '';
+        setEl('info-weather-icon', ico);
+        setEl('info-weather-text', temp+'°F '+txt);
+        window._currentWeather = ico+' '+temp+'°F '+txt;
+      })
+      .catch(function(){ setEl('info-weather-text','N/A'); });
+  }
+
+  /* IP-based location — no permission needed */
+  function byIP() {
+    setEl('info-loc-text','Detecting...');
+    fetch('https://ipapi.co/json/')
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (!d || !d.latitude) throw 0;
+        var lat = ''+d.latitude, lng = ''+d.longitude;
+        var loc = [d.city, d.region_code, (d.postal||'').slice(0,5)].filter(Boolean).join(' ');
+        setEl('info-loc-text', loc || lat+', '+lng);
+        window._currentGeo = loc; window._geoLat = lat; window._geoLng = lng;
+        getWeather(lat, lng);
+      })
+      .catch(function(){
+        /* fallback: Bergenfield NJ coords from profile */
+        setEl('info-loc-text','Bergenfield NJ');
+        getWeather('40.9268','-73.9957');
+      });
+  }
+
+  /* GPS first, IP fallback if denied/timeout */
+  function start() {
+    if (!navigator.geolocation) { byIP(); return; }
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        var lat = pos.coords.latitude.toFixed(4);
+        var lng = pos.coords.longitude.toFixed(4);
+        window._geoLat = lat; window._geoLng = lng;
+        /* Show coords, then reverse-geocode */
+        setEl('info-loc-text', lat+', '+lng);
+        getWeather(lat, lng);
+        fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json')
+          .then(function(r){ return r.json(); })
+          .then(function(d) {
+            var a = d.address||{};
+            var loc = [a.city||a.town||a.village||a.suburb||a.county, a.state_code||a.state, (a.postcode||'').slice(0,5)].filter(Boolean).join(' ');
+            if (loc) { setEl('info-loc-text', loc); window._currentGeo = loc; }
+          }).catch(function(){});
+      },
+      function() { byIP(); },   /* denied → IP fallback */
+      {timeout:6000, enableHighAccuracy:false}
+    );
+  }
+
+  /* Fire after page loads */
+  if (document.readyState !== 'loading') {
+    setTimeout(start, 800);
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(start, 800); });
+  }
+})();
+</script>
+
+<script>
+/* Mirror geo/weather/time to all screen headers */
+function pbMirrorHeader() {
+  var loc  = document.getElementById('info-loc-text')?.textContent || '';
+  var wico = document.getElementById('info-weather-icon')?.textContent || '';
+  var wtxt = document.getElementById('info-weather-text')?.textContent || '';
+  var time = document.getElementById('info-time')?.textContent || '';
+
+  document.querySelectorAll('.geo-mirror').forEach(function(el){ el.textContent = loc; });
+  document.querySelectorAll('.wicon-mirror').forEach(function(el){ el.textContent = wico; });
+  document.querySelectorAll('.wtxt-mirror').forEach(function(el){ el.textContent = wtxt; });
+  document.querySelectorAll('.ttime-mirror').forEach(function(el){ el.textContent = time; });
+}
+
+// Mirror every time clock updates + after geo loads
+var _origUpdateClock = updateClock;
+updateClock = function() {
+  _origUpdateClock();
+  pbMirrorHeader();
+};
+
+// Watch for geo/weather text changes and mirror
+var _geoObserver = new MutationObserver(function(){ pbMirrorHeader(); });
+var _watchReady = function() {
+  ['info-loc-text','info-weather-icon','info-weather-text'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) _geoObserver.observe(el, {childList:true,subtree:true,characterData:true});
+  });
+};
+if (document.readyState !== 'loading') {
+  setTimeout(_watchReady, 1000);
+} else {
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_watchReady, 1000); });
+}
+</script>
+</body>
+</html>
+<script>
+/* ══ ROOMS ENGINE ════════════════════════════════════════════ */
+
+var currentRoomId = null;
+
+/* ── Open Add Room ── */
+function openAddRoom(jobId) {
+  document.getElementById('ar-name').value  = '';
+  document.getElementById('ar-notes').value = '';
+  document.getElementById('ar-type').value  = 'Kitchen';
+  populateJobSelects();
+  if (jobId) document.getElementById('ar-job').value = jobId;
+  openSheet('sheet-add-room');
+  setTimeout(function(){ document.getElementById('ar-name').focus(); }, 300);
+}
+
+/* ── Save Room ── */
+function saveRoom() {
+  var name = document.getElementById('ar-name').value.trim();
+  if (!name) { alert('Room name required'); return; }
+  if (!DB.rooms) DB.rooms = [];
+  var room = {
+    id:     uid(),
+    name:   name,
+    type:   document.getElementById('ar-type').value,
+    jobId:  document.getElementById('ar-job').value,
+    notes:  document.getElementById('ar-notes').value.trim(),
+    created: now(),
+  };
+  DB.rooms.push(room);
+  closeSheet('sheet-add-room');
+  save(); renderAll();
+  if (currentJobId) renderJobDetail(currentJobId);
+  toast('🏠 Room "' + name + '" added');
+}
+
+/* ── Render Rooms screen ── */
+function renderRooms() {
+  var filter = document.getElementById('rooms-job-filter')?.value || '';
+  var rooms  = filter
+    ? (DB.rooms||[]).filter(function(r){ return r.jobId===filter; })
+    : (DB.rooms||[]);
+  var el    = document.getElementById('rooms-list');
+  var cnt   = document.getElementById('rooms-count');
+  if (cnt) cnt.textContent = rooms.length + ' room' + (rooms.length!==1?'s':'');
+
+  if (!rooms.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🏠</div><div class="empty-text">No rooms yet</div><div class="empty-sub">Tap + to add a room or area</div></div>';
+    return;
+  }
+
+  // Group by job
+  var byJob = {};
+  rooms.forEach(function(r) { var k=r.jobId||''; if(!byJob[k])byJob[k]=[]; byJob[k].push(r); });
+
+  var html = '';
+  Object.keys(byJob).forEach(function(jid) {
+    var job = DB.jobs.find(function(j){return j.id===jid;});
+    if (job) html += '<div class="section-header">' + esc(job.name) + '</div>';
+    byJob[jid].forEach(function(room) {
+      html += buildRoomCard(room);
+    });
+  });
+  el.innerHTML = html;
+}
+
+/* ── Build Room Card ── */
+function buildRoomCard(room) {
+  var tasks   = (DB.tasks||[]).filter(function(t){ return t.roomId===room.id; });
+  var done    = tasks.filter(function(t){ return t.done; }).length;
+  var pct     = tasks.length ? Math.round(done/tasks.length*100) : 0;
+  var photos  = (DB.photos||[]).filter(function(p){ return p.roomId===room.id; }).length;
+  var icons   = { Kitchen:'🍳', Bathroom:'🚿', Bedroom:'🛏️', 'Living Room':'🛋️',
+    Basement:'🏚️', Attic:'🏠', Garage:'🚗', Office:'💼', Hallway:'🚪',
+    Laundry:'🧺', Exterior:'🏗️', Roof:'🏠', HVAC:'❄️', Electrical:'⚡',
+    Plumbing:'🔧', Other:'📦' };
+  var icon = icons[room.type] || '🏠';
+
+  return '<div class="card card-tap" onclick="openRoomDetail(\'' + room.id + '\')" style="margin:0 16px 10px">'
+    + '<div class="card-body">'
+    + '<div class="card-row" style="margin-bottom:8px">'
+    + '<div style="width:42px;height:42px;border-radius:11px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">' + icon + '</div>'
+    + '<div style="flex:1;min-width:0">'
+    + '<div style="font-size:16px;font-weight:700;line-height:1.2">' + esc(room.name) + '</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-top:2px">' + room.type + '</div>'
+    + '</div>'
+    + '<button onclick="event.stopPropagation();openAddTask(null,room.id)" style="background:var(--accent);border:none;color:#fff;border-radius:9px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0">+ Task</button>'
+    + '</div>'
+    + (tasks.length ? '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px"><span>' + done + '/' + tasks.length + ' tasks</span><span style="color:var(--accent);font-weight:700">' + pct + '%</span></div>'
+    + '<div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:4px;width:' + pct + '%;background:var(--accent);border-radius:99px"></div></div></div>' : '')
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + (tasks.length ? '<span class="chip">' + tasks.length + ' task' + (tasks.length!==1?'s':'') + '</span>' : '<span class="chip">No tasks</span>')
+    + (photos ? '<span class="chip blue">' + photos + ' photos</span>' : '')
+    + (room.notes ? '<span class="chip">' + esc(room.notes.slice(0,30)) + (room.notes.length>30?'…':'') + '</span>' : '')
+    + '</div>'
+    + '</div></div>';
+}
+
+/* ── Room Detail Screen ── */
+function openRoomDetail(roomId) {
+  currentRoomId = roomId;
+  var room = (DB.rooms||[]).find(function(r){return r.id===roomId;});
+  if (!room) return;
+
+  // Remove old room detail if exists
+  var old = document.getElementById('s-room-detail');
+  if (old) old.remove();
+
+  var job   = room.jobId ? DB.jobs.find(function(j){return j.id===room.jobId;}) : null;
+  var tasks = (DB.tasks||[]).filter(function(t){ return t.roomId===roomId; });
+  var done  = tasks.filter(function(t){ return t.done; }).length;
+  var pct   = tasks.length ? Math.round(done/tasks.length*100) : 0;
+  var photos= (DB.photos||[]).filter(function(p){ return p.roomId===roomId; });
+  var icons = { Kitchen:'🍳', Bathroom:'🚿', Bedroom:'🛏️', 'Living Room':'🛋️',
+    Basement:'🏚️', Attic:'🏠', Garage:'🚗', Office:'💼', Hallway:'🚪',
+    Laundry:'🧺', Exterior:'🏗️', Roof:'🏠', HVAC:'❄️', Electrical:'⚡',
+    Plumbing:'🔧', Other:'📦' };
+  var icon = icons[room.type] || '🏠';
+
+  var screen = document.createElement('div');
+  screen.className = 'screen active';
+  screen.id = 's-room-detail';
+  screen.innerHTML =
+    '<div class="detail-header">'
+    + '<button class="back-btn" onclick="closeRoomDetail()">'
+    + '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>Rooms'
+    + '</button>'
+    + '<div style="display:flex;align-items:center;gap:12px">'
+    + '<div style="width:48px;height:48px;border-radius:12px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">' + icon + '</div>'
+    + '<div>'
+    + '<div class="detail-title">' + esc(room.name) + '</div>'
+    + '<div class="detail-meta">' + room.type + (job?' · '+esc(job.name):'') + '</div>'
+    + '</div>'
+    + '<button onclick="deleteRoom(\'' + roomId + '\')" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">🗑</button>'
+    + '</div>'
+    // Progress
+    + (tasks.length ? '<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px"><span>Room Progress</span><span style="color:var(--accent);font-weight:700">' + pct + '%  (' + done + '/' + tasks.length + ')</span></div>'
+    + '<div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden"><div style="height:6px;width:' + pct + '%;background:var(--accent);border-radius:99px"></div></div></div>' : '')
+    + '</div>'
+
+    // Actions
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px">'
+    + '<button class="btn btn-primary" onclick="openAddTask(null,\'' + roomId + '\')" style="border-radius:12px;padding:14px">+ Add Task</button>'
+    + '<label class="btn btn-ghost" style="border-radius:12px;padding:14px;cursor:pointer;justify-content:center">'
+    + '📷 Add Photo<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="addPhotos(this,\'' + (room.jobId||'') + '\',\'' + roomId + '\')">'
+    + '</label>'
+    + '</div>'
+
+    // Notes
+    + (room.notes ? '<div style="margin:0 16px 10px;padding:12px 14px;background:var(--card);border-radius:12px;border:1px solid var(--border);font-size:14px;color:var(--muted);line-height:1.6">' + esc(room.notes) + '</div>' : '')
+
+    // Tasks
+    + '<div class="section-header">Tasks (' + tasks.length + ')</div>'
+    + '<div id="rd-tasks" class="card" style="margin:0 16px 10px">'
+    + (tasks.length
+        ? tasks.map(buildTaskItem).join('')
+        : '<div style="padding:16px;text-align:center;color:var(--faint);font-size:14px">No tasks — tap + Add Task</div>')
+    + '</div>'
+
+    // Photos
+    + '<div class="section-header">Photos (' + photos.length + ')</div>'
+    + '<div style="margin:0 16px 20px">'
+    + (photos.length
+        ? '<div class="photo-grid">' + photos.slice(0,12).map(function(ph){ return '<div class="photo-thumb" onclick="viewPhoto(\'' + ph.id + '\')"><img src="' + ph.src + '" loading="lazy"/></div>'; }).join('') + '</div>'
+        : '<div style="text-align:center;padding:20px;color:var(--faint);font-size:14px">No photos yet</div>')
+    + '</div>';
+
+  // Hide all other screens
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.body.insertBefore(screen, document.querySelector('.nav'));
+}
+
+function closeRoomDetail() {
+  var s = document.getElementById('s-room-detail');
+  if (s) s.remove();
+  showScreen('s-rooms');
+}
+
+function deleteRoom(roomId) {
+  var room = (DB.rooms||[]).find(function(r){return r.id===roomId;});
+  if (!confirm('Delete room "' + (room?room.name:'') + '"? Its tasks will remain.')) return;
+  DB.rooms = (DB.rooms||[]).filter(function(r){ return r.id!==roomId; });
+  save(); renderAll();
+  closeRoomDetail();
+  toast('Room deleted');
+}
+
+/* ── Extend openAddTask to accept roomId ── */
+var _origOpenAddTask = openAddTask;
+openAddTask = function(jobId, roomId) {
+  _origOpenAddTask(jobId);
+  // Add room selector if not present
+  var atJob = document.getElementById('at-job');
+  if (atJob) {
+    // Add room filter at top
+    var existing = document.getElementById('at-room-field');
+    if (!existing) {
+      var roomField = document.createElement('div');
+      roomField.className = 'field';
+      roomField.id = 'at-room-field';
+      var rooms = DB.rooms || [];
+      var opts  = rooms.map(function(r){ return '<option value="' + r.id + '">' + esc(r.name) + '</option>'; }).join('');
+      roomField.innerHTML = '<div class="field-label">Room / Area</div>'
+        + '<select id="at-room" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:16px;font-family:inherit;padding:12px 14px"><option value="">No room</option>' + opts + '</select>';
+      atJob.closest('.field').parentElement.insertBefore(roomField, atJob.closest('.field').nextSibling);
+    }
+    if (roomId) {
+      setTimeout(function(){ var el=document.getElementById('at-room'); if(el)el.value=roomId; }, 50);
+      // Auto-set job from room
+      var room = (DB.rooms||[]).find(function(r){return r.id===roomId;});
+      if (room && room.jobId && atJob) atJob.value = room.jobId;
+    }
+  }
+};
+
+/* ── Extend saveTask to save roomId ── */
+var _origSaveTask = saveTask;
+saveTask = function() {
+  var roomEl = document.getElementById('at-room');
+  if (roomEl) {
+    // Temporarily stash room ID
+    window._pendingRoomId = roomEl.value;
+  }
+  _origSaveTask();
+};
+
+/* Patch DB.tasks.push to attach roomId */
+var _origPush = Array.prototype.push;
+// Better: patch after saveTask adds the task
+var _saveTaskOrig2 = saveTask;
+saveTask = function() {
+  var roomEl = document.getElementById('at-room');
+  var roomId = roomEl ? roomEl.value : '';
+  var prevLen = (DB.tasks||[]).length;
+  _saveTaskOrig2();
+  // Attach roomId to newly added task
+  if ((DB.tasks||[]).length > prevLen && roomId) {
+    DB.tasks[DB.tasks.length-1].roomId = roomId;
+    save();
+  }
+  // Refresh room detail if open
+  if (currentRoomId) renderRoomDetailTasks(currentRoomId);
+};
+
+function renderRoomDetailTasks(roomId) {
+  var el = document.getElementById('rd-tasks');
+  if (!el) return;
+  var tasks = (DB.tasks||[]).filter(function(t){ return t.roomId===roomId; });
+  el.innerHTML = tasks.length
+    ? tasks.map(buildTaskItem).join('')
+    : '<div style="padding:16px;text-align:center;color:var(--faint);font-size:14px">No tasks — tap + Add Task</div>';
+}
+
+/* ── Extend addPhotos to accept roomId ── */
+var _origAddPhotos = addPhotos;
+addPhotos = function(input, jobId, roomId) {
+  if (!input.files) return;
+  Array.from(input.files).forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    var r = new FileReader();
+    r.onload = function(e) {
+      var src = e.target.result;
+      if (!src || src.length < 100) return;
+      DB.photos.push({
+        id:    uid(),
+        src:   src,
+        jobId: jobId || currentJobId || '',
+        roomId: roomId || currentRoomId || '',
+        date:  now(),
+      });
+      save(); renderAll();
+      if (currentRoomId) openRoomDetail(currentRoomId);
+    };
+    r.readAsDataURL(file);
+  });
+};
+
+/* ── Extend populateJobSelects to include rooms ── */
+var _origPopulate = populateJobSelects;
+populateJobSelects = function() {
+  _origPopulate();
+  // Populate room filter on rooms screen
+  var rf = document.getElementById('rooms-job-filter');
+  if (rf) {
+    var opts = DB.jobs.map(function(j){ return '<option value="' + j.id + '">' + esc(j.name) + '</option>'; }).join('');
+    rf.innerHTML = '<option value="">All Jobs</option>' + opts;
+  }
+  // Populate ar-job in add room sheet
+  var arj = document.getElementById('ar-job');
+  if (arj) {
+    var opts2 = DB.jobs.map(function(j){ return '<option value="' + j.id + '">' + esc(j.name) + '</option>'; }).join('');
+    arj.innerHTML = '<option value="">No job</option>' + opts2;
+  }
+};
+
+/* ── Add rooms to renderAll ── */
+var _origRenderAll = renderAll;
+renderAll = function() {
+  _origRenderAll();
+  if (document.getElementById('rooms-list')) renderRooms();
+  populateJobSelects();
+};
+
+/* ── Add rooms count to home KPIs ── */
+var _origRenderHome = renderHome;
+renderHome = function() {
+  _origRenderHome();
+  // Update tasks count to show rooms too
+  var el = document.getElementById('kpi-tasks');
+  if (el) el.textContent = (DB.tasks||[]).filter(function(t){return !t.done;}).length;
+};
+
+/* ── Add rooms section to job detail ── */
+var _origRenderJobDetail = renderJobDetail;
+renderJobDetail = function(jobId) {
+  _origRenderJobDetail(jobId);
+  // Inject rooms section into job detail
+  var jdEl = document.getElementById('jd-tasks');
+  if (!jdEl) return;
+  var existing = document.getElementById('jd-rooms-section');
+  if (existing) existing.remove();
+
+  var rooms = (DB.rooms||[]).filter(function(r){ return r.jobId===jobId; });
+  if (!rooms.length) return;
+
+  var section = document.createElement('div');
+  section.id   = 'jd-rooms-section';
+  var icons = { Kitchen:'🍳', Bathroom:'🚿', Bedroom:'🛏️', 'Living Room':'🛋️',
+    Basement:'🏚️', Attic:'🏠', Garage:'🚗', Office:'💼', Hallway:'🚪',
+    Laundry:'🧺', Exterior:'🏗️', Roof:'🏠', HVAC:'❄️', Electrical:'⚡',
+    Plumbing:'🔧', Other:'📦' };
+
+  section.innerHTML = '<div class="section-header">Rooms & Areas (' + rooms.length + ')</div>'
+    + '<div style="padding:0 16px;display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+    + rooms.map(function(room) {
+        var tasks = (DB.tasks||[]).filter(function(t){ return t.roomId===room.id; });
+        var done  = tasks.filter(function(t){ return t.done; }).length;
+        var pct   = tasks.length ? Math.round(done/tasks.length*100) : 0;
+        var icon  = icons[room.type]||'🏠';
+        return '<div onclick="openRoomDetail(\'' + room.id + '\')" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;cursor:pointer">'
+          + '<span style="font-size:22px">' + icon + '</span>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div style="font-size:14px;font-weight:700">' + esc(room.name) + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);margin-top:2px">' + done + '/' + tasks.length + ' tasks · ' + pct + '%</div>'
+          + (tasks.length ? '<div style="height:3px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:5px"><div style="height:3px;width:' + pct + '%;background:var(--accent)"></div></div>' : '')
+          + '</div>'
+          + '<span style="color:var(--accent);font-size:18px">›</span>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+
+  jdEl.parentElement.insertBefore(section, jdEl);
+};
+
+console.log('[PB] Rooms engine loaded');
+</script>
+<script>
+/* ══ CHECKLIST ENGINE ════════════════════════════════════════
+   Replaces simple notes with checklist items
+   Each item: description, done toggle, before photo(s), after photo(s)
+══════════════════════════════════════════════════════════════ */
+
+/* ── Patch DB notes to be checklist items ── */
+(function patchDB() {
+  if (!DB.notes) DB.notes = [];
+  // Migrate plain text notes to checklist format
+  DB.notes = DB.notes.map(function(n) {
+    if (!n.hasOwnProperty('done')) {
+      n.done        = false;
+      n.photosBefore = n.photosBefore || [];
+      n.photosAfter  = n.photosAfter  || [];
+      n.priority     = n.priority || 'Normal';
+      n.extraNotes   = n.extraNotes || '';
+    }
+    return n;
+  });
+})();
+
+/* ── Override renderNotes with Checklist render ── */
+renderNotes = function() {
+  var el = document.getElementById('checklist-list') || document.getElementById('notes-list');
+  if (!el) return;
+
+  var total = DB.notes.length;
+  var done  = DB.notes.filter(function(n){ return n.done; }).length;
+  var sub   = document.getElementById('checklist-sub');
+  if (sub) sub.textContent = done + '/' + total + ' complete';
+
+  if (!DB.notes.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">☑️</div><div class="empty-text">No checklist items</div><div class="empty-sub">Tap + to add items with before &amp; after photos</div></div>';
+    return;
+  }
+
+  var open   = DB.notes.filter(function(n){ return !n.done; });
+  var closed = DB.notes.filter(function(n){ return n.done; });
+  var html   = '';
+
+  if (open.length) {
+    html += '<div class="section-header">Open (' + open.length + ')</div>';
+    html += open.map(buildChecklistCard).join('');
+  }
+  if (closed.length) {
+    html += '<div class="section-header" style="margin-top:8px">Completed (' + closed.length + ')</div>';
+    html += closed.map(buildChecklistCard).join('');
+  }
+  el.innerHTML = html;
+};
+
+/* ── Build each checklist card ── */
+function buildChecklistCard(item) {
+  var job       = item.jobId ? DB.jobs.find(function(j){return j.id===item.jobId;}) : null;
+  var before    = item.photosBefore || [];
+  var after     = item.photosAfter  || [];
+  var priColor  = {Critical:'var(--red)',High:'var(--accent)'}[item.priority] || 'var(--muted)';
+  var priDot    = item.priority && item.priority!=='Normal'
+    ? '<span style="width:8px;height:8px;border-radius:50%;background:'+priColor+';display:inline-block;margin-right:4px"></span>'
+    : '';
+
+  var html = '<div id="cli-'+item.id+'" style="background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;opacity:'+(item.done?'.7':'1')+'">';
+
+  /* ── Header row ── */
+  html += '<div style="display:flex;align-items:flex-start;gap:10px;padding:14px 14px 10px">';
+  /* Checkbox */
+  html += '<div onclick="toggleChecklistItem(\''+item.id+'\')" style="width:26px;height:26px;border-radius:8px;border:2px solid '+(item.done?'#34C759':'var(--faint)')+';background:'+(item.done?'#34C759':'transparent')+';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:1px;transition:all .15s">'
+    +(item.done?'<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>':'')
+    +'</div>';
+  /* Text */
+  html += '<div style="flex:1;min-width:0">';
+  html += '<div style="font-size:15px;font-weight:700;line-height:1.3;text-decoration:'+(item.done?'line-through':'none')+';color:'+(item.done?'var(--faint)':'var(--text)')+'">'+priDot+esc(item.text)+'</div>';
+  if (item.extraNotes) html += '<div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">'+esc(item.extraNotes)+'</div>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px">';
+  if (job) html += '<span class="chip">📋 '+esc(job.name)+'</span>';
+  if (item.priority&&item.priority!=='Normal') html += '<span class="chip" style="color:'+priColor+';border-color:'+priColor+'44">'+item.priority+'</span>';
+  if (item.done&&item.completedAt) html += '<span class="chip green">✅ '+new Date(item.completedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</span>';
+  html += '</div></div>';
+  /* Delete */
+  html += '<button onclick="deleteChecklistItem(\''+item.id+'\')" style="background:none;border:none;color:var(--faint);font-size:20px;cursor:pointer;flex-shrink:0;padding:0 0 0 4px;line-height:1">×</button>';
+  html += '</div>';
+
+  /* ── Before photos ── */
+  html += '<div style="border-top:1px solid var(--border);padding:10px 14px">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">📷 Before <span style="font-weight:400">('+before.length+')</span></div>';
+  html += '<label style="font-size:12px;font-weight:700;color:var(--accent);cursor:pointer">+ Add<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="addChecklistPhoto(this,\''+item.id+'\',\'before\')"></label>';
+  html += '</div>';
+  if (before.length) {
+    html += '<div style="display:flex;gap:5px;flex-wrap:wrap">';
+    html += before.map(function(ph,i){
+      return '<div style="position:relative">'
+        +'<img src="'+ph.src+'" onclick="viewChecklistPhoto(\''+item.id+'\',\'before\','+i+')" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer"/>'
+        +'<button onclick="deleteChecklistPhoto(\''+item.id+'\',\'before\','+i+')" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>'
+        +'</div>';
+    }).join('');
+    html += '</div>';
+  } else {
+    html += '<div style="font-size:12px;color:var(--faint);text-align:center;padding:6px 0">No before photos</div>';
+  }
+  html += '</div>';
+
+  /* ── After photos ── */
+  html += '<div style="border-top:1px solid var(--border);padding:10px 14px">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+  html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#FF2D78">✅ After <span style="font-weight:400">('+after.length+')</span></div>';
+  html += '<label style="font-size:12px;font-weight:700;color:#FF2D78;cursor:pointer">+ Add<input type="file" accept="image/*" capture="environment" multiple style="display:none" onchange="addChecklistPhoto(this,\''+item.id+'\',\'after\')"></label>';
+  html += '</div>';
+  if (after.length) {
+    html += '<div style="display:flex;gap:5px;flex-wrap:wrap">';
+    html += after.map(function(ph,i){
+      return '<div style="position:relative">'
+        +'<img src="'+ph.src+'" onclick="viewChecklistPhoto(\''+item.id+'\',\'after\','+i+')" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,45,120,.3);cursor:pointer"/>'
+        +'<button onclick="deleteChecklistPhoto(\''+item.id+'\',\'after\','+i+')" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>'
+        +'</div>';
+    }).join('');
+    html += '</div>';
+  } else {
+    html += '<div style="font-size:12px;color:var(--faint);text-align:center;padding:6px 0">No after photos yet</div>';
+  }
+  html += '</div>';
+
+  html += '</div>'; /* end card */
+  return html;
+}
+
+/* ── Toggle checklist item done ── */
+window.toggleChecklistItem = function(id) {
+  var item = DB.notes.find(function(n){ return n.id===id; });
+  if (!item) return;
+  item.done = !item.done;
+  if (item.done) { item.completedAt = now(); }
+  else { delete item.completedAt; }
+  save(); renderNotes();
+};
+
+window.deleteChecklistItem = function(id) {
+  if (!confirm('Delete this checklist item?')) return;
+  DB.notes = DB.notes.filter(function(n){ return n.id!==id; });
+  save(); renderNotes();
+};
+
+/* ── Add photo to checklist item (before/after) ── */
+window.addChecklistPhoto = function(input, itemId, phase) {
+  var item = DB.notes.find(function(n){ return n.id===itemId; });
+  if (!item) return;
+  if (!item.photosBefore) item.photosBefore = [];
+  if (!item.photosAfter)  item.photosAfter  = [];
+
+  Array.from(input.files).forEach(function(file) {
+    if (!file.type.startsWith('image/')) return;
+    var r = new FileReader();
+    r.onload = function(e) {
+      var src = e.target.result;
+      if (!src || src.length < 100) return;
+      var ph = {
+        src:     src,
+        date:    now(),
+        geo:     window._currentGeo || '',
+        weather: window._currentWeather || '',
+      };
+      if (phase === 'before') item.photosBefore.push(ph);
+      else item.photosAfter.push(ph);
+      save(); renderNotes();
+      toast(phase === 'before' ? '📷 Before photo saved' : '✅ After photo saved');
+    };
+    r.readAsDataURL(file);
+  });
+};
+
+window.deleteChecklistPhoto = function(itemId, phase, idx) {
+  var item = DB.notes.find(function(n){ return n.id===itemId; });
+  if (!item) return;
+  if (phase==='before') item.photosBefore.splice(idx,1);
+  else item.photosAfter.splice(idx,1);
+  save(); renderNotes();
+};
+
+/* ── View checklist photo fullscreen ── */
+window.viewChecklistPhoto = function(itemId, phase, idx) {
+  var item = DB.notes.find(function(n){ return n.id===itemId; });
+  if (!item) return;
+  var photos = phase==='before' ? (item.photosBefore||[]) : (item.photosAfter||[]);
+  var ph     = photos[idx];
+  if (!ph) return;
+  document.getElementById('photo-viewer-img').src  = ph.src;
+  document.getElementById('photo-dl').href          = ph.src;
+  document.getElementById('photo-viewer-cap').textContent =
+    (phase==='before'?'📷 BEFORE':'✅ AFTER') + ' · ' + (ph.date?new Date(ph.date).toLocaleString():'') + (ph.geo?' · '+ph.geo:'') + (ph.weather?' · '+ph.weather:'');
+  document.getElementById('photo-viewer').classList.add('open');
+};
+
+/* ── Override saveNote for checklist format ── */
+saveNote = function() {
+  var text = (document.getElementById('an-text').value||'').trim();
+  if (!text) { toast('Description required'); return; }
+  if (!DB.notes) DB.notes=[];
+  DB.notes.push({
+    id:            uid(),
+    text:          text,
+    jobId:         document.getElementById('an-job')?.value || '',
+    priority:      document.getElementById('an-priority')?.value || 'Normal',
+    extraNotes:    document.getElementById('an-notes')?.value?.trim() || '',
+    isVoice:       !!window._lastNoteWasVoice,
+    done:          false,
+    photosBefore:  [],
+    photosAfter:   [],
+    date:          now(),
+  });
+  window._lastNoteWasVoice = false;
+  // Clear inputs
+  ['an-text','an-notes'].forEach(function(id){ var el=document.getElementById(id);if(el)el.value=''; });
+  closeSheet('sheet-add-note');
+  save(); renderNotes();
+  if (currentJobId) renderJobDetail(currentJobId);
+  toast('☑️ Item added');
+};
+
+/* ── Override toggleVoiceNote to fill an-text ── */
+var _origToggleVoice = toggleVoiceNote;
+toggleVoiceNote = function() {
+  _origToggleVoice();
+  // After voice stops, put final text into an-text
+  var observer = setInterval(function() {
+    var liveEl = document.getElementById('voice-note-live');
+    var btn    = document.getElementById('voice-note-btn');
+    if (btn && !btn.classList.contains('recording') && liveEl && liveEl.textContent.trim() && liveEl.textContent !== 'Voice transcript will appear here...') {
+      var ta = document.getElementById('an-text');
+      if (ta && !ta.value) ta.value = liveEl.textContent.trim();
+      clearInterval(observer);
+    }
+  }, 500);
+};
+
+/* ── Store geo + weather globally for photo tagging ── */
+/* patchGeo removed */
+
+/* ── Show checklist count in home KPIs ── */
+var _origRenderHomeOld = renderHome;
+renderHome = function() {
+  _origRenderHomeOld();
+  var notesKpi = document.getElementById('kpi-notes');
+  if (notesKpi) {
+    var open = (DB.notes||[]).filter(function(n){ return !n.done; }).length;
+    notesKpi.textContent = open;
+    notesKpi.title = open + ' open checklist items';
+  }
+};
+
+/* ── Initial render ── */
+renderNotes();
+
+console.log('[PB] Checklist engine loaded');
+</script>
+<script>
+/* ══ FINANCE ENGINE ══════════════════════════════════════════
+   Invoices · Expenses / Receipts · Contractors
+   Running balance = Contract Value - Expenses - Sub Costs
+══════════════════════════════════════════════════════════════ */
+
+var _financeTab = 'invoices';
+var _expReceiptSrc = null;
+
+/* ── Tab switching ── */
+window.setFinanceTab = function(tab) {
+  _financeTab = tab;
+
+  var styles = {
+    invoices:    { activeColor:'rgba(245,166,35,.5)',  activeBg:'rgba(245,166,35,.15)',  textColor:'var(--accent)',  label:'Add Invoice' },
+    expenses:    { activeColor:'rgba(239,83,80,.5)',   activeBg:'rgba(239,83,80,.12)',   textColor:'#ef5350',        label:'Add Expense' },
+    contractors: { activeColor:'rgba(255,45,120,.5)', activeBg:'rgba(255,45,120,.12)', textColor:'#FF2D78',        label:'Add Contractor' },
+  };
+
+  ['invoices','expenses','contractors'].forEach(function(t) {
+    var btn     = document.getElementById('ftab-' + t);
+    var nameEl  = btn && btn.querySelector('span:nth-child(2)');
+    var isActive = t === tab;
+    var s = styles[t];
+    if (!btn) return;
+    btn.style.border     = '2px solid ' + (isActive ? s.activeColor : 'var(--border)');
+    btn.style.background = isActive ? s.activeBg : 'var(--card2)';
+    if (nameEl) nameEl.style.color = isActive ? s.textColor : 'var(--muted)';
+  });
+
+  // Update add button label
+  var addLabel = document.getElementById('finance-add-label');
+  if (addLabel && styles[tab]) addLabel.textContent = styles[tab].label;
+
+  // Update counts on badges
+  var jf = document.getElementById('finance-job-filter')?.value||'';
+  var counts = {
+    invoices:    (jf ? (DB.invoices||[]).filter(function(i){return i.jobId===jf;}) : (DB.invoices||[])).length,
+    expenses:    (jf ? (DB.expenses||[]).filter(function(e){return e.jobId===jf;}) : (DB.expenses||[])).length,
+    contractors: (jf ? (DB.contractors||[]).filter(function(c){return c.jobId===jf;}) : (DB.contractors||[])).length,
+  };
+  ['invoices','expenses','contractors'].forEach(function(t) {
+    var cnt = document.getElementById('ftab-' + t + '-count');
+    if (cnt) cnt.textContent = counts[t] + ' item' + (counts[t]!==1?'s':'');
+  });
+
+  renderFinanceContent();
+};
+
+/* ── Main render ── */
+window.renderFinance = function() {
+  populateJobSelects();
+  renderFinanceSummary();
+  setFinanceTab(_financeTab || 'invoices');
+  var addBtn = document.getElementById('finance-add-btn');
+  if (addBtn) addBtn.title = 'Add ' + _financeTab.slice(0,-1);
+};
+
+window.openFinanceAdd = function() {
+  if (_financeTab === 'invoices')    { populateFinanceSelects(); openSheet('sheet-add-invoice'); }
+  else if (_financeTab === 'expenses') {
+    populateFinanceSelects();
+    _expReceiptSrc=null;
+    var prev=document.getElementById('exp-receipt-preview'); if(prev) prev.style.display='none';
+    var res=document.getElementById('scan-result'); if(res) res.style.display='none';
+    openSheet('sheet-add-expense');
+  }
+  else if (_financeTab === 'contractors') { populateFinanceSelects(); openSheet('sheet-add-contractor'); }
+};
+
+function populateFinanceSelects() {
+  var opts = DB.jobs.map(function(j){ return '<option value="'+j.id+'">'+esc(j.name)+'</option>'; }).join('');
+  ['inv-job','exp-job','con-job'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">No job</option>' + opts;
+  });
+  // Set today's date
+  var today = todayStr();
+  ['inv-date','exp-date'].forEach(function(id){
+    var el = document.getElementById(id); if(el && !el.value) el.value = today;
+  });
+}
+
+/* ── SUMMARY CARDS ── */
+function renderFinanceSummary() {
+  var jobFilter = document.getElementById('finance-job-filter')?.value || '';
+  var jobs = jobFilter ? DB.jobs.filter(function(j){return j.id===jobFilter;}) : DB.jobs;
+
+  var contractTotal = jobs.reduce(function(s,j){ return s + (+j.contract||0); }, 0);
+
+  var fInv = jobFilter
+    ? (DB.invoices||[]).filter(function(i){return i.jobId===jobFilter;})
+    : (DB.invoices||[]);
+  var fExp = jobFilter
+    ? (DB.expenses||[]).filter(function(e){return e.jobId===jobFilter;})
+    : (DB.expenses||[]);
+  var fCon = jobFilter
+    ? (DB.contractors||[]).filter(function(c){return c.jobId===jobFilter;})
+    : (DB.contractors||[]);
+
+  var invoiced  = fInv.reduce(function(s,i){ return s+(+i.amount||0); }, 0);
+  var paid      = fInv.filter(function(i){return i.status==='Paid';}).reduce(function(s,i){return s+(+i.amount||0);},0);
+  var expenses  = fExp.reduce(function(s,e){ return s+(+e.amount||0); }, 0);
+  var subCosts  = fCon.reduce(function(s,c){ return s+(+c.value||0); }, 0);
+  var totalCost = expenses + subCosts;
+  var balance   = contractTotal - totalCost;
+  var margin    = contractTotal > 0 ? Math.round(balance/contractTotal*100) : 0;
+
+  var sub = document.getElementById('finance-sub');
+  if (sub) sub.textContent = fmt(contractTotal) + ' contract · ' + fmt(balance) + ' remaining';
+
+  function fmt(n) {
+    return '$' + (+n||0).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+  }
+
+  var el = document.getElementById('finance-summary');
+  if (!el) return;
+
+  el.innerHTML =
+    /* Row 1: Contract + Balance */
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    + mkKpi('Contract Value', fmt(contractTotal), '#34C759')
+    + mkKpi('Remaining', fmt(balance), balance >= 0 ? '#34C759' : 'var(--red)')
+    + '</div>'
+    /* Row 2: Invoiced + Paid */
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    + mkKpi('Invoiced', fmt(invoiced), 'var(--accent)')
+    + mkKpi('Collected', fmt(paid), '#34C759')
+    + '</div>'
+    /* Row 3: Expenses + Subs */
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    + mkKpi('Expenses', fmt(expenses), 'var(--red)')
+    + mkKpi('Sub Costs', fmt(subCosts), '#FF2D78')
+    + '</div>'
+    /* Progress bar: margin */
+    + '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:2px">'
+    + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px">'
+    + '<span>Profit Margin</span><span style="font-weight:800;color:'+(margin>=0?'#34C759':'var(--red)')+'">'+margin+'%</span>'
+    + '</div>'
+    + '<div style="height:8px;background:var(--border);border-radius:99px;overflow:hidden">'
+    + '<div style="height:8px;width:'+Math.max(0,Math.min(100,margin))+'%;background:'+(margin>=20?'#34C759':margin>=10?'var(--accent)':'var(--red)')+';border-radius:99px;transition:width .4s"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function mkKpi(label, val, color) {
+  return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center">'
+    + '<div style="font-size:18px;font-weight:900;color:'+color+'">'+val+'</div>'
+    + '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:3px">'+label+'</div>'
+    + '</div>';
+}
+
+/* ── CONTENT BY TAB ── */
+function renderFinanceContent() {
+  var el = document.getElementById('finance-content');
+  if (!el) return;
+  var jf = document.getElementById('finance-job-filter')?.value||'';
+
+  if (_financeTab === 'invoices') {
+    var items = jf ? (DB.invoices||[]).filter(function(i){return i.jobId===jf;}) : (DB.invoices||[]);
+    if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No invoices</div><div class="empty-sub">Tap + to create an invoice</div></div>'; return; }
+    var statusColor = {Draft:'var(--muted)',Sent:'var(--accent)',Paid:'#34C759',Overdue:'var(--red)'};
+    el.innerHTML = items.slice().reverse().map(function(inv) {
+      var job = inv.jobId ? DB.jobs.find(function(j){return j.id===inv.jobId;}) : null;
+      return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+        +'<div style="flex:1">'
+        +'<div style="font-size:15px;font-weight:700;line-height:1.3">'+esc(inv.desc)+'</div>'
+        +(job?'<div style="font-size:12px;color:var(--muted);margin-top:3px">📋 '+esc(job.name)+'</div>':'')
+        +(inv.date?'<div style="font-size:12px;color:var(--faint);margin-top:2px">📅 '+inv.date+'</div>':'')
+        +(inv.notes?'<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">'+esc(inv.notes)+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right;flex-shrink:0">'
+        +'<div style="font-size:18px;font-weight:900;color:var(--accent)">$'+(+inv.amount||0).toLocaleString()+'</div>'
+        +'<div style="font-size:11px;font-weight:700;color:'+(statusColor[inv.status]||'var(--muted)')+'">'+inv.status+'</div>'
+        +'<div style="display:flex;gap:4px;margin-top:6px;justify-content:flex-end">'
+        +'<button onclick="cycleInvoiceStatus(\''+inv.id+'\')" style="background:rgba(52,199,89,.1);border:1px solid rgba(52,199,89,.3);border-radius:6px;color:#34C759;font-size:10px;font-weight:700;padding:3px 7px;cursor:pointer">Mark Paid</button>'
+        +'<button onclick="deleteFinItem(\'invoices\',\''+inv.id+'\')" style="background:none;border:none;color:var(--faint);font-size:16px;cursor:pointer">×</button>'
+        +'</div></div></div></div>';
+    }).join('');
+  }
+
+  else if (_financeTab === 'expenses') {
+    var items = jf ? (DB.expenses||[]).filter(function(e){return e.jobId===jf;}) : (DB.expenses||[]);
+    if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div><div class="empty-text">No expenses</div><div class="empty-sub">Tap + to log a receipt or expense</div></div>'; return; }
+    var total = items.reduce(function(s,e){return s+(+e.amount||0);},0);
+    el.innerHTML = '<div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px;text-align:right">Total: $'+total.toLocaleString()+'</div>'
+      + items.slice().reverse().map(function(exp) {
+        var job = exp.jobId ? DB.jobs.find(function(j){return j.id===exp.jobId;}) : null;
+        return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'
+          +'<div style="flex:1">'
+          +'<div style="font-size:15px;font-weight:700">'+esc(exp.desc)+'</div>'
+          +(exp.vendor?'<div style="font-size:12px;color:var(--muted);margin-top:2px">🏪 '+esc(exp.vendor)+'</div>':'')
+          +(job?'<div style="font-size:12px;color:var(--muted)">📋 '+esc(job.name)+'</div>':'')
+          +'<div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">'
+          +'<span class="chip">'+exp.category+'</span>'
+          +(exp.date?'<span class="chip">'+exp.date+'</span>':'')
+          +'</div>'
+          +(exp.receiptSrc?'<img src="'+exp.receiptSrc+'" onclick="viewReceiptPhoto(\''+exp.id+'\')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;margin-top:8px;cursor:pointer;border:1px solid var(--border)"/>':'')
+          +'</div>'
+          +'<div style="text-align:right;flex-shrink:0">'
+          +'<div style="font-size:18px;font-weight:900;color:var(--red)">$'+(+exp.amount||0).toLocaleString()+'</div>'
+          +'<button onclick="deleteFinItem(\'expenses\',\''+exp.id+'\')" style="background:none;border:none;color:var(--faint);font-size:16px;cursor:pointer;margin-top:4px">×</button>'
+          +'</div></div></div>';
+      }).join('');
+  }
+
+  else if (_financeTab === 'contractors') {
+    var items = jf ? (DB.contractors||[]).filter(function(c){return c.jobId===jf;}) : (DB.contractors||[]);
+    if (!items.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">👷</div><div class="empty-text">No contractors</div><div class="empty-sub">Tap + to add a sub or contractor</div></div>'; return; }
+    var total = items.reduce(function(s,c){return s+(+c.value||0);},0);
+    var statusColor = {Active:'#34C759',Pending:'var(--accent)',Completed:'var(--muted)','On Hold':'var(--red)'};
+    el.innerHTML = '<div style="font-size:13px;font-weight:700;color:#FF2D78;margin-bottom:8px;text-align:right">Total Sub Costs: $'+total.toLocaleString()+'</div>'
+      + items.map(function(con) {
+        var job = con.jobId ? DB.jobs.find(function(j){return j.id===con.jobId;}) : null;
+        return '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px">'
+          +'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">'
+          +'<div style="flex:1">'
+          +'<div style="font-size:16px;font-weight:800">'+esc(con.name)+'</div>'
+          +'<div style="font-size:12px;color:var(--muted);margin-top:2px">🔧 '+esc(con.trade)+(job?' · 📋 '+esc(job.name):'')+'</div>'
+          +(con.phone?'<div style="font-size:12px;color:var(--muted)">📞 '+esc(con.phone)+'</div>':'')
+          +'</div>'
+          +'<div style="text-align:right;flex-shrink:0">'
+          +'<div style="font-size:20px;font-weight:900;color:#FF2D78">$'+(+con.value||0).toLocaleString()+'</div>'
+          +'<div style="font-size:11px;font-weight:700;color:'+(statusColor[con.status]||'var(--muted)')+'">'+con.status+'</div>'
+          +'<button onclick="deleteFinItem(\'contractors\',\''+con.id+'\')" style="background:none;border:none;color:var(--faint);font-size:16px;cursor:pointer">×</button>'
+          +'</div></div>'
+          +(con.scope?'<div style="background:var(--card2);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted);line-height:1.6;white-space:pre-wrap;border:1px solid var(--border)">'+esc(con.scope)+'</div>':'')
+          +(con.start||con.end?'<div style="font-size:11px;color:var(--faint);margin-top:6px">'+(con.start?'Start: '+con.start:'')+(con.end?' · End: '+con.end:'')+'</div>':'')
+          +'</div>';
+      }).join('');
+  }
+}
+
+/* ── SAVE FUNCTIONS ── */
+window.saveInvoice = function() {
+  var desc   = document.getElementById('inv-desc')?.value?.trim();
+  var amount = document.getElementById('inv-amount')?.value;
+  if (!desc || !amount) { toast('Description and amount required'); return; }
+  if (!DB.invoices) DB.invoices=[];
+  DB.invoices.push({
+    id:     uid(), desc:desc,
+    jobId:  document.getElementById('inv-job')?.value||'',
+    amount: +amount,
+    date:   document.getElementById('inv-date')?.value||todayStr(),
+    status: document.getElementById('inv-status')?.value||'Draft',
+    notes:  document.getElementById('inv-notes')?.value?.trim()||'',
+    created:now()
+  });
+  closeSheet('sheet-add-invoice');
+  save(); renderFinance();
+  toast('🧾 Invoice saved');
+};
+
+window.saveExpense = function() {
+  var desc   = document.getElementById('exp-desc')?.value?.trim();
+  var amount = document.getElementById('exp-amount')?.value;
+  if (!desc || !amount) { toast('Description and amount required'); return; }
+  if (!DB.expenses) DB.expenses=[];
+  DB.expenses.push({
+    id:         uid(), desc:desc,
+    jobId:      document.getElementById('exp-job')?.value||'',
+    amount:     +amount,
+    date:       document.getElementById('exp-date')?.value||todayStr(),
+    category:   document.getElementById('exp-cat')?.value||'Other',
+    vendor:     document.getElementById('exp-vendor')?.value?.trim()||'',
+    receiptSrc: _expReceiptSrc||null,
+    created:    now()
+  });
+  _expReceiptSrc = null;
+  closeSheet('sheet-add-expense');
+  save(); renderFinance();
+  toast('💸 Expense saved');
+};
+
+window.saveContractor = function() {
+  var name  = document.getElementById('con-name')?.value?.trim();
+  var scope = document.getElementById('con-scope')?.value?.trim();
+  if (!name) { toast('Contractor name required'); return; }
+  if (!DB.contractors) DB.contractors=[];
+  DB.contractors.push({
+    id:     uid(), name:name,
+    jobId:  document.getElementById('con-job')?.value||'',
+    trade:  document.getElementById('con-trade')?.value||'General',
+    value:  +(document.getElementById('con-value')?.value||0),
+    scope:  scope||'',
+    start:  document.getElementById('con-start')?.value||'',
+    end:    document.getElementById('con-end')?.value||'',
+    phone:  document.getElementById('con-phone')?.value?.trim()||'',
+    status: document.getElementById('con-status')?.value||'Active',
+    created:now()
+  });
+  closeSheet('sheet-add-contractor');
+  save(); renderFinance();
+  toast('👷 Contractor saved');
+};
+
+window.cycleInvoiceStatus = function(id) {
+  var inv = (DB.invoices||[]).find(function(i){return i.id===id;});
+  if (!inv) return;
+  var cycle = {Draft:'Sent',Sent:'Paid',Paid:'Draft',Overdue:'Paid'};
+  inv.status = cycle[inv.status]||'Sent';
+  save(); renderFinance();
+  toast('Invoice: ' + inv.status);
+};
+
+window.deleteFinItem = function(type, id) {
+  if (!confirm('Delete this item?')) return;
+  DB[type] = (DB[type]||[]).filter(function(x){return x.id!==id;});
+  save(); renderFinance();
+};
+
+window.attachExpenseReceipt = function(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _expReceiptSrc = e.target.result;
+    // Show preview
+    var prev = document.getElementById('exp-receipt-preview');
+    var img  = document.getElementById('exp-receipt-img');
+    if (prev) prev.style.display = 'block';
+    if (img)  img.src = _expReceiptSrc;
+    // Enable scan button
+    var scanBtn = document.getElementById('scan-ocr-btn');
+    if (scanBtn) scanBtn.style.background = 'rgba(52,199,89,.15)';
+    toast('📷 Receipt attached — tap Scan to auto-fill');
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearExpenseReceipt = function() {
+  _expReceiptSrc = null;
+  var prev = document.getElementById('exp-receipt-preview');
+  var img  = document.getElementById('exp-receipt-img');
+  if (prev) prev.style.display = 'none';
+  if (img)  img.src = '';
+  document.getElementById('scan-result') && (document.getElementById('scan-result').style.display='none');
+  toast('Receipt cleared');
+};
+
+window.scanReceiptOCR = async function() {
+  if (!_expReceiptSrc) {
+    toast('📷 Take a photo first, then tap Scan');
+    return;
+  }
+  var btn = document.getElementById('scan-ocr-btn');
+  var res = document.getElementById('scan-result');
+  if (btn) { btn.textContent = '⏳ Scanning...'; btn.disabled = true; }
+
+  try {
+    // Use Claude claude-sonnet-4-6 vision to read the receipt
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 400,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: _expReceiptSrc.split(';')[0].split(':')[1] || 'image/jpeg',
+                data: _expReceiptSrc.split(',')[1],
+              }
+            },
+            {
+              type: 'text',
+              text: 'This is a receipt. Extract: total amount, vendor/store name, date, and main items purchased. Return ONLY a JSON object with keys: total (number, no $ sign), vendor (string), date (YYYY-MM-DD or empty string), items (short string summary). No other text.'
+            }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) throw new Error('API error ' + response.status);
+    var data  = await response.json();
+    var text  = (data.content && data.content[0] && data.content[0].text) || '{}';
+    var clean = text.replace(/```json|```/g, '').trim();
+    var parsed = JSON.parse(clean);
+
+    // Auto-fill form fields
+    if (parsed.total && +parsed.total > 0) {
+      var amtEl = document.getElementById('exp-amount');
+      if (amtEl && !amtEl.value) amtEl.value = parsed.total;
+    }
+    if (parsed.vendor) {
+      var vndEl = document.getElementById('exp-vendor');
+      if (vndEl && !vndEl.value) vndEl.value = parsed.vendor;
+    }
+    if (parsed.date) {
+      var dtEl = document.getElementById('exp-date');
+      if (dtEl) dtEl.value = parsed.date;
+    }
+    if (parsed.total && +parsed.total > 0) {
+      var descEl = document.getElementById('exp-desc');
+      if (descEl && !descEl.value && parsed.vendor) {
+        descEl.value = (parsed.items || 'Purchase') + ' — ' + parsed.vendor;
+      }
+    }
+
+    // Show result
+    if (res) {
+      res.style.display = 'block';
+      res.innerHTML =
+        '✅ Scanned successfully!<br>'
+        + (parsed.vendor ? '<strong>' + parsed.vendor + '</strong><br>' : '')
+        + (parsed.total  ? 'Total: <strong>$' + parsed.total + '</strong><br>' : '')
+        + (parsed.date   ? 'Date: ' + parsed.date + '<br>' : '')
+        + (parsed.items  ? parsed.items : '');
+    }
+    toast('✅ Receipt scanned — fields filled in');
+  } catch(e) {
+    if (res) {
+      res.style.display = 'block';
+      res.style.background = 'rgba(239,83,80,.08)';
+      res.style.borderColor = 'rgba(239,83,80,.3)';
+      res.style.color = '#ef5350';
+      // Manual fallback if no API key
+      res.innerHTML = '⚠️ Auto-scan needs an API key.<br>Enter the amount manually below.';
+    }
+    toast('Enter amount manually');
+  } finally {
+    if (btn) {
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="4 7 4 4 7 4"/><polyline points="17 4 20 4 20 7"/><polyline points="20 17 20 20 17 20"/><polyline points="7 20 4 20 4 17"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg> Scan &amp; Auto-Fill Amount';
+      btn.disabled = false;
+    }
+  }
+};
+
+window.viewReceiptPhoto = function(expId) {
+  var exp = (DB.expenses||[]).find(function(e){return e.id===expId;});
+  if (!exp || !exp.receiptSrc) return;
+  document.getElementById('photo-viewer-img').src = exp.receiptSrc;
+  document.getElementById('photo-dl').href = exp.receiptSrc;
+  document.getElementById('photo-viewer-cap').textContent = 'Receipt: ' + esc(exp.desc) + ' · $' + exp.amount;
+  document.getElementById('photo-viewer').classList.add('open');
+};
+
+/* ── Wire into showScreen ── */
+var _origShowScreen = showScreen;
+showScreen = function(id) {
+  _origShowScreen(id);
+  if (id === 's-finance') {
+    populateJobSelects();
+    var ff = document.getElementById('finance-job-filter');
+    if (ff) {
+      var opts = DB.jobs.map(function(j){return '<option value="'+j.id+'">'+esc(j.name)+'</option>';}).join('');
+      ff.innerHTML = '<option value="">All Jobs</option>' + opts;
+    }
+    renderFinance();
+  }
+};
+
+/* ── Show finance balance in job detail ── */
+var _origRenderJobDetail2 = renderJobDetail;
+renderJobDetail = function(jobId) {
+  _origRenderJobDetail2(jobId);
+  var existing = document.getElementById('jd-finance');
+  if (existing) existing.remove();
+
+  var inv = (DB.invoices||[]).filter(function(i){return i.jobId===jobId;});
+  var exp = (DB.expenses||[]).filter(function(e){return e.jobId===jobId;});
+  var con = (DB.contractors||[]).filter(function(c){return c.jobId===jobId;});
+  var job = DB.jobs.find(function(j){return j.id===jobId;});
+  if (!job) return;
+
+  var contractVal = +(job.contract||0);
+  var invoiced    = inv.reduce(function(s,i){return s+(+i.amount||0);},0);
+  var expenses    = exp.reduce(function(s,e){return s+(+e.amount||0);},0);
+  var subCosts    = con.reduce(function(s,c){return s+(+c.value||0);},0);
+  var balance     = contractVal - expenses - subCosts;
+
+  if (!contractVal && !invoiced && !expenses && !subCosts) return;
+
+  var section = document.createElement('div');
+  section.id  = 'jd-finance';
+  section.innerHTML =
+    '<div class="section-header">Finance</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 14px">'
+    + mkKpi('Contract', '$'+(contractVal||0).toLocaleString(), '#34C759')
+    + mkKpi('Balance', '$'+Math.max(0,balance).toLocaleString(), balance>=0?'#34C759':'var(--red)')
+    + mkKpi('Expenses', '$'+expenses.toLocaleString(), 'var(--red)')
+    + mkKpi('Sub Costs', '$'+subCosts.toLocaleString(), '#FF2D78')
+    + '</div>';
+
+  var jdTasks = document.getElementById('jd-tasks');
+  if (jdTasks) jdTasks.parentElement.insertBefore(section, jdTasks);
+};
+
+console.log('[PB] Finance engine loaded');
+</script>
+<script>
+/* ── Edit Room ── */
+window.openEditRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
+  if (!room) return;
+
+  document.getElementById('edit-room-modal')?.remove();
+
+  var TYPES = ['Kitchen','Bathroom','Bedroom','Living Room','Basement','Attic',
+    'Garage','Office','Hallway','Laundry','Exterior','Roof','HVAC','Electrical','Plumbing','Other'];
+
+  var mo = document.createElement('div');
+  mo.id  = 'edit-room-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
+
+  var typeOpts = TYPES.map(function(t){
+    return '<option value="'+t+'"'+(t===room.type?' selected':'')+'>'+t+'</option>';
+  }).join('');
+
+  var jobOpts = '<option value="">No job</option>' +
+    DB.jobs.map(function(j){
+      return '<option value="'+j.id+'"'+(j.id===room.jobId?' selected':'')+'>'+esc(j.name)+'</option>';
+    }).join('');
+
+  var s = 'width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border,#2a2a2a);background:var(--card2,#222);color:var(--text,#f0f0f0);font-size:16px;font-family:inherit';
+
+  mo.innerHTML =
+    '<div style="background:var(--card,#1a1a1a);border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);width:100%;max-width:480px;max-height:90vh;overflow-y:auto">'
+    +'<div style="width:36px;height:4px;background:var(--faint,#444);border-radius:99px;margin:12px auto 4px"></div>'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 14px;border-bottom:1px solid var(--border,#2a2a2a)">'
+    +'<div style="font-size:17px;font-weight:700">✏️ Edit Room</div>'
+    +'<button onclick="document.getElementById(\'edit-room-modal\').remove()" style="width:30px;height:30px;border-radius:50%;background:var(--card2);border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="padding:16px 18px">'
+
+    /* Name */
+    +'<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Room / Area Name *</div>'
+    +'<input id="er-name" type="text" value="'+esc(room.name)+'" style="'+s+'"/></div>'
+
+    /* Type */
+    +'<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Type</div>'
+    +'<select id="er-type" style="'+s+'">'+typeOpts+'</select></div>'
+
+    /* Job */
+    +'<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Job</div>'
+    +'<select id="er-job" style="'+s+'">'+jobOpts+'</select></div>'
+
+    /* Notes */
+    +'<div style="margin-bottom:18px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bot
