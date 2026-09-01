@@ -39,11 +39,44 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;overflow:hidden}
 
 /* NAV */
-.nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--card);border-top:2px solid #FF2D78;display:flex;align-items:stretch;z-index:100;padding-bottom:env(safe-area-inset-bottom);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--card);border-top:none;display:flex;align-items:stretch;z-index:100;padding-bottom:env(safe-area-inset-bottom);overflow-x:auto;-webkit-overflow-scrolling:touch}
 .nav-btn{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:none;background:none;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:color .15s;padding:8px 0}
 .nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .nav-btn.active{color:var(--accent)}
 .nav-btn.active svg{stroke:var(--accent)}
+
+/* Per-tab colors */
+#nav-home.active,      #nav-home.active svg      { color:#34C759 !important; stroke:#34C759 !important; }
+#nav-s-jobs.active,    #nav-s-jobs.active svg    { color:#C8935A !important; stroke:#C8935A !important; }
+#nav-s-rooms.active,   #nav-s-rooms.active svg   { color:#FF2D78 !important; stroke:#FF2D78 !important; }
+#nav-s-tasks.active,   #nav-s-tasks.active svg   { color:#FFD60A !important; stroke:#FFD60A !important; }
+#nav-s-photos.active,  #nav-s-photos.active svg  { color:#42A5F5 !important; stroke:#42A5F5 !important; }
+#nav-s-notes.active,   #nav-s-notes.active svg   { color:#FF9500 !important; stroke:#FF9500 !important; }
+#nav-s-finance.active, #nav-s-finance.active svg { color:#BF5AF2 !important; stroke:#BF5AF2 !important; }
+
+/* Inactive — subtle tint so each tab still feels colored */
+#nav-home      { color:rgba(52,199,89,.4)   }
+#nav-s-jobs    { color:rgba(200,147,90,.4)  }
+#nav-s-rooms   { color:rgba(255,45,120,.4)  }
+#nav-s-tasks   { color:rgba(255,214,10,.4)  }
+#nav-s-photos  { color:rgba(66,165,245,.4)  }
+#nav-s-notes   { color:rgba(255,149,0,.4)   }
+#nav-s-finance { color:rgba(191,90,242,.4)  }
+#nav-home svg,      #nav-s-jobs svg    { stroke:rgba(200,147,90,.4)  !important }
+#nav-s-rooms svg                       { stroke:rgba(255,45,120,.4)  !important }
+#nav-s-tasks svg                       { stroke:rgba(255,214,10,.4)  !important }
+#nav-s-photos svg                      { stroke:rgba(66,165,245,.4)  !important }
+#nav-s-notes svg                       { stroke:rgba(255,149,0,.4)   !important }
+#nav-s-finance svg                     { stroke:rgba(191,90,242,.4)  !important }
+
+/* Active bottom nav border color matches tab */
+#nav-home.active      { border-top: 2px solid #34C759 }
+#nav-s-jobs.active    { border-top: 2px solid #C8935A }
+#nav-s-rooms.active                         { border-top: 2px solid #FF2D78 }
+#nav-s-tasks.active                         { border-top: 2px solid #FFD60A }
+#nav-s-photos.active                        { border-top: 2px solid #42A5F5 }
+#nav-s-notes.active                         { border-top: 2px solid #FF9500 }
+#nav-s-finance.active                       { border-top: 2px solid #BF5AF2 }
 
 /* SCREENS */
 .screen{position:fixed;inset:0;bottom:var(--nav-h);overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:0 0 20px}
@@ -270,10 +303,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       </div>
     </div>
 
-    <!-- Row 2: Location + Weather -->
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+    <!-- Row 2: Location -->
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
       <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:#34C759;fill:none;stroke-width:2.5;flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       <span id="info-loc-text" style="font-size:13px;font-weight:700;color:var(--text)">Detecting...</span>
+    </div>
+    <!-- Row 3: Weather -->
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
       <span id="info-weather-icon" style="font-size:14px">🌡️</span>
       <span id="info-weather-text" style="font-size:13px;font-weight:600;color:var(--muted)">Loading...</span>
     </div>
@@ -292,7 +328,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
       <span class="sync-time" id="sync-time"></span>
     </div>
   </div>
-  <div class="kpi-row">
+  <div class="kpi-row" style="padding-top:16px">
     <div class="kpi" onclick="showScreen('s-jobs')">
       <div class="kpi-val" style="color:#FF2D78" id="kpi-jobs">0</div>
       <div class="kpi-lbl">Active Jobs</div>
