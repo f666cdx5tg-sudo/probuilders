@@ -1305,7 +1305,7 @@ async function doPull() {
     var remote  = JSON.parse(content);
     var incoming = remote.db || remote;
     // Merge
-    ['jobs','tasks','photos','notes'].forEach(function(k) {
+    ['jobs','rooms','tasks','photos','notes','invoices','expenses','contractors'].forEach(function(k) {
       if (!incoming[k] || !Array.isArray(incoming[k])) return;
       if (!DB[k]) { DB[k] = incoming[k]; return; }
       var ids = {}; DB[k].forEach(function(x){ ids[x.id]=true; });
@@ -1505,101 +1505,6 @@ setInterval(updateClock, 10000);
   </div>
 </div>
 
-<script>
-/* ── Edit Room ── */
-window.openEditRoom = function(roomId) {
-  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
-  if (!room) return;
-  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
-  var TYPES = ['Kitchen','Bathroom','Bedroom','Living Room','Basement','Attic','Garage','Office','Hallway','Laundry','Exterior','Roof','HVAC','Electrical','Plumbing','Other'];
-  var s = 'width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border,#2a2a2a);background:var(--card2,#222);color:var(--text,#f0f0f0);font-size:16px;font-family:inherit';
-  var typeOpts = TYPES.map(function(t){ return '<option'+(t===room.type?' selected':'')+'>'+t+'</option>'; }).join('');
-  var jobOpts  = '<option value="">No job</option>'+DB.jobs.map(function(j){ return '<option value="'+j.id+'"'+(j.id===room.jobId?' selected':'')+'>'+esc(j.name)+'</option>'; }).join('');
-  var mo = document.createElement('div');
-  mo.id  = 'edit-room-modal';
-  mo.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
-  var html = '<div style="background:var(--card,#1a1a1a);border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);width:100%;max-width:480px;max-height:90vh;overflow-y:auto">';
-  html += '<div style="width:36px;height:4px;background:var(--faint,#444);border-radius:99px;margin:12px auto 4px"></div>';
-  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 14px;border-bottom:1px solid var(--border,#2a2a2a)">';
-  html += '<div style="font-size:17px;font-weight:700">Edit Room</div>';
-  html += '<button onclick="document.getElementById(\'edit-room-modal\').remove()" style="width:30px;height:30px;border-radius:50%;background:var(--card2);border:none;color:var(--muted);font-size:18px;cursor:pointer">x</button>';
-  html += '</div><div style="padding:16px 18px">';
-  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Room Name *</div><input id="er-name" type="text" value="'+esc(room.name)+'" style="'+s+'"/></div>';
-  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Type</div><select id="er-type" style="'+s+'">'+typeOpts+'</select></div>';
-  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Job</div><select id="er-job" style="'+s+'">'+jobOpts+'</select></div>';
-  html += '<div style="margin-bottom:18px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Notes</div><textarea id="er-notes" rows="2" style="'+s+';resize:vertical">'+esc(room.notes||'')+'</textarea></div>';
-  html += '<div style="display:flex;gap:8px">';
-  html += '<button onclick="erDeleteRoom(\''+roomId+'\')" style="flex:1;padding:13px;border-radius:12px;border:1px solid rgba(239,83,80,.35);background:rgba(239,83,80,.08);color:#ef5350;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Delete Room</button>';
-  html += '<button onclick="saveEditRoom(\''+roomId+'\')" style="flex:2;padding:13px;border-radius:12px;border:none;background:#34C759;color:#000;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">Save Changes</button>';
-  html += '</div></div></div>';
-  mo.innerHTML = html;
-  document.body.appendChild(mo);
-  setTimeout(function(){ document.getElementById('er-name') && document.getElementById('er-name').focus(); }, 200);
-};
-
-window.saveEditRoom = function(roomId) {
-  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
-  if (!room) return;
-  var name = (document.getElementById('er-name') && document.getElementById('er-name').value || '').trim();
-  if (!name) { toast('Room name required'); return; }
-  room.name  = name;
-  room.type  = (document.getElementById('er-type') && document.getElementById('er-type').value) || room.type;
-  room.jobId = (document.getElementById('er-job')  && document.getElementById('er-job').value)  || '';
-  room.notes = ((document.getElementById('er-notes') && document.getElementById('er-notes').value) || '').trim();
-  room.updatedAt = now();
-  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
-  save(); renderAll();
-  if (currentRoomId === roomId) openRoomDetail(roomId);
-  toast('Room updated');
-};
-
-window.erDeleteRoom = function(roomId) {
-  var room = (DB.rooms||[]).find(function(r){return r.id===roomId;});
-  var taskCount = (DB.tasks||[]).filter(function(t){return t.roomId===roomId;}).length;
-  if (!confirm('Delete "' + (room ? room.name : 'this room') + '"?' + (taskCount ? '\n\nThis also deletes ' + taskCount + ' linked task(s).' : ''))) return;
-  DB.rooms = (DB.rooms||[]).filter(function(r){return r.id!==roomId;});
-  DB.tasks = (DB.tasks||[]).filter(function(t){return t.roomId!==roomId;});
-  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
-  var detail = document.getElementById('s-room-detail');
-  if (detail) detail.remove();
-  save(); renderAll();
-  showScreen('s-rooms');
-  toast('Room deleted');
-};
-
-/* ── Add Edit button to room cards ── */
-var _origBRC = buildRoomCard;
-buildRoomCard = function(room) {
-  var base = _origBRC(room);
-  var editBar = '<div style="border-top:1px solid var(--border,#2a2a2a);margin-top:8px;padding-top:8px;display:flex;gap:6px">'
-    + '<button onclick="event.stopPropagation();openEditRoom(\'' + room.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Edit Room</button>'
-    + '<button onclick="event.stopPropagation();openAddTask(null,\'' + room.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:none;background:#34C759;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ Add Task</button>'
-    + '</div>';
-  return base.replace('</div></div>', editBar + '</div></div>');
-};
-
-/* ── Add Edit button inside room detail header ── */
-var _origORD = openRoomDetail;
-openRoomDetail = function(roomId) {
-  _origORD(roomId);
-  setTimeout(function() {
-    var screen = document.getElementById('s-room-detail');
-    if (!screen || screen.querySelector('.room-edit-btn')) return;
-    var delBtn = screen.querySelector('[onclick*="deleteRoom"]');
-    if (!delBtn) return;
-    var btn = document.createElement('button');
-    btn.className = 'room-edit-btn';
-    btn.textContent = 'Edit';
-    btn.style.cssText = 'background:rgba(52,199,89,.1);border:1px solid rgba(52,199,89,.3);border-radius:9px;color:#34C759;font-size:14px;font-weight:700;padding:6px 14px;cursor:pointer;font-family:inherit;margin-right:6px';
-    btn.onclick = function(){ openEditRoom(roomId); };
-    delBtn.parentElement.insertBefore(btn, delBtn);
-  }, 100);
-};
-
-renderRooms && renderRooms();
-console.log('[PB] Room edit v2 ready');
-
-</script>
 <
 <script>
 
@@ -2078,6 +1983,102 @@ renderJobDetail = function(jobId) {
 };
 
 console.log('[PB] Rooms engine loaded');
+</script>
+
+<script>
+/* ── Edit Room ── */
+window.openEditRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
+  if (!room) return;
+  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
+  var TYPES = ['Kitchen','Bathroom','Bedroom','Living Room','Basement','Attic','Garage','Office','Hallway','Laundry','Exterior','Roof','HVAC','Electrical','Plumbing','Other'];
+  var s = 'width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid var(--border,#2a2a2a);background:var(--card2,#222);color:var(--text,#f0f0f0);font-size:16px;font-family:inherit';
+  var typeOpts = TYPES.map(function(t){ return '<option'+(t===room.type?' selected':'')+'>'+t+'</option>'; }).join('');
+  var jobOpts  = '<option value="">No job</option>'+DB.jobs.map(function(j){ return '<option value="'+j.id+'"'+(j.id===room.jobId?' selected':'')+'>'+esc(j.name)+'</option>'; }).join('');
+  var mo = document.createElement('div');
+  mo.id  = 'edit-room-modal';
+  mo.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;justify-content:center;font-family:inherit';
+  var html = '<div style="background:var(--card,#1a1a1a);border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);width:100%;max-width:480px;max-height:90vh;overflow-y:auto">';
+  html += '<div style="width:36px;height:4px;background:var(--faint,#444);border-radius:99px;margin:12px auto 4px"></div>';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 14px;border-bottom:1px solid var(--border,#2a2a2a)">';
+  html += '<div style="font-size:17px;font-weight:700">Edit Room</div>';
+  html += '<button onclick="document.getElementById(\'edit-room-modal\').remove()" style="width:30px;height:30px;border-radius:50%;background:var(--card2);border:none;color:var(--muted);font-size:18px;cursor:pointer">x</button>';
+  html += '</div><div style="padding:16px 18px">';
+  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Room Name *</div><input id="er-name" type="text" value="'+esc(room.name)+'" style="'+s+'"/></div>';
+  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Type</div><select id="er-type" style="'+s+'">'+typeOpts+'</select></div>';
+  html += '<div style="margin-bottom:14px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Job</div><select id="er-job" style="'+s+'">'+jobOpts+'</select></div>';
+  html += '<div style="margin-bottom:18px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Notes</div><textarea id="er-notes" rows="2" style="'+s+';resize:vertical">'+esc(room.notes||'')+'</textarea></div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<button onclick="erDeleteRoom(\''+roomId+'\')" style="flex:1;padding:13px;border-radius:12px;border:1px solid rgba(239,83,80,.35);background:rgba(239,83,80,.08);color:#ef5350;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">Delete Room</button>';
+  html += '<button onclick="saveEditRoom(\''+roomId+'\')" style="flex:2;padding:13px;border-radius:12px;border:none;background:#34C759;color:#000;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">Save Changes</button>';
+  html += '</div></div></div>';
+  mo.innerHTML = html;
+  document.body.appendChild(mo);
+  setTimeout(function(){ document.getElementById('er-name') && document.getElementById('er-name').focus(); }, 200);
+};
+
+window.saveEditRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){ return r.id===roomId; });
+  if (!room) return;
+  var name = (document.getElementById('er-name') && document.getElementById('er-name').value || '').trim();
+  if (!name) { toast('Room name required'); return; }
+  room.name  = name;
+  room.type  = (document.getElementById('er-type') && document.getElementById('er-type').value) || room.type;
+  room.jobId = (document.getElementById('er-job')  && document.getElementById('er-job').value)  || '';
+  room.notes = ((document.getElementById('er-notes') && document.getElementById('er-notes').value) || '').trim();
+  room.updatedAt = now();
+  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
+  save(); renderAll();
+  if (currentRoomId === roomId) openRoomDetail(roomId);
+  toast('Room updated');
+};
+
+window.erDeleteRoom = function(roomId) {
+  var room = (DB.rooms||[]).find(function(r){return r.id===roomId;});
+  var taskCount = (DB.tasks||[]).filter(function(t){return t.roomId===roomId;}).length;
+  if (!confirm('Delete "' + (room ? room.name : 'this room') + '"?' + (taskCount ? '\n\nThis also deletes ' + taskCount + ' linked task(s).' : ''))) return;
+  DB.rooms = (DB.rooms||[]).filter(function(r){return r.id!==roomId;});
+  DB.tasks = (DB.tasks||[]).filter(function(t){return t.roomId!==roomId;});
+  document.getElementById('edit-room-modal') && document.getElementById('edit-room-modal').remove();
+  var detail = document.getElementById('s-room-detail');
+  if (detail) detail.remove();
+  save(); renderAll();
+  showScreen('s-rooms');
+  toast('Room deleted');
+};
+
+/* ── Add Edit button to room cards ── */
+var _origBRC = buildRoomCard;
+buildRoomCard = function(room) {
+  var base = _origBRC(room);
+  var editBar = '<div style="border-top:1px solid var(--border,#2a2a2a);margin-top:8px;padding-top:8px;display:flex;gap:6px">'
+    + '<button onclick="event.stopPropagation();openEditRoom(\'' + room.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Edit Room</button>'
+    + '<button onclick="event.stopPropagation();openAddTask(null,\'' + room.id + '\')" style="flex:1;padding:8px;border-radius:9px;border:none;background:#34C759;color:#000;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ Add Task</button>'
+    + '</div>';
+  return base.replace('</div></div>', editBar + '</div></div>');
+};
+
+/* ── Add Edit button inside room detail header ── */
+var _origORD = openRoomDetail;
+openRoomDetail = function(roomId) {
+  _origORD(roomId);
+  setTimeout(function() {
+    var screen = document.getElementById('s-room-detail');
+    if (!screen || screen.querySelector('.room-edit-btn')) return;
+    var delBtn = screen.querySelector('[onclick*="deleteRoom"]');
+    if (!delBtn) return;
+    var btn = document.createElement('button');
+    btn.className = 'room-edit-btn';
+    btn.textContent = 'Edit';
+    btn.style.cssText = 'background:rgba(52,199,89,.1);border:1px solid rgba(52,199,89,.3);border-radius:9px;color:#34C759;font-size:14px;font-weight:700;padding:6px 14px;cursor:pointer;font-family:inherit;margin-right:6px';
+    btn.onclick = function(){ openEditRoom(roomId); };
+    delBtn.parentElement.insertBefore(btn, delBtn);
+  }, 100);
+};
+
+renderRooms && renderRooms();
+console.log('[PB] Room edit v2 ready');
+
 </script>
 <script>
 /* ══ CHECKLIST ENGINE ════════════════════════════════════════
